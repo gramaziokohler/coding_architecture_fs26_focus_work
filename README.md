@@ -440,10 +440,10 @@ Comprehensive documentation of challenges and solutions is crucial for understan
 
 ## Credits
 
-**Project**: A03 Design Project - Coding Architecture FS26
-**Institution**: ETH Zurich
-**Framework**: COMPAS (https://compas.dev)
-**Development**: Iterative problem-solving with AI assistance (Bob/Claude)
+* **Project**: A03 Design Project - Coding Architecture FS26
+* **Institution**: ETH Zurich
+* **Framework**: COMPAS (https://compas.dev)
+* **Development**: Iterative problem-solving with AI assistance (Bob/Claude)
 
 ---
 
