@@ -8,6 +8,16 @@ This project explores computational design and fabrication of reciprocal frame (
 
 ---
 
+## Workshop Groups
+
+Each group reads from the previous group's folder and writes its output into its own:
+
+[group_a](group_a/) → [group_b](group_b/) → [group_c](group_c/) → [group_d](group_d/)
+
+Add your name to your group's README.
+
+---
+
 ## Table of Contents
 
 1. [Core Systems](#core-systems)
