@@ -444,3 +444,9 @@ Comprehensive documentation of challenges and solutions is crucial for understan
 **Institution**: ETH Zurich
 **Framework**: COMPAS (https://compas.dev)
 **Development**: Iterative problem-solving with AI assistance (Bob/Claude)
+
+---
+
+## License
+
+Released under the MIT License, see [LICENSE](LICENSE). Copyright © 2026 Gramazio Kohler Research, ETH Zürich.
