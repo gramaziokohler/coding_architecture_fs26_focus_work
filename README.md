@@ -12,7 +12,7 @@ This project explores computational design and fabrication of reciprocal frame (
 
 Each group reads from the previous group's folder and writes its output into its own:
 
-[group_a](group_a/) → [group_b](group_b/) → [group_c](group_c/) → [group_d](group_d/)
+[Group A](group_a/) → [Group B](group_b/) → [Group C](group_c/) → [Group D](group_d/)
 
 Add your name to your group's README.
 
