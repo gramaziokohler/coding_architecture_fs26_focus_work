@@ -9,16 +9,16 @@ Following an intensive design phase, this repository focuses on the translation 
 This phase bridges the gap between computational design and physical reality, requiring a fabrication- and assembly-aware mindset from day one.
 
 ## Table of Contents
-1. [Focuswork Overview & Schedule](#️-semester-overview--schedule)
+1. [Focuswork Overview & Schedule](#focuswork-overview--schedule)
    - [Week 1: Revision & Detailing](#week-1-revision--detailing)
    - [Week 2: Preparation & Machine Instructions](#week-2-preparation--machine-instructions)
    - [Week 3: Fabrication & Prefabrication](#week-3-fabrication--prefabrication)
    - [Week 4: On-Site Assembly](#week-4-on-site-assembly)
-2. [Workflow & Team Structure](#-workflow--team-structure)
+2. [Workflow & Team Structure](#workflow--team-structure)
    - [Dynamic Deliverables](#dynamic-deliverables)
-3. [Repository Structure](#️-repository-structure)
+3. [Repository Structure](#repository-structure)
    - [Working Folders vs. Deliverables](#working-folders-vs-deliverables)
-   - [Group 3's Approach and changes to the repo](#-the-winning-project-group-3s-approach)
+   - [Group 3's Approach and changes to the default solution](#group-3s-approach-and-changes-to-the-default-solution)
 
 ---
 
