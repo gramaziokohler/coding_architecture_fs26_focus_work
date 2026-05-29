@@ -70,7 +70,7 @@ To foster leadership and project management skills, **each group takes the prima
 ### Dynamic Deliverables
 Weekly deliverables will be announced on a rolling basis. The workflow will adapt to the reality of the project: sometimes it will be linear, sometimes circular and iterative. There will be highly intense periods and more relaxed ones. **Flexibility, communication, and teamwork are our most important tools.**
 
-You will work across the organized sub-directories (`group_a/`, `group_b/`, `group_c/`, `group_d/`) and will heavily interact and hand off tasks between groups.
+You will work across the organized sub-directories (`working_directory/group_a/`, `working_directory/group_b/`, `working_directory/group_c/`, `working_directory/group_d/`) and will heavily interact and hand off tasks between groups.
 
 
 
@@ -80,21 +80,25 @@ To keep the repository organized despite the dynamic and sometimes chaotic natur
 
 ```text
 coding_architecture_fs26_focus_work/
+├── _static/             # Static files and assets for documentation
 ├── code/                # Core Python scripts and GH definitions
-├── design/              # Rhino files and base geometries
 ├── deliverables/        # Official weekly handovers
-│   ├── Week_01/
-│   ├── Week_02/
+│   ├── week_01/
+│   ├── week_02/
 │   └── ...
-├── group_a/             # Working directory for Group A
-├── group_b/             # Working directory for Group B
-├── group_c/             # Working directory for Group C
-└── group_d/             # Working directory for Group D
+├── design/              # Rhino files and base geometries
+├── images/              # Additional project and progress images
+├── timber_models/       # Exports of finalized timber objects/models
+└── working_directory/   # Sandboxes for the groups
+    ├── group_a/         # Working directory for Group A
+    ├── group_b/         # Working directory for Group B
+    ├── group_c/         # Working directory for Group C
+    └── group_d/         # Working directory for Group D
 ```
 
 ### Working Folders vs. Deliverables
-* **`group_*/` Folders:** Your primary sandbox. This is where your group edits scripts, tests parametric components, experiments with new tools, and saves intermediate Grasshopper files. Each group has full ownership over their folder.
-* **`deliverables/Week_XX/` Folders:** At the end of each week, the responsible lead group compiles the finalized code, the frozen Rhino models, fabrication files (like BTLX/HOPS), and logistic lists into the respective week's folder. This guarantees a clean, linear history of our progress without the clutter of daily work.
+* **`working_directory/group_*/` Folders:** Your primary sandbox. This is where your group edits scripts, tests parametric components, experiments with new tools, and saves intermediate Grasshopper files. Each group has full ownership over their folder.
+* **`deliverables/week_XX/` Folders:** At the end of each week, the responsible lead group compiles the finalized code, the frozen Rhino models, fabrication files (like BTLX/HOPS), and logistic lists into the respective week's folder. This guarantees a clean, linear history of our progress without the clutter of daily work.
 * **`code/` & `design/`:** Shared global resources. The `code/` folder contains the core algorithmic pipeline that we refine together.
 
 ### Group 3's Approach and changes to the default solution
