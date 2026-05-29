@@ -8,7 +8,21 @@ Following an intensive design phase, this repository focuses on the translation 
 
 This phase bridges the gap between computational design and physical reality, requiring a fabrication- and assembly-aware mindset from day one.
 
-## 🗓️ Focuswork Overview & Schedule
+## Table of Contents
+1. [Focuswork Overview & Schedule](#️-semester-overview--schedule)
+   - [Week 1: Revision & Detailing](#week-1-revision--detailing)
+   - [Week 2: Preparation & Machine Instructions](#week-2-preparation--machine-instructions)
+   - [Week 3: Fabrication & Prefabrication](#week-3-fabrication--prefabrication)
+   - [Week 4: On-Site Assembly](#week-4-on-site-assembly)
+2. [Workflow & Team Structure](#-workflow--team-structure)
+   - [Dynamic Deliverables](#dynamic-deliverables)
+3. [Repository Structure](#️-repository-structure)
+   - [Working Folders vs. Deliverables](#working-folders-vs-deliverables)
+   - [Group 3's Approach and changes to the repo](#-the-winning-project-group-3s-approach)
+
+---
+
+## Focuswork Overview & Schedule
 
 ![Focus Work Overview](_static/caii-focuswork_overview.jpg)
 
@@ -43,9 +57,11 @@ The Focus Work spans exactly 4 weeks (20 full working days), taking us from desi
 
 ---
 
-## 👥 Workflow & Team Structure
+## Workflow & Team Structure
 
 ![Weekly Goals](_static/caii_weeky-goals.jpg)
+
+> *Note: This image will be updated soon.*
 
 The cohort is divided into **4 Groups (A, B, C, D)**. 
 
@@ -58,7 +74,7 @@ You will work across the organized sub-directories (`group_a/`, `group_b/`, `gro
 
 
 
-## 🗂️ Repository Structure
+## Repository Structure
 
 To keep the repository organized despite the dynamic and sometimes chaotic nature of the Focus Work, we strictly separate **work in progress** from **official milestones**. 
 
@@ -81,7 +97,7 @@ coding_architecture_fs26_focus_work/
 * **`deliverables/Week_XX/` Folders:** At the end of each week, the responsible lead group compiles the finalized code, the frozen Rhino models, fabrication files (like BTLX/HOPS), and logistic lists into the respective week's folder. This guarantees a clean, linear history of our progress without the clutter of daily work.
 * **`code/` & `design/`:** Shared global resources. The `code/` folder contains the core algorithmic pipeline that we refine together.
 
-### 🏆 The Winning Project (Group 3's Approach)
+### Group 3's Approach and changes to the default solution
 The codebase provided here is based on the winning design from the semester. Group 3 distinguished themselves by heavily extending our standard reciprocal frame template to bridge the gap between automated generation and manual control. Here is how their approach stands out and which files drive it:
     
 1. **Dual-Mesh Generation:** Instead of applying one algorithm to the whole structure, they generate a hexagonal mesh for the interior beams and a quad mesh for the boundary beams.
