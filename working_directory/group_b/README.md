@@ -12,7 +12,7 @@ Second group in the pipeline. Read **Group A**'s output and place your own outpu
 
 Add your names below:
 
-- _Your name here_
-- _Your name here_
+- _Wanru Zhao   
+- _Anneke Iten de León
 - _Your name here_
 - _Your name here_
