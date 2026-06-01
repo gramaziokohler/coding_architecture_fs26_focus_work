@@ -350,7 +350,8 @@ class RFSystem:
 
 
     def extend_centerlines(self, extensions_pos: float = 0.0, extensions_neg: float = 0.0,
-                          relative: bool = False) -> None:
+                          relative: bool = False, attractor_point: Optional[Point] = None,
+                          max_distance: float = 1.0, attractor_strength: float = 1.0) -> None:
         """
         Extend centerlines uniformly with special handling for closing edges.
         
@@ -367,7 +368,28 @@ class RFSystem:
         relative : bool, optional
             If True, extensions are relative to edge length.
             Default is False (absolute mode).
+        attractor_point : Point, optional
+            An attractor point that controls extension amount based on distance
+            from the centerline midpoint.
+        max_distance : float, optional
+            Distance from the attractor point beyond which full slider extension applies.
+            Default is 1.0.
+        attractor_strength : float, optional
+            Strength of the attractor attenuation. A value of 1.0 gives full
+            reduction near the point, while lower values soften the effect.
+            Default is 1.0.
         """
+        def _attractor_scale(distance: float) -> float:
+            if distance >= max_distance:
+                return 1.0
+            if max_distance <= 0.0:
+                return 1.0
+            normalized = distance / max_distance
+            # Preserve full extension at max_distance, while reducing extension
+            # smoothly as the centerline midpoint approaches the point.
+            scale = 1.0 - (1.0 - normalized) * attractor_strength
+            return max(0.0, min(1.0, scale))
+
         # Identify closing edges by checking each edge against ALL its faces
         closing_edges_to_skip = set()  # For 4-vertex faces
         closing_edges_info = {}  # For 6-vertex faces: edge -> (face, face_verts)
@@ -429,7 +451,18 @@ class RFSystem:
             else:
                 ext_pos = extensions_pos
                 ext_neg = extensions_neg
-            
+
+            if attractor_point is not None:
+                midpoint = Point(
+                    (centerline.start.x + centerline.end.x) / 2.0,
+                    (centerline.start.y + centerline.end.y) / 2.0,
+                    (centerline.start.z + centerline.end.z) / 2.0,
+                )
+                distance = midpoint.distance_to_point(attractor_point)
+                scale = _attractor_scale(distance)
+                ext_pos *= scale
+                ext_neg *= scale
+
             # Apply standard extensions
             edge_dir = centerline.direction.unitized()
             centerline.start += edge_dir * (-ext_neg)
