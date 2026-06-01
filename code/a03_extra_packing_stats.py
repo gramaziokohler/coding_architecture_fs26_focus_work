@@ -43,6 +43,7 @@ def get_general_stats(timber_model, wood_density=500):
             "--- MODEL STATS ---",
             f"Beams: {count}",
             f"Total Length: {total_length:.2f} m",
+            f"Longest Beam: {max_len:.2f} m",
             f"Weight: {total_weight:.1f} kg",
             f"Joints/Features: {total_joints} / {total_features}",
             "-------------------",
