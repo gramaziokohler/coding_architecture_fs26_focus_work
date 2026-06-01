@@ -15,4 +15,3 @@ Add your names below:
 - _Wanru Zhao   
 - _Anneke Iten de León
 - _Cami Minger
-- _Your name here_
