@@ -2,6 +2,8 @@
 
 # Coding Architecture II: Focus Work
 
+> **We are starting!**
+
 Welcome to the **Focus Work** of Coding Architecture II, Spring Semester 2026! 
 
 Following an intensive design phase, this repository focuses on the translation of the **winning project** into a real-world, full-scale timber structure. Over the next four weeks, we will adapt, refine, fabricate, and assemble the reciprocal frame structure for the local neighborhood garden (*Quartiergarten*).
