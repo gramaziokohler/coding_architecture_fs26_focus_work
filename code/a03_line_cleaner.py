@@ -2,6 +2,25 @@ import Rhino.Geometry as rg
 from compas_rhino.conversions import line_to_rhino
 
 
+def _is_inside_boundary(point, boundary_lines):
+    """Ray casting in 2D (XY projection): returns True if point is inside the boundary.
+    Shoots a ray from point in +X direction and counts boundary crossings.
+    Odd = inside, Even = outside.
+    """
+    mx, my = point.X, point.Y
+    crossings = 0
+    for seg in boundary_lines:
+        ax, ay = seg.From.X, seg.From.Y
+        bx, by = seg.To.X, seg.To.Y
+        # Segment must straddle the horizontal ray at Y=my
+        if (ay > my) != (by > my):
+            t = (my - ay) / (by - ay)
+            x_intersect = ax + t * (bx - ax)
+            if x_intersect > mx:
+                crossings += 1
+    return crossings % 2 == 1
+
+
 def extract_lines_from_hybrid(boundary_rf_system, inner_rf_system, intersection_tolerance=0.01, parallel_tolerance=0.1, extension_length=0.5):
     """
     Extract lines from a hybrid RF system setup.
@@ -100,84 +119,39 @@ def extract_lines_from_hybrid(boundary_rf_system, inner_rf_system, intersection_
     # For each inner line, find all intersection points and trim to the innermost points
     trimmed_inner_lines = []
     trimmed_count = 0
-    
+
     for i, inner_line in enumerate(rhino_inner_lines):
         # Skip if this line was removed in step 1
         if inner_line not in cleaned_inner_lines:
             continue
-        
+
         intersections = inner_line_intersections[i]
-        
+
         if len(intersections) == 0:
             # No intersections - keep original line (assumed to be fully inside)
             trimmed_inner_lines.append(inner_line)
         elif len(intersections) == 1:
-            # One intersection - determine which endpoint is INSIDE using 2D projection
+            # One intersection - use ray casting to decide which half is inside
             point = intersections[0]
-            
-            # Project to XY plane (Z=0)
-            point_2d = rg.Point3d(point.X, point.Y, 0)
-            from_2d = rg.Point3d(inner_line.From.X, inner_line.From.Y, 0)
-            to_2d = rg.Point3d(inner_line.To.X, inner_line.To.Y, 0)
-            
-            # Create 2D boundary polyline for containment test
-            boundary_points_2d = []
-            for boundary_line in rhino_boundary_lines:
-                pt = rg.Point3d(boundary_line.From.X, boundary_line.From.Y, 0)
-                if len(boundary_points_2d) == 0 or boundary_points_2d[-1].DistanceTo(pt) > 0.001:
-                    boundary_points_2d.append(pt)
-            
-            # Close the boundary if needed
-            if len(boundary_points_2d) > 0:
-                first_pt = boundary_points_2d[0]
-                last_pt = rg.Point3d(rhino_boundary_lines[-1].To.X, rhino_boundary_lines[-1].To.Y, 0)
-                if first_pt.DistanceTo(last_pt) > 0.001:
-                    boundary_points_2d.append(last_pt)
-                # Ensure closed
-                if boundary_points_2d[0].DistanceTo(boundary_points_2d[-1]) > 0.001:
-                    boundary_points_2d.append(boundary_points_2d[0])
-            
-            # Create 2D polyline curve
-            boundary_curve_2d = None
-            if len(boundary_points_2d) > 2:
-                try:
-                    boundary_curve_2d = rg.Polyline(boundary_points_2d).ToNurbsCurve()
-                except:
-                    pass
-            
-            # Test which endpoint is inside using 2D containment
-            from_inside = False
-            to_inside = False
-            
-            if boundary_curve_2d:
-                # Use Rhino's point-in-curve test
-                from_relation = boundary_curve_2d.Contains(from_2d, rg.Plane.WorldXY, intersection_tolerance)
-                to_relation = boundary_curve_2d.Contains(to_2d, rg.Plane.WorldXY, intersection_tolerance)
-                
-                from_inside = (from_relation == rg.PointContainment.Inside or
-                              from_relation == rg.PointContainment.Coincident)
-                to_inside = (to_relation == rg.PointContainment.Inside or
-                            to_relation == rg.PointContainment.Coincident)
-            
-            # Apply 2D test result to 3D line
-            if from_inside and not to_inside:
-                # From is inside - keep From to intersection
+            m1 = rg.Point3d(
+                (inner_line.From.X + point.X) / 2,
+                (inner_line.From.Y + point.Y) / 2,
+                (inner_line.From.Z + point.Z) / 2
+            )
+            m2 = rg.Point3d(
+                (point.X + inner_line.To.X) / 2,
+                (point.Y + inner_line.To.Y) / 2,
+                (point.Z + inner_line.To.Z) / 2
+            )
+            if _is_inside_boundary(m1, rhino_boundary_lines):
                 new_line = rg.Line(inner_line.From, point)
-            elif to_inside and not from_inside:
-                # To is inside - keep intersection to To
+            elif _is_inside_boundary(m2, rhino_boundary_lines):
                 new_line = rg.Line(point, inner_line.To)
-            elif from_inside and to_inside:
-                # Both inside - keep original (shouldn't happen with 1 intersection)
-                new_line = inner_line
             else:
-                # Neither inside - fallback: keep longer segment
-                dist_from = inner_line.From.DistanceTo(point)
-                dist_to = inner_line.To.DistanceTo(point)
-                if dist_from > dist_to:
-                    new_line = rg.Line(inner_line.From, point)
-                else:
-                    new_line = rg.Line(point, inner_line.To)
-            
+                # Fallback: keep the longer segment
+                dist1 = inner_line.From.DistanceTo(point)
+                dist2 = inner_line.To.DistanceTo(point)
+                new_line = rg.Line(inner_line.From, point) if dist1 > dist2 else rg.Line(point, inner_line.To)
             trimmed_inner_lines.append(new_line)
             trimmed_count += 1
             
@@ -319,4 +293,4 @@ def extract_lines_from_hybrid(boundary_rf_system, inner_rf_system, intersection_
     print(f"Total intersections found: {len(rhino_points)} (tolerance: {intersection_tolerance})")
     print(f"Final output: {len(cleaned_lines)} lines ({len(rhino_boundary_lines)} boundary + {len(extended_inner_lines)} inner)")
     
-    return cleaned_lines, rhino_points
+    return rhino_boundary_lines, extended_inner_lines, rhino_points

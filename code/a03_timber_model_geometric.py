@@ -13,13 +13,19 @@ class GeometricTimberModelCreator:
     using actual beam geometry (width/height), not just centerline proximity.
     """
 
-    def __init__(self, rf_system: RFSystem, beam_width: float = 0.08, beam_height: float = 0.10, sampling_points: int = 20):
+    def __init__(self, rf_system: RFSystem,
+                 beam_width: float = 0.08, beam_height: float = 0.10,
+                 inner_beam_width: float = None, inner_beam_height: float = None,
+                 boundary_beam_width: float = None, boundary_beam_height: float = None,
+                 sampling_points: int = 20):
         self.rf_system = rf_system
         self.timber_model = TimberModel()
-        self.beam_width = beam_width
-        self.beam_height = beam_height
-        self.beam_radius = max(beam_width, beam_height) / 2.0  # Conservative radius for intersection
-        self.sampling_points = sampling_points  # Number of points to sample along each centerline
+        self.inner_beam_width = inner_beam_width if inner_beam_width is not None else beam_width
+        self.inner_beam_height = inner_beam_height if inner_beam_height is not None else beam_height
+        self.boundary_beam_width = boundary_beam_width if boundary_beam_width is not None else beam_width
+        self.boundary_beam_height = boundary_beam_height if boundary_beam_height is not None else beam_height
+        self.beam_radius = max(beam_width, beam_height) / 2.0
+        self.sampling_points = sampling_points
         self.joining_errors = []
         self._rules = []
 
@@ -63,8 +69,12 @@ class GeometricTimberModelCreator:
                 from compas.geometry import Vector
                 normal = Vector(0, 0, 1)
 
-            beam = Beam.from_centerline(centerline, width=self.beam_width, height=self.beam_height, z_vector=normal)
             category = self._edge_category(edge)
+            if category == "boundary":
+                w, h = self.boundary_beam_width, self.boundary_beam_height
+            else:
+                w, h = self.inner_beam_width, self.inner_beam_height
+            beam = Beam.from_centerline(centerline, width=w, height=h, z_vector=normal)
             beam.attributes["category"] = category
             beam.attributes["edge"] = edge  # Store edge reference
             self.timber_model.add_element(beam)

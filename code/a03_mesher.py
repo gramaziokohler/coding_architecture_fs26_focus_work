@@ -21,9 +21,10 @@ class BaseMesher:
     def surface(self) -> NurbsSurface:
         return NurbsSurface.from_native(self.face.UnderlyingSurface())
 
-    def is_vertex_on_face(self, vertex_key) -> bool:
+    def is_vertex_on_face(self, vertex_key, boundary_tolerance: float = 0.01) -> bool:
         point = self.mesh.vertex_point(vertex_key)
-        _, face_u, face_v = self.face.ClosestPoint(rg.Point3d(point.x, point.y, point.z))
+        pt_3d = rg.Point3d(point.x, point.y, point.z)
+        _, face_u, face_v = self.face.ClosestPoint(pt_3d)
         relation = self.face.IsPointOnFace(face_u, face_v)
 
         if relation == rg.PointFaceRelation.Interior:
@@ -31,7 +32,9 @@ class BaseMesher:
         if relation == rg.PointFaceRelation.Boundary:
             return True
 
-        return False
+        # Accept vertices just outside the boundary within tolerance
+        closest = self.face.PointAt(face_u, face_v)
+        return pt_3d.DistanceTo(closest) < boundary_tolerance
 
     def _vertex_key(self, u_index: int, v_index: int) -> int:
         return next(self.mesh.vertices_where({"u": u_index, "v": v_index}))
@@ -248,13 +251,13 @@ class HexagonalMesher2D(BaseMesher):
         self.radius = radius
         self.full_hexas = full_hexas
         self.inset = inset
-        
+
         # Geometric constants for pointy-topped hexagons
         import math
         self.sqrt3 = math.sqrt(3)
         self.col_spacing = self.sqrt3 * radius  # Horizontal spacing between column centers
         self.row_spacing = 1.5 * radius  # Vertical spacing between rows
-    
+
     def _get_hexagon_corners_uv(self, center_u: float, center_v: float, is_first_column: bool = False,
                                  is_last_column: bool = False, is_last_row: bool = False, max_v: float = None) -> list[tuple[float, float]]:
         """Calculate corner positions of a pointy-topped hexagon in UV space.
@@ -348,7 +351,7 @@ class HexagonalMesher2D(BaseMesher):
         # Keep extent based on original counts - extra hexagons will extend beyond
         max_v_extent = self.v_count * self.row_spacing + self.radius / 2
         max_u_extent = self.u_count * self.col_spacing
-        
+
         for col in range(effective_u_count):
             # Start from row=1 to skip the first row that gets shifted down
             for row in range(1, effective_v_count):

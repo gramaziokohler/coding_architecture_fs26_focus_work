@@ -24,11 +24,18 @@ class TimberModelCreator:
     3. SOLVING: Calculating the geometry of those connections (Processing).
     """
 
-    def __init__(self, rf_system: RFSystem, beam_width: float = 0.08, beam_height: float = 0.10, tolerance: float = 0.02):
+    def __init__(self, rf_system: RFSystem,
+                 beam_width: float = 0.08, beam_height: float = 0.10,
+                 inner_beam_width: float = None, inner_beam_height: float = None,
+                 boundary_beam_width: float = None, boundary_beam_height: float = None,
+                 tolerance: float = 0.02):
         self.rf_system = rf_system
         self.timber_model = TimberModel()
-        self.beam_width = beam_width
-        self.beam_height = beam_height
+        # Per-category dimensions — fall back to the shared beam_width/height if not specified
+        self.inner_beam_width = inner_beam_width if inner_beam_width is not None else beam_width
+        self.inner_beam_height = inner_beam_height if inner_beam_height is not None else beam_height
+        self.boundary_beam_width = boundary_beam_width if boundary_beam_width is not None else beam_width
+        self.boundary_beam_height = boundary_beam_height if boundary_beam_height is not None else beam_height
         self.joining_errors = []
 
         # Rule solver settings.
@@ -101,8 +108,12 @@ class TimberModelCreator:
                 normal = Vector(0, 0, 1)  # Default fallback
                 print(f"WARNING: Edge {edge} has None normal, using default Z-up")
 
-            beam = Beam.from_centerline(centerline, width=self.beam_width, height=self.beam_height, z_vector=normal)
             category = self._edge_category(edge)
+            if category == "boundary":
+                w, h = self.boundary_beam_width, self.boundary_beam_height
+            else:
+                w, h = self.inner_beam_width, self.inner_beam_height
+            beam = Beam.from_centerline(centerline, width=w, height=h, z_vector=normal)
             beam.attributes["category"] = category
             self.timber_model.add_element(beam)
 
