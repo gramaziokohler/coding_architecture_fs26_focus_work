@@ -25,18 +25,28 @@ class GeometricTimberModelCreator:
         rf_system: RFSystem,
         beam_width: float = 0.08,
         beam_height: float = 0.10,
+        inner_beam_width: float = None,
+        inner_beam_height: float = None,
+        base_beam_width: float = None,
+        base_beam_height: float = None,
+        arch_beam_width: float = None,
+        arch_beam_height: float = None,
+        max_distance: float = None,
+        z_height_threshold: float = None,
         sampling_points: int = 20,
     ):
         self.rf_system = rf_system
         self.timber_model = TimberModel()
-        self.beam_width = beam_width
-        self.beam_height = beam_height
-        self.beam_radius = (
-            max(beam_width, beam_height) / 2.0
-        )  # Conservative radius for intersection
-        self.sampling_points = (
-            sampling_points  # Number of points to sample along each centerline
-        )
+        self.inner_beam_width = inner_beam_width if inner_beam_width is not None else beam_width
+        self.inner_beam_height = inner_beam_height if inner_beam_height is not None else beam_height
+        self.base_beam_width = base_beam_width if base_beam_width is not None else beam_width
+        self.base_beam_height = base_beam_height if base_beam_height is not None else beam_height
+        self.arch_beam_width = arch_beam_width if arch_beam_width is not None else beam_width
+        self.arch_beam_height = arch_beam_height if arch_beam_height is not None else beam_height
+        self.beam_radius = max(beam_width, beam_height) / 2.0
+        self.max_distance = max_distance if max_distance is not None else self.beam_radius
+        self.z_height_threshold = z_height_threshold
+        self.sampling_points = sampling_points
         self.joining_errors = []
         self._rules = []
 
@@ -68,6 +78,7 @@ class GeometricTimberModelCreator:
         boundary_count = 0
         interior_count = 0
 
+        debug_printed = 0
         for edge in mesh.edges():
             centerline = mesh.edge_attribute(edge, "centerline")
             normal = mesh.edge_attribute(edge, "normal")
@@ -78,45 +89,59 @@ class GeometricTimberModelCreator:
 
             if normal is None:
                 from compas.geometry import Vector
-
                 normal = Vector(0, 0, 1)
 
-            beam = Beam.from_centerline(
-                centerline,
-                width=self.beam_width,
-                height=self.beam_height,
-                z_vector=normal,
-            )
+            # Debug: print raw attributes for first 5 non-inner edges
+            raw_beam_category = mesh.edge_attribute(edge, "beam_category")
+            raw_is_boundary = mesh.edge_attribute(edge, "is_boundary")
+            if raw_is_boundary and debug_printed < 5:
+                midpoint_z = (centerline.start.z + centerline.end.z) / 2.0
+                print(f"DEBUG edge {edge}: beam_category={raw_beam_category}, is_boundary={raw_is_boundary}, midpoint_z={midpoint_z:.3f}, z_height_threshold={self.z_height_threshold}")
+                debug_printed += 1
+
             category = self._edge_category(edge)
-            if category == "boundary":
-                w, h = self.boundary_beam_width, self.boundary_beam_height
+            if category == "base":
+                w, h = self.base_beam_width, self.base_beam_height
+                boundary_count += 1
+            elif category == "arch":
+                w, h = self.arch_beam_width, self.arch_beam_height
+                boundary_count += 1
             else:
                 w, h = self.inner_beam_width, self.inner_beam_height
+                interior_count += 1
             beam = Beam.from_centerline(centerline, width=w, height=h, z_vector=normal)
             beam.attributes["category"] = category
-            beam.attributes["edge"] = edge  # Store edge reference
+            beam.attributes["edge"] = edge
             self.timber_model.add_element(beam)
 
             mesh.edge_attribute(edge, "beam", beam)
 
-            if category == "boundary":
-                boundary_count += 1
-            else:
-                interior_count += 1
-
         if skipped_count > 0:
             print(f"Skipped {skipped_count} edges with None centerlines")
-        print(f"Beam categories: {boundary_count} boundary, {interior_count} interior")
+        print(f"Beam categories: {interior_count} inner, {boundary_count} base/arch")
 
     def _edge_category(self, edge) -> str:
-        """Determine if edge is boundary or interior."""
+        """Determine beam category: inner, base, or arch."""
+        category = self.rf_system.mesh.edge_attribute(edge, "beam_category")
+        if category is not None:
+            return category
+
+        # Fallback for meshes using old is_boundary True/False
         is_boundary = self.rf_system.mesh.edge_attribute(edge, "is_boundary")
         if is_boundary is not None:
-            return "boundary" if is_boundary else "interior"
+            if not is_boundary:
+                return "inner"
+            # Boundary edge — distinguish base vs arch using Z height if available
+            if self.z_height_threshold is not None:
+                centerline = self.rf_system.mesh.edge_attribute(edge, "centerline")
+                if centerline is not None:
+                    midpoint_z = (centerline.start.z + centerline.end.z) / 2.0
+                    return "base" if midpoint_z < self.z_height_threshold else "arch"
+            return "base"
 
         if self.rf_system.mesh.is_edge_on_boundary(edge):
-            return "boundary"
-        return "interior"
+            return "base"
+        return "inner"
 
     def _find_intersections_with_topology(self) -> None:
         """
@@ -124,7 +149,7 @@ class GeometricTimberModelCreator:
         """
         beams = list(self.timber_model.beams)
         solver = ConnectionSolver()
-        max_distance = self.beam_radius * 2
+        max_distance = self.max_distance
 
         print(f"\nChecking {len(beams)} beams for intersections...")
         print(f"Using max_distance: {max_distance:.3f}")
@@ -196,28 +221,25 @@ class GeometricTimberModelCreator:
         For TOPO_T: ConnectionSolver returns main_beam=continuous, cross_beam=ending
         TButtJoint expects [main_beam, cross_beam] in that order.
         """
+        outer = {"base", "arch"}
+
         # TOPO_L: Both beams meet at ends
         if topology == JointTopology.TOPO_L:
-            # LMiterJoint ONLY for boundary-boundary L-joints
-            if cat_main == "boundary" and cat_cross == "boundary":
+            # LMiterJoint for outer-outer L-joints
+            if cat_main in outer and cat_cross in outer:
                 return LMiterJoint, [main_beam, cross_beam]
-            # For interior L-joints, use TLapJoint (they're actually T-shaped in practice)
-            # Skip them to avoid errors
             return None, None
 
         # TOPO_T: One beam ends on the other
-        # ConnectionSolver gives us: main_beam (continuous), cross_beam (ending)
-        # TButtJoint expects: [main_beam, cross_beam] in that exact order
         elif topology == JointTopology.TOPO_T:
-            # Always use the order from ConnectionSolver: [main_beam, cross_beam]
             return TLapJoint, [main_beam, cross_beam]
 
         # TOPO_X: Both beams cross -> XLapJoint
         elif topology == JointTopology.TOPO_X:
-            # Put boundary beam first if there is one (maintains priority)
-            if cat_main == "boundary":
+            # Put outer beam first if there is one
+            if cat_main in outer:
                 return XLapJoint, [main_beam, cross_beam]
-            elif cat_cross == "boundary":
+            elif cat_cross in outer:
                 return XLapJoint, [cross_beam, main_beam]
             return XLapJoint, [main_beam, cross_beam]
 
@@ -234,19 +256,10 @@ class GeometricTimberModelCreator:
         self.joining_errors = []
         solver = JointRuleSolver(self._rules)
 
-        boundary_beams = [
-            b
-            for b in self.timber_model.beams
-            if b.attributes.get("category") == "boundary"
-        ]
-        interior_beams = [
-            b
-            for b in self.timber_model.beams
-            if b.attributes.get("category") == "interior"
-        ]
-        print(
-            f"Before joint solving: {len(boundary_beams)} boundary beams, {len(interior_beams)} interior beams"
-        )
+        inner_beams = [b for b in self.timber_model.beams if b.attributes.get("category") == "inner"]
+        base_beams = [b for b in self.timber_model.beams if b.attributes.get("category") == "base"]
+        arch_beams = [b for b in self.timber_model.beams if b.attributes.get("category") == "arch"]
+        print(f"Before joint solving: {len(inner_beams)} inner, {len(base_beams)} base, {len(arch_beams)} arch beams")
 
         self.joining_errors, unjoined_clusters = solver.apply_rules_to_model(
             self.timber_model
