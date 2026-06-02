@@ -4,6 +4,7 @@ from compas.geometry import distance_point_point
 from compas_timber.connections import (
     LMiterJoint,
     TButtJoint,
+    TBirdsmouthJoint,
     XLapJoint,
     TLapJoint,
     JointTopology,
@@ -230,40 +231,27 @@ class GeometricTimberModelCreator:
     def _determine_joint_from_topology(
         self, topology, main_beam, cross_beam, cat_main, cat_cross
     ):
-        """
-        Determine joint type based on detected topology and beam categories.
-
-        IMPORTANT:
-        - LMiterJoint requires TOPO_L (only for boundary-boundary)
-        - TButtJoint requires TOPO_T with [main_beam, cross_beam] order
-        - XLapJoint requires TOPO_X
-
-        For TOPO_T: ConnectionSolver returns main_beam=continuous, cross_beam=ending
-        TButtJoint expects [main_beam, cross_beam] in that order.
-        """
         outer = {"base", "arch"}
 
-        # TOPO_L: Both beams meet at ends
         if topology == JointTopology.TOPO_L:
-            # LMiterJoint for outer-outer L-joints
             if cat_main in outer and cat_cross in outer:
                 return LMiterJoint, [main_beam, cross_beam]
             return None, None
 
-        # TOPO_T: One beam ends on the other
         elif topology == JointTopology.TOPO_T:
+            if "base" in (cat_main, cat_cross) and "inner" in (cat_main, cat_cross):
+                base_b  = main_beam  if cat_main == "base" else cross_beam
+                inner_b = cross_beam if cat_main == "base" else main_beam
+                return TBirdsmouthJoint, [inner_b, base_b]
             return TButtJoint, [main_beam, cross_beam]
 
-        # TOPO_X: Both beams cross -> XLapJoint
         elif topology == JointTopology.TOPO_X:
-            # Put outer beam first if there is one
             if cat_main in outer:
                 return XLapJoint, [main_beam, cross_beam]
             elif cat_cross in outer:
                 return XLapJoint, [cross_beam, main_beam]
             return XLapJoint, [main_beam, cross_beam]
 
-        # TOPO_I: Parallel end-to-end -> skip
         elif topology == JointTopology.TOPO_I:
             return None, None
 
