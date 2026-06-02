@@ -32,6 +32,9 @@ class GeometricTimberModelCreator:
         arch_beam_width: float = None,
         arch_beam_height: float = None,
         max_distance: float = None,
+        max_distance_L: float = None,
+        max_distance_T: float = None,
+        max_distance_X: float = None,
         z_height_threshold: float = None,
         sampling_points: int = 20,
     ):
@@ -44,7 +47,10 @@ class GeometricTimberModelCreator:
         self.arch_beam_width = arch_beam_width if arch_beam_width is not None else beam_width
         self.arch_beam_height = arch_beam_height if arch_beam_height is not None else beam_height
         self.beam_radius = max(beam_width, beam_height) / 2.0
-        self.max_distance = max_distance if max_distance is not None else self.beam_radius
+        base_dist = max_distance if max_distance is not None else self.beam_radius
+        self.max_distance_L = max_distance_L if max_distance_L is not None else base_dist
+        self.max_distance_T = max_distance_T if max_distance_T is not None else base_dist
+        self.max_distance_X = max_distance_X if max_distance_X is not None else base_dist
         self.z_height_threshold = z_height_threshold
         self.sampling_points = sampling_points
         self.joining_errors = []
@@ -145,63 +151,66 @@ class GeometricTimberModelCreator:
 
     def _find_intersections_with_topology(self) -> None:
         """
-        Use ConnectionSolver to detect actual beam topology, then create appropriate DirectRules.
+        Three-pass topology detection — each pass uses its own max_distance.
+        Pass order: L → T → X.  A beam pair is only processed in the first pass
+        that finds a non-UNKNOWN topology for it, preventing duplicates.
         """
         beams = list(self.timber_model.beams)
         solver = ConnectionSolver()
-        max_distance = self.max_distance
 
         print(f"\nChecking {len(beams)} beams for intersections...")
-        print(f"Using max_distance: {max_distance:.3f}")
+        print(f"max_distance  L={self.max_distance_L:.3f}  T={self.max_distance_T:.3f}  X={self.max_distance_X:.3f}")
 
         topology_counts = {
             JointTopology.TOPO_L: 0,
             JointTopology.TOPO_T: 0,
             JointTopology.TOPO_X: 0,
-            JointTopology.TOPO_I: 0,
-            JointTopology.TOPO_UNKNOWN: 0,
         }
 
-        for i, beam_a in enumerate(beams):
-            for j, beam_b in enumerate(beams):
-                if j <= i:
-                    continue
+        passes = [
+            (JointTopology.TOPO_L, self.max_distance_L),
+            (JointTopology.TOPO_T, self.max_distance_T),
+            (JointTopology.TOPO_X, self.max_distance_X),
+        ]
 
-                # Detect actual topology using ConnectionSolver
-                result = solver.find_topology(beam_a, beam_b, max_distance=max_distance)
+        processed_pairs = set()
 
-                # Extract topology and beams from result
-                topology = result.topology
-                main_beam = result.beam_a
-                cross_beam = result.beam_b
+        for target_topo, max_dist in passes:
+            for i, beam_a in enumerate(beams):
+                for j, beam_b in enumerate(beams):
+                    if j <= i:
+                        continue
+                    pair = (i, j)
+                    if pair in processed_pairs:
+                        continue
 
-                if topology == JointTopology.TOPO_UNKNOWN:
-                    continue
+                    result = solver.find_topology(beam_a, beam_b, max_distance=max_dist)
+                    topology = result.topology
+                    main_beam = result.beam_a
+                    cross_beam = result.beam_b
 
-                topology_counts[topology] += 1
+                    if topology == JointTopology.TOPO_UNKNOWN:
+                        continue
 
-                # Get categories
-                cat_main = (
-                    main_beam.attributes.get("category", "interior")
-                    if main_beam
-                    else None
-                )
-                cat_cross = (
-                    cross_beam.attributes.get("category", "interior")
-                    if cross_beam
-                    else None
-                )
+                    # Only claim this pair in the pass that matches its topology
+                    if topology != target_topo:
+                        continue
 
-                # Determine joint type based on topology and categories
-                joint_type, beam_order = self._determine_joint_from_topology(
-                    topology, main_beam, cross_beam, cat_main, cat_cross
-                )
+                    processed_pairs.add(pair)
+                    topology_counts[topology] += 1
 
-                if joint_type and beam_order:
-                    rule = DirectRule(joint_type, beam_order, max_distance=max_distance)
-                    self._rules.append(rule)
+                    cat_main  = main_beam.attributes.get("category", "inner")  if main_beam  else None
+                    cat_cross = cross_beam.attributes.get("category", "inner") if cross_beam else None
 
-        print(f"Topology detection results:")
+                    joint_type, beam_order = self._determine_joint_from_topology(
+                        topology, main_beam, cross_beam, cat_main, cat_cross
+                    )
+
+                    if joint_type and beam_order:
+                        rule = DirectRule(joint_type, beam_order, max_distance=max_dist)
+                        self._rules.append(rule)
+
+        print("Topology detection results:")
         for topo, count in topology_counts.items():
             if count > 0:
                 print(f"  {JointTopology.get_name(topo)}: {count}")
@@ -232,7 +241,7 @@ class GeometricTimberModelCreator:
 
         # TOPO_T: One beam ends on the other
         elif topology == JointTopology.TOPO_T:
-            return TLapJoint, [main_beam, cross_beam]
+            return TButtJoint, [main_beam, cross_beam]
 
         # TOPO_X: Both beams cross -> XLapJoint
         elif topology == JointTopology.TOPO_X:
