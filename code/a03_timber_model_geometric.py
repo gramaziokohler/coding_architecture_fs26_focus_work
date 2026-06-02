@@ -77,6 +77,25 @@ class GeometricTimberModelCreator:
 
         return self.timber_model
 
+    @staticmethod
+    def _upright_normal(centerline):
+        """Project global Z onto the plane perpendicular to the beam — gives a vertical cross-section."""
+        from compas.geometry import Vector
+        dx = centerline.end.x - centerline.start.x
+        dy = centerline.end.y - centerline.start.y
+        dz = centerline.end.z - centerline.start.z
+        length = (dx**2 + dy**2 + dz**2) ** 0.5
+        if length < 0.001:
+            return Vector(0, 0, 1)
+        dx /= length; dy /= length; dz /= length
+        px = -dx * dz
+        py = -dy * dz
+        pz = 1.0 - dz * dz
+        proj_len = (px**2 + py**2 + pz**2) ** 0.5
+        if proj_len > 0.001:
+            return Vector(px / proj_len, py / proj_len, pz / proj_len)
+        return Vector(1, 0, 0)
+
     def _create_beams(self) -> None:
         """Convert every RF edge into a Beam."""
         mesh: Mesh = self.rf_system.mesh
@@ -84,7 +103,6 @@ class GeometricTimberModelCreator:
         boundary_count = 0
         interior_count = 0
 
-        debug_printed = 0
         for edge in mesh.edges():
             centerline = mesh.edge_attribute(edge, "centerline")
             normal = mesh.edge_attribute(edge, "normal")
@@ -97,17 +115,10 @@ class GeometricTimberModelCreator:
                 from compas.geometry import Vector
                 normal = Vector(0, 0, 1)
 
-            # Debug: print raw attributes for first 5 non-inner edges
-            raw_beam_category = mesh.edge_attribute(edge, "beam_category")
-            raw_is_boundary = mesh.edge_attribute(edge, "is_boundary")
-            if raw_is_boundary and debug_printed < 5:
-                midpoint_z = (centerline.start.z + centerline.end.z) / 2.0
-                print(f"DEBUG edge {edge}: beam_category={raw_beam_category}, is_boundary={raw_is_boundary}, midpoint_z={midpoint_z:.3f}, z_height_threshold={self.z_height_threshold}")
-                debug_printed += 1
-
             category = self._edge_category(edge)
             if category == "base":
                 w, h = self.base_beam_width, self.base_beam_height
+                normal = self._upright_normal(centerline)
                 boundary_count += 1
             elif category == "arch":
                 w, h = self.arch_beam_width, self.arch_beam_height
