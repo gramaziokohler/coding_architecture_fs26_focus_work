@@ -1,4 +1,3 @@
-# Save this in VS Code (e.g., in rf_utils.py)
 def classify_arch_and_foundation(boundary_lines, tolerance=0.1):
     """Filters boundary centerlines into Arch and Foundation curves based on Z-height."""
     if not boundary_lines:
