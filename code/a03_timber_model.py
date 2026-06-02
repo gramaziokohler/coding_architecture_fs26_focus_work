@@ -138,7 +138,7 @@ class TimberModelCreator:
         is_boundary = self.rf_system.mesh.edge_attribute(edge, "is_boundary")
         if is_boundary is not None:
             return "boundary" if is_boundary else "interior"
-        
+
         # Fallback to mesh boundary detection
         if self.rf_system.mesh.is_edge_on_boundary(edge):
             return "boundary"
@@ -167,13 +167,13 @@ class TimberModelCreator:
         for tol in tolerances:
             # Case 1: TWO INTERIOR BEAMS - XLapJoint
             self._rules.append(CategoryRule(XLapJoint, "interior", "interior", max_distance=tol))
-            
+
             # Case 2: INTERIOR meets BOUNDARY - TButtJoint
             self._rules.append(CategoryRule(TButtJoint, "interior", "boundary", max_distance=tol))
-            
+
             # Case 3: TWO BOUNDARY BEAMS - LMiterJoint
             self._rules.append(CategoryRule(LMiterJoint, "boundary", "boundary", max_distance=tol))
-            
+
             # Case 4: Topology X joints
             self._rules.append(TopologyRule(topology_type=JointTopology.TOPO_X, joint_type=XLapJoint, max_distance=tol))
         

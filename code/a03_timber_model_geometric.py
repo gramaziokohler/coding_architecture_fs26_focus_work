@@ -95,7 +95,7 @@ class GeometricTimberModelCreator:
         is_boundary = self.rf_system.mesh.edge_attribute(edge, "is_boundary")
         if is_boundary is not None:
             return "boundary" if is_boundary else "interior"
-        
+
         if self.rf_system.mesh.is_edge_on_boundary(edge):
             return "boundary"
         return "interior"

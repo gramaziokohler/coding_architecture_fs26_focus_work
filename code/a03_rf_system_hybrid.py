@@ -32,10 +32,11 @@ class RFSystemHybrid:
         self.inner_mesh = inner_mesh
         self.boundary_mesh = boundary_mesh
         self.timber_model = None
-        
+        self.z_threshold = 0.2  # |sin(angle from horizontal)| cutoff: below = base, above = arch
+
         # Ensure all edges have normals (boundary edges might not have them)
         self._ensure_edge_normals()
-    
+
     def _ensure_edge_normals(self):
         """Ensure all edges in both meshes have normal vectors."""
         from compas.geometry import Vector
@@ -128,6 +129,36 @@ class RFSystemHybrid:
                 if centerline is not None:
                     centerlines.append(centerline)
         return centerlines
+
+    @property
+    def base_centerlines(self) -> List[Line]:
+        """Boundary beams that lie nearly horizontal (|Z component of direction| < z_threshold)."""
+        result = []
+        for line in self.boundary_centerlines:
+            direction = line.direction
+            length = (direction.x**2 + direction.y**2 + direction.z**2) ** 0.5
+            if length < 1e-6:
+                continue
+            z_component = abs(direction.z / length)
+            if z_component < self.z_threshold:
+                result.append(line)
+        print(f"Base beams: {len(result)} (z_threshold={self.z_threshold})")
+        return result
+
+    @property
+    def arch_centerlines(self) -> List[Line]:
+        """Boundary beams with Z inclination (|Z component of direction| >= z_threshold)."""
+        result = []
+        for line in self.boundary_centerlines:
+            direction = line.direction
+            length = (direction.x**2 + direction.y**2 + direction.z**2) ** 0.5
+            if length < 1e-6:
+                continue
+            z_component = abs(direction.z / length)
+            if z_component >= self.z_threshold:
+                result.append(line)
+        print(f"Arch beams: {len(result)} (z_threshold={self.z_threshold})")
+        return result
 
     def copy(self) -> "RFSystemHybrid":
         """Create a copy of the hybrid RF system."""
