@@ -4,6 +4,7 @@ from compas_timber.connections import JointTopology
 from compas_timber.connections import LMiterJoint
 from compas_timber.connections import TBirdsmouthJoint
 from compas_timber.connections import TButtJoint
+from compas_timber.connections import TLapJoint
 from compas_timber.connections import TStepJoint
 from compas_timber.connections import XLapJoint
 from compas_timber.elements import Beam
@@ -168,13 +169,24 @@ class TimberModelCreator:
             # Case 1: TWO INTERIOR BEAMS - XLapJoint
             self._rules.append(CategoryRule(XLapJoint, "interior", "interior", max_distance=tol))
             
-            # Case 2: INTERIOR meets BOUNDARY - TButtJoint
-            self._rules.append(CategoryRule(TButtJoint, "interior", "boundary", max_distance=tol))
+            # Case 2: INTERIOR meets Outer Arch - TLapJoint
+            # self._rules.append(CategoryRule(TButtJoint, "interior", "boundary", max_distance=tol))
+            self._rules.append(CategoryRule(TLapJoint, "interior", "boundary", max_distance=tol))
+
+            # Case 3: INTERIOR meets Foundation - TBirdsmouthJoint
+            # self._rules.append(CategoryRule(TButtJoint, "interior", "boundary", max_distance=tol))
+            self._rules.append(CategoryRule(TBirdsmouthJoint, "interior", "boundary", max_distance=tol))
             
-            # Case 3: TWO BOUNDARY BEAMS - LMiterJoint
+            # Case 4: TWO Outer Arch BEAMS - LMiterJoint
             self._rules.append(CategoryRule(LMiterJoint, "boundary", "boundary", max_distance=tol))
+
+            # Case 5: TWO Foundation BEAMS - LMiterJoint
+            self._rules.append(CategoryRule(LMiterJoint, "boundary", "boundary", max_distance=tol))
+
+            # Case 6: Outer Arch meets Foundation - TBirdsmouthJoint
+            self._rules.append(CategoryRule(TBirdsmouthJoint, "boundary", "boundary", max_distance=tol))
             
-            # Case 4: Topology X joints
+            # Case 7: Topology X joints
             self._rules.append(TopologyRule(topology_type=JointTopology.TOPO_X, joint_type=XLapJoint, max_distance=tol))
         
         print(f"Added {len(self._rules)} joint rules (3 tolerance passes: {tolerances})")
