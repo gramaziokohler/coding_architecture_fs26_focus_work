@@ -340,7 +340,8 @@ class RFSystem:
         relative : bool, optional
             If True, extensions are relative to edge length.
             Default is False (absolute mode).
-        """
+        
+        
         attractor_point : Point, optional
             An attractor point that controls extension amount based on distance
             from the centerline midpoint.
