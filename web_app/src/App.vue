@@ -36,7 +36,7 @@ onMounted(() => {
     } else {
         // Default fallback
         beamUrl.value =
-            "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/web_app/web_data/beams/beam_1";
+            "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data/beams/beam_1";
         console.log("Using default beam URL:", beamUrl.value);
     }
 });
