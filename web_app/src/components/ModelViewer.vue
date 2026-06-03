@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, ref, watch } from "vue";
+import { onMounted, ref } from "vue";
 import * as THREE from "three";
 import { STLLoader } from "three/examples/jsm/loaders/STLLoader.js";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
@@ -16,11 +16,13 @@ let scene, camera, renderer, model, controls;
 let animationId;
 
 const loadModel = (stlUrl) => {
+    console.log("Loading STL from:", stlUrl);
     const loader = new STLLoader();
 
     loader.load(
         stlUrl,
         (geometry) => {
+            console.log("STL loaded successfully");
             // Remove old model if exists
             if (model) {
                 scene.remove(model);
@@ -119,10 +121,23 @@ onMounted(async () => {
             throw new Error("No beam URL provided");
         }
 
-        const jsonUrl = props.beamUrl + ".json";
+        console.log("ModelViewer fetching from:", props.beamUrl);
+
+        // Construct JSON URL - if URL ends with /beam_1, fetch /beam_1/beam_1.json
+        const beamName = props.beamUrl.split("/").pop();
+        const jsonUrl = props.beamUrl + "/" + beamName + ".json";
+
+        console.log("Fetching JSON from:", jsonUrl);
+
         const response = await fetch(jsonUrl);
-        if (!response.ok) throw new Error("Failed to fetch beam data");
+        if (!response.ok) {
+            throw new Error(
+                `Failed to fetch beam data: ${response.status} ${response.statusText}`,
+            );
+        }
         const beamData = await response.json();
+
+        console.log("Beam data loaded:", beamData);
 
         if (!beamData["3d_model"]) {
             throw new Error("No 3D model URL in beam data");

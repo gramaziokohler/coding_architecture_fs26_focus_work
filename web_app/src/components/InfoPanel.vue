@@ -18,14 +18,26 @@ onMounted(async () => {
             throw new Error("No beam URL provided");
         }
 
+        console.log("InfoPanel fetching from:", props.beamUrl);
+
         // Construct JSON URL from beam URL
-        const jsonUrl = props.beamUrl + ".json";
+        // If URL ends with /beam_1, fetch /beam_1/beam_1.json
+        const beamName = props.beamUrl.split("/").pop();
+        const jsonUrl = props.beamUrl + "/" + beamName + ".json";
+
+        console.log("Fetching JSON from:", jsonUrl);
 
         const response = await fetch(jsonUrl);
-        if (!response.ok) throw new Error("Failed to fetch beam data");
+        if (!response.ok) {
+            throw new Error(
+                `Failed to fetch beam data: ${response.status} ${response.statusText}`,
+            );
+        }
         beamData.value = await response.json();
+        console.log("Beam data loaded:", beamData.value);
     } catch (e) {
         error.value = e.message;
+        console.error("InfoPanel error:", e);
     } finally {
         loading.value = false;
     }

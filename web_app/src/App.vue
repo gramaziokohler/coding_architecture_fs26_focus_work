@@ -11,20 +11,28 @@ onMounted(() => {
     let beam = params.get("beam");
 
     if (beam) {
-        // Convert GitHub web URL to raw content URL if needed
-        beam = beam.replace(
-            "https://github.com/",
-            "https://raw.githubusercontent.com/",
-        );
-        beam = beam.replace("/blob/", "/");
+        console.log("Original URL:", beam);
 
-        // Remove .json extension if present
+        // Convert GitHub web URL to raw content URL if needed
+        if (beam.includes("github.com")) {
+            // Handle /tree/ format (folder view)
+            beam = beam.replace(
+                "https://github.com/",
+                "https://raw.githubusercontent.com/",
+            );
+            beam = beam.replace("/tree/", "/");
+
+            // Handle /blob/ format (file view)
+            beam = beam.replace("/blob/", "/");
+        }
+
+        // Remove .json extension if present (we'll add it back later)
         if (beam.endsWith(".json")) {
             beam = beam.replace(".json", "");
         }
 
         beamUrl.value = beam;
-        console.log("Beam URL:", beamUrl.value);
+        console.log("Processed Beam URL:", beamUrl.value);
     } else {
         // Default fallback
         beamUrl.value =
@@ -36,9 +44,9 @@ onMounted(() => {
 
 <template>
     <div class="app-container">
-        <InfoPanel :beam-url="beamUrl" />
+        <InfoPanel v-if="beamUrl" :beam-url="beamUrl" />
         <div class="viewer-container">
-            <ModelViewer :beam-url="beamUrl" />
+            <ModelViewer v-if="beamUrl" :beam-url="beamUrl" />
         </div>
     </div>
 </template>
