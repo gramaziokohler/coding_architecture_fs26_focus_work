@@ -12,10 +12,10 @@ def get_stats(timber_model, wood_density=500):
 
 
     length = [b.centerline.length for b in beams]
-    width = b.geometry.width
-    height = b.geometry.height
-    volume = length * width * height
-    weight = volume * wood_density
+    width = [b.geometry.width for b in beams]
+    height = [b.geometry.height for b in beams]
+    volume = [l * w * h for l, w, h in zip(length, width, height)]
+    weight = [v * wood_density for v in volume]
 
 
     stats_msg = "\n".join(
