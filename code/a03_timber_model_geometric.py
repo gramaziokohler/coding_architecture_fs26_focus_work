@@ -1,6 +1,6 @@
 from a03_rf_system import RFSystem
 from compas.datastructures import Mesh
-from compas.geometry import distance_point_point
+from compas.geometry import distance_point_point, Vector
 from compas_timber.connections import (
     LButtJoint,
     LMiterJoint,
@@ -39,6 +39,10 @@ class GeometricTimberModelCreator:
         max_distance_X: float = None,
         z_height_threshold: float = None,
         sampling_points: int = 20,
+        arch_plane_A=None,
+        arch_plane_B=None,
+        arch_split_axis: str = "x",
+        arch_align_axis: str = "z",
     ):
         self.rf_system = rf_system
         self.timber_model = TimberModel()
@@ -57,7 +61,46 @@ class GeometricTimberModelCreator:
         self.sampling_points = sampling_points
         self.joining_errors = []
         self._rules = []
+        self.arch_plane_A = arch_plane_A
+        self.arch_plane_B = arch_plane_B
+        self.arch_split_axis = arch_split_axis
+        self.arch_align_axis = arch_align_axis
 
+        self.arch_plane_A_normal = self._vector_from_rhino_plane_normal(arch_plane_A)
+        self.arch_plane_B_normal = self._vector_from_rhino_plane_normal(arch_plane_B)
+
+
+    def _arch_reference_vector_for_centerline(self, centerline):
+        """Choose the closest arch reference plane and return its normal vector."""
+
+        if self.arch_plane_A is None and self.arch_plane_B is None:
+            return None
+
+        midpoint = centerline.midpoint
+
+        distance_A = None
+        distance_B = None
+
+        if self.arch_plane_A is not None:
+            distance_A = self._distance_point_to_rhino_plane(midpoint, self.arch_plane_A)
+
+        if self.arch_plane_B is not None:
+            distance_B = self._distance_point_to_rhino_plane(midpoint, self.arch_plane_B)
+
+        if distance_A is not None and distance_B is not None:
+            if distance_A <= distance_B:
+                return self.arch_plane_A_normal
+            else:
+                return self.arch_plane_B_normal
+
+        if distance_A is not None:
+            return self.arch_plane_A_normal
+
+        if distance_B is not None:
+            return self.arch_plane_B_normal
+
+        return None
+        
     def create_timber_model(self, process_joinery: bool = True) -> TimberModel:
         """Main recipe for generating the model with geometric intersection detection."""
         print("=" * 60)
@@ -78,7 +121,31 @@ class GeometricTimberModelCreator:
         print("=" * 60)
 
         return self.timber_model
+    
+    @staticmethod
+    def _distance_point_to_rhino_plane(point, plane):
+        """Absolute distance from a COMPAS point to a Rhino plane."""
 
+        plane_origin = plane.Origin
+        plane_normal = plane.Normal
+
+        vx = point.x - plane_origin.X
+        vy = point.y - plane_origin.Y
+        vz = point.z - plane_origin.Z
+
+        nx = plane_normal.X
+        ny = plane_normal.Y
+        nz = plane_normal.Z
+
+        normal_length = (nx**2 + ny**2 + nz**2) ** 0.5
+
+        if normal_length < 0.001:
+            return None
+
+        signed_distance = (vx * nx + vy * ny + vz * nz) / normal_length
+
+        return abs(signed_distance)
+    
     @staticmethod
     def _upright_normal(centerline):
         """Project global Z onto the plane perpendicular to the beam — gives a vertical cross-section."""
@@ -97,7 +164,53 @@ class GeometricTimberModelCreator:
         if proj_len > 0.001:
             return Vector(px / proj_len, py / proj_len, pz / proj_len)
         return Vector(1, 0, 0)
+    
+    @staticmethod
+    def _vector_from_rhino_plane_normal(plane):
+        """Convert a Rhino.Geometry.Plane normal to a COMPAS Vector."""
+        if plane is None:
+            return None
 
+        n = plane.Normal
+        v = Vector(n.X, n.Y, n.Z)
+
+        if v.length < 0.001:
+            return None
+
+        v.unitize()
+        return v
+
+    @staticmethod
+    def _project_vector_perpendicular_to_centerline(centerline, reference_vector):
+        """Project a reference vector onto the plane perpendicular to the beam axis.
+
+        This gives a valid z_vector for Beam.from_centerline while keeping
+        all beams aligned to one shared reference direction.
+        """
+
+        if reference_vector is None:
+            return None
+
+        xaxis = Vector.from_start_end(centerline.start, centerline.end)
+
+        if xaxis.length < 0.001:
+            return reference_vector
+
+        xaxis.unitize()
+
+        projected = reference_vector - xaxis * reference_vector.dot(xaxis)
+
+        if projected.length < 0.001:
+            # Fallback if reference vector is almost parallel to the beam.
+            world_z = Vector(0, 0, 1)
+            projected = world_z - xaxis * world_z.dot(xaxis)
+
+        if projected.length < 0.001:
+            projected = Vector(1, 0, 0)
+
+        projected.unitize()
+        return projected
+    
     def _create_beams(self) -> None:
         """Convert every RF edge into a Beam."""
         mesh: Mesh = self.rf_system.mesh
@@ -124,6 +237,18 @@ class GeometricTimberModelCreator:
                 boundary_count += 1
             elif category == "arch":
                 w, h = self.arch_beam_width, self.arch_beam_height
+
+                reference_vector = self._arch_reference_vector_for_centerline(centerline)
+
+                if reference_vector is not None:
+                    normal = self._project_vector_perpendicular_to_centerline(
+                        centerline,
+                        reference_vector
+                    )
+                dA = self._distance_point_to_rhino_plane(centerline.midpoint, self.arch_plane_A) if self.arch_plane_A else None
+                dB = self._distance_point_to_rhino_plane(centerline.midpoint, self.arch_plane_B) if self.arch_plane_B else None
+                print(f"ARCH edge {edge}: distance to plane A={dA}, distance to plane B={dB}")                
+
                 boundary_count += 1
             else:
                 w, h = self.inner_beam_width, self.inner_beam_height
