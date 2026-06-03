@@ -3,7 +3,7 @@ from compas.geometry import Transformation
 from compas_rhino.conversions import point_to_compas
 
 
-def get_general_stats(timber_model, wood_density=500):
+def get_stats(timber_model, wood_density=500):
     """
     Erstellt allgemeine Statistiken über das Timber-Modell.
     wood_density: Dichte in kg/m3 (Standard ca. 500 für Nadelholz)
