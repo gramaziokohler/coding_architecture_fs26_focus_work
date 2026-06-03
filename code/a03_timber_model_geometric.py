@@ -330,6 +330,7 @@ class GeometricTimberModelCreator:
                         cat_b = beam_b.attributes.get("category", "inner")
                         if {cat_a, cat_b} != category_filter:
                             continue
+                        processed_pairs.add(pair)
 
                     result = solver.find_topology(beam_a, beam_b, max_distance=max_dist)
                     topology = result.topology
