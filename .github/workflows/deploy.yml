@@ -1,0 +1,42 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [ "main" ] # Triggers on push to main
+
+# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps: deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-cache: 'npm' # change to yarn or pnpm if needed
+
+      - name: Install dependencies & Build
+        run: |
+          cd web_app
+          npm install
+          npm run build # Ensure this creates the ./web_app/dist folder
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          # This is the magic line that points to your build folder!
+          path: ./web_app/
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
