@@ -16,6 +16,8 @@ onMounted(() => {
         // Convert GitHub web URL to raw content URL if needed
         if (beam.includes("github.com")) {
             // Handle /tree/ format (folder view)
+            // Convert: https://github.com/user/repo/tree/branch/path
+            // To: https://raw.githubusercontent.com/user/repo/branch/path
             beam = beam.replace(
                 "https://github.com/",
                 "https://raw.githubusercontent.com/",
