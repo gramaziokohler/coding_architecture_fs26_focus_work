@@ -231,3 +231,340 @@ def get_packing_stats(stocks, stock_length, price_per_meter=5.00, currency="CHF"
 
     # Rückgabe als String für Text Panel
     return msg
+
+# ==============================================================================
+# GROUPED PACKING BY CROSS SECTION / QUERSCHNITT
+# ==============================================================================
+
+def get_beam_cross_section(beam, precision=4):
+    """
+    Reads the beam cross-section and returns it as a tuple:
+    (width, height)
+
+    Example:
+        (0.06, 0.08)
+        (0.12, 0.14)
+
+    The rounding avoids floating point issues like 0.06000000001.
+    """
+
+    width = None
+    height = None
+
+    if hasattr(beam, "width"):
+        width = beam.width
+
+    if hasattr(beam, "height"):
+        height = beam.height
+
+    if width is None or height is None:
+        if hasattr(beam, "__dict__"):
+            data = beam.__dict__
+
+            possible_width_names = [
+                "width",
+                "beam_width",
+                "section_width",
+                "cross_section_width",
+                "b",
+            ]
+
+            possible_height_names = [
+                "height",
+                "beam_height",
+                "section_height",
+                "cross_section_height",
+                "h",
+            ]
+
+            if width is None:
+                for name in possible_width_names:
+                    if name in data:
+                        width = data[name]
+                        break
+
+            if height is None:
+                for name in possible_height_names:
+                    if name in data:
+                        height = data[name]
+                        break
+
+    if width is None or height is None:
+        return ("unknown", "unknown")
+
+    return (round(float(width), precision), round(float(height), precision))
+
+
+class BeamSubsetModel(object):
+    """
+    Small wrapper so that solve_bin_packing() can receive only
+    a subset of beams while still behaving like a timber_model.
+    """
+
+    def __init__(self, beams):
+        self.beams = beams
+
+
+def group_beams_by_cross_section(timber_model):
+    """
+    Groups beams by their cross-section.
+
+    Returns:
+        dict:
+        {
+            (0.06, 0.08): [beam1, beam2, ...],
+            (0.12, 0.14): [beam3, beam4, ...]
+        }
+    """
+
+    groups = {}
+
+    for beam in timber_model.beams:
+        section = get_beam_cross_section(beam)
+
+        if section not in groups:
+            groups[section] = []
+
+        groups[section].append(beam)
+
+    return groups
+
+
+def solve_grouped_bin_packing(timber_model, stock_length, saw_kerf=0.0):
+    """
+    Runs bin packing separately for every cross-section / Querschnitt.
+
+    This prevents beams with different dimensions from being packed
+    into the same stock.
+    """
+
+    groups = group_beams_by_cross_section(timber_model)
+
+    grouped_stocks = {}
+
+    for section in sorted(groups.keys()):
+        beams = groups[section]
+        subset_model = BeamSubsetModel(beams)
+
+        stocks = solve_bin_packing(
+            subset_model,
+            stock_length,
+            saw_kerf
+        )
+
+        grouped_stocks[section] = stocks
+
+    return grouped_stocks
+
+
+def visualize_grouped_packing(
+    grouped_stocks,
+    origin,
+    stock_length,
+    beam_spacing=0.6,
+    beam_offset=0.2,
+    group_spacing=None
+):
+    """
+    Visualizes grouped packing.
+
+    Each cross-section group is displayed separately in Y direction.
+    """
+
+    from compas.geometry import Point
+
+    if group_spacing is None:
+        group_spacing = beam_spacing * 3.0
+
+    visual_stocks_all = []
+    visual_beams_all = []
+    section_labels = []
+    section_label_points = []
+
+    base_x = origin.x
+    base_y = origin.y
+    base_z = origin.z
+
+    y_offset = 0.0
+
+    for section in sorted(grouped_stocks.keys()):
+        stocks = grouped_stocks[section]
+
+        section_origin = Point(
+            base_x,
+            base_y + y_offset,
+            base_z
+        )
+
+        visual_stocks, visual_beams = visualize_packing(
+            stocks,
+            section_origin,
+            stock_length,
+            beam_spacing,
+            beam_offset
+        )
+
+        visual_stocks_all.extend(visual_stocks)
+        visual_beams_all.extend(visual_beams)
+
+        label = format_cross_section_label(section)
+        section_labels.append(label)
+
+        label_point = Point(
+            base_x,
+            base_y + y_offset - beam_spacing * 0.6,
+            base_z
+        )
+        section_label_points.append(label_point)
+
+        y_offset += len(stocks) * beam_spacing + group_spacing
+
+    return visual_stocks_all, visual_beams_all, section_labels, section_label_points
+
+
+def format_cross_section_label(section):
+    """
+    Formats cross-section label for Grasshopper display.
+    """
+
+    width, height = section
+
+    if width == "unknown" or height == "unknown":
+        return "Querschnitt unknown"
+
+    return "Querschnitt {:.2f} x {:.2f} m".format(width, height)
+
+
+def get_grouped_packing_stats(
+    grouped_stocks,
+    stock_length,
+    price_per_meter=5.00,
+    currency="CHF"
+):
+    """
+    Creates one packing report per cross-section and one total summary.
+    """
+
+    reports = []
+
+    total_stocks = 0
+    total_material = 0.0
+    total_waste = 0.0
+    total_cost = 0.0
+
+    for section in sorted(grouped_stocks.keys()):
+        stocks = grouped_stocks[section]
+
+        label = format_cross_section_label(section)
+
+        num_stocks = len(stocks)
+        material = num_stocks * stock_length
+        waste = sum(stock["remaining"] for stock in stocks)
+        cost = material * price_per_meter
+
+        total_stocks += num_stocks
+        total_material += material
+        total_waste += waste
+        total_cost += cost
+
+        efficiency = 0.0
+        if material > 0:
+            efficiency = ((material - waste) / material) * 100.0
+
+        report = "\n".join(
+            [
+                "--- PACKING REPORT: {} ---".format(label),
+                "Stock Length used: {:.2f} m".format(stock_length),
+                "Stocks needed:     {} pcs".format(num_stocks),
+                "Total Material:    {:.2f} m".format(material),
+                "Total Waste:       {:.2f} m".format(waste),
+                "Efficiency:        {:.1f}%".format(efficiency),
+                "Price/m:           {} {}".format(price_per_meter, currency),
+                "Estimated Cost:    {:.2f} {}".format(cost, currency),
+                "----------------------",
+            ]
+        )
+
+        reports.append(report)
+
+    total_efficiency = 0.0
+    if total_material > 0:
+        total_efficiency = ((total_material - total_waste) / total_material) * 100.0
+
+    total_report = "\n".join(
+        [
+            "--- TOTAL PACKING SUMMARY ---",
+            "Total Stocks needed: {} pcs".format(total_stocks),
+            "Total Material:      {:.2f} m".format(total_material),
+            "Total Waste:         {:.2f} m".format(total_waste),
+            "Total Efficiency:    {:.1f}%".format(total_efficiency),
+            "Total Cost:          {:.2f} {}".format(total_cost, currency),
+            "-----------------------------",
+        ]
+    )
+
+    reports.append(total_report)
+
+    msg = "\n\n".join(reports)
+    print(msg)
+
+    return msg
+
+
+def solve_and_visualize_grouped_packing(
+    timber_model,
+    origin,
+    stock_length,
+    saw_gap,
+    beam_spacing,
+    beam_offset,
+    price_lm,
+    currency="CHF"
+):
+    """
+    Main function for Grasshopper.
+
+    It does everything:
+    1. model stats
+    2. group beams by cross-section
+    3. bin packing per cross-section
+    4. visualization
+    5. packing statistics
+    """
+
+    from compas_rhino.conversions import point_to_compas
+
+    model_stats = get_general_stats(timber_model)
+
+    origin = point_to_compas(origin)
+
+    grouped_stocks = solve_grouped_bin_packing(
+        timber_model,
+        stock_length,
+        saw_gap
+    )
+
+    visual_stocks, visual_beams, section_labels, section_label_points = visualize_grouped_packing(
+        grouped_stocks,
+        origin,
+        stock_length,
+        beam_spacing,
+        beam_offset
+    )
+
+    packing_stats = get_grouped_packing_stats(
+        grouped_stocks,
+        stock_length,
+        price_lm,
+        currency
+    )
+
+    return (
+        model_stats,
+        packing_stats,
+        visual_stocks,
+        visual_beams,
+        section_labels,
+        section_label_points,
+        grouped_stocks
+    )
