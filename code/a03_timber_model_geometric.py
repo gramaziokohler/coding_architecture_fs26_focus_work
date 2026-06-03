@@ -2,6 +2,7 @@ from a03_rf_system import RFSystem
 from compas.datastructures import Mesh
 from compas.geometry import distance_point_point
 from compas_timber.connections import (
+    LButtJoint,
     LMiterJoint,
     TButtJoint,
     TBirdsmouthJoint,
@@ -235,6 +236,10 @@ class GeometricTimberModelCreator:
 
         if topology == JointTopology.TOPO_L:
             if cat_main in outer and cat_cross in outer:
+                if {cat_main, cat_cross} == {"arch", "base"}:
+                    base_b = main_beam if cat_main == "base" else cross_beam
+                    arch_b = cross_beam if cat_main == "base" else main_beam
+                    return LButtJoint, [arch_b, base_b]
                 return LMiterJoint, [main_beam, cross_beam]
             return None, None
 
