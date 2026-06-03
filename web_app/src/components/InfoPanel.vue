@@ -1,15 +1,27 @@
 <script setup>
 import { onMounted, ref } from "vue";
 
+const props = defineProps({
+    beamUrl: {
+        type: String,
+        default: "",
+    },
+});
+
 const beamData = ref(null);
 const loading = ref(true);
 const error = ref(null);
 
 onMounted(async () => {
     try {
-        const response = await fetch(
-            "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/web_app/web_data/beams/beam_1.json",
-        );
+        if (!props.beamUrl) {
+            throw new Error("No beam URL provided");
+        }
+
+        // Construct JSON URL from beam URL
+        const jsonUrl = props.beamUrl + ".json";
+
+        const response = await fetch(jsonUrl);
         if (!response.ok) throw new Error("Failed to fetch beam data");
         beamData.value = await response.json();
     } catch (e) {
@@ -31,15 +43,15 @@ onMounted(async () => {
                     <span class="label">ID</span>
                     <span class="value">{{ beamData.beam_id }}</span>
                 </li>
-                <li class="spec-item">
+                <li v-if="beamData.length" class="spec-item">
                     <span class="label">Length</span>
                     <span class="value">{{ beamData.length }} m</span>
                 </li>
-                <li class="spec-item">
+                <li v-if="beamData.width" class="spec-item">
                     <span class="label">Width</span>
                     <span class="value">{{ beamData.width }} m</span>
                 </li>
-                <li class="spec-item">
+                <li v-if="beamData.height" class="spec-item">
                     <span class="label">Height</span>
                     <span class="value">{{ beamData.height }} m</span>
                 </li>

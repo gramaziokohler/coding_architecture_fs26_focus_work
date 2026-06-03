@@ -1,81 +1,181 @@
 <script setup>
-import { onMounted, ref } from 'vue'
-import * as THREE from 'three'
+import { onMounted, ref, watch } from "vue";
+import * as THREE from "three";
+import { STLLoader } from "three/examples/jsm/loaders/STLLoader.js";
+import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 
-const containerRef = ref(null)
-let scene, camera, renderer
-let cube // Example 3D object
+const props = defineProps({
+    beamUrl: {
+        type: String,
+        default: "",
+    },
+});
 
-onMounted(() => {
-  // Scene setup
-  scene = new THREE.Scene()
-  scene.background = new THREE.Color(0x1a1a2e)
+const containerRef = ref(null);
+let scene, camera, renderer, model, controls;
+let animationId;
 
-  // Camera setup
-  const width = containerRef.value.clientWidth
-  const height = containerRef.value.clientHeight
-  camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000)
-  camera.position.z = 3
+const loadModel = (stlUrl) => {
+    const loader = new STLLoader();
 
-  // Renderer setup
-  renderer = new THREE.WebGLRenderer({ antialias: true })
-  renderer.setSize(width, height)
-  renderer.setPixelRatio(window.devicePixelRatio)
-  containerRef.value.appendChild(renderer.domElement)
+    loader.load(
+        stlUrl,
+        (geometry) => {
+            // Remove old model if exists
+            if (model) {
+                scene.remove(model);
+            }
 
-  // Create a simple cube as example
-  const geometry = new THREE.BoxGeometry()
-  const material = new THREE.MeshPhongMaterial({ color: 0xc084fc })
-  cube = new THREE.Mesh(geometry, material)
-  scene.add(cube)
+            // Create beige/wood material
+            const material = new THREE.MeshPhongMaterial({
+                color: 0xd4b896, // Beige wood color
+                shininess: 30,
+                side: THREE.DoubleSide,
+            });
 
-  // Add lighting
-  const light = new THREE.DirectionalLight(0xffffff, 1)
-  light.position.set(5, 5, 5)
-  scene.add(light)
+            // Create mesh from geometry
+            model = new THREE.Mesh(geometry, material);
+            model.castShadow = true;
+            model.receiveShadow = true;
 
-  const ambientLight = new THREE.AmbientLight(0xffffff, 0.5)
-  scene.add(ambientLight)
+            scene.add(model);
 
-  // Animation loop
-  const animate = () => {
-    requestAnimationFrame(animate)
-    cube.rotation.x += 0.01
-    cube.rotation.y += 0.01
-    renderer.render(scene, camera)
-  }
-  animate()
+            // Center and scale model
+            geometry.computeBoundingBox();
+            const center = new THREE.Vector3();
+            geometry.boundingBox.getCenter(center);
+            geometry.translate(-center.x, -center.y, -center.z);
 
-  // Handle window resize
-  const handleResize = () => {
-    const newWidth = containerRef.value.clientWidth
-    const newHeight = containerRef.value.clientHeight
-    camera.aspect = newWidth / newHeight
-    camera.updateProjectionMatrix()
-    renderer.setSize(newWidth, newHeight)
-  }
+            const size = new THREE.Vector3();
+            geometry.boundingBox.getSize(size);
+            const maxDim = Math.max(size.x, size.y, size.z);
+            const scale = 2 / maxDim;
 
-  window.addEventListener('resize', handleResize)
+            model.scale.multiplyScalar(scale);
 
-  return () => {
-    window.removeEventListener('resize', handleResize)
-    renderer.dispose()
-  }
-})
+            // Update controls target to center of model
+            controls.target.set(0, 0, 0);
+            controls.update();
+        },
+        (progress) => {
+            console.log(
+                "Loading model...",
+                ((progress.loaded / progress.total) * 100).toFixed(2) + "%",
+            );
+        },
+        (error) => {
+            console.error("Error loading STL model:", error);
+        },
+    );
+};
+
+onMounted(async () => {
+    // Scene setup
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xffffff);
+
+    // Camera setup (Z-up coordinate system)
+    const width = containerRef.value.clientWidth;
+    const height = containerRef.value.clientHeight;
+    camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
+    camera.position.set(3, 3, 2);
+    camera.up.set(0, 0, 1);
+
+    // Renderer setup
+    renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(width, height);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.shadowMap.enabled = true;
+    containerRef.value.appendChild(renderer.domElement);
+
+    // OrbitControls setup
+    controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.autoRotate = true;
+    controls.autoRotateSpeed = 4;
+    controls.enableZoom = true;
+    controls.enablePan = true;
+    controls.target.set(0, 0, 0);
+
+    // Add lighting - optimized for white background and wooden beam
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 1.2);
+    directionalLight.position.set(5, 8, 5);
+    directionalLight.castShadow = true;
+    directionalLight.shadow.mapSize.width = 2048;
+    directionalLight.shadow.mapSize.height = 2048;
+    scene.add(directionalLight);
+
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+    scene.add(ambientLight);
+
+    const fillLight = new THREE.DirectionalLight(0xffffff, 0.4);
+    fillLight.position.set(-5, 3, -5);
+    scene.add(fillLight);
+
+    // Fetch beam JSON and load model
+    try {
+        if (!props.beamUrl) {
+            throw new Error("No beam URL provided");
+        }
+
+        const jsonUrl = props.beamUrl + ".json";
+        const response = await fetch(jsonUrl);
+        if (!response.ok) throw new Error("Failed to fetch beam data");
+        const beamData = await response.json();
+
+        if (!beamData["3d_model"]) {
+            throw new Error("No 3D model URL in beam data");
+        }
+
+        loadModel(beamData["3d_model"]);
+    } catch (error) {
+        console.error("Error loading beam:", error);
+    }
+
+    // Animation loop
+    const animate = () => {
+        animationId = requestAnimationFrame(animate);
+
+        controls.update();
+
+        renderer.render(scene, camera);
+    };
+    animate();
+
+    // Handle window resize
+    const handleResize = () => {
+        const newWidth = containerRef.value.clientWidth;
+        const newHeight = containerRef.value.clientHeight;
+        camera.aspect = newWidth / newHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(newWidth, newHeight);
+    };
+
+    window.addEventListener("resize", handleResize);
+
+    return () => {
+        window.removeEventListener("resize", handleResize);
+        cancelAnimationFrame(animationId);
+        controls.dispose();
+        renderer.dispose();
+    };
+});
 </script>
 
 <template>
-  <div ref="containerRef" class="model-viewer"></div>
+    <div ref="containerRef" class="model-viewer"></div>
 </template>
 
 <style scoped>
 .model-viewer {
-  width: 100%;
-  height: 100%;
-  position: relative;
+    width: 100%;
+    height: 100%;
+    position: relative;
 }
 
 :deep(canvas) {
-  display: block;
+    display: block;
+    touch-action: none;
 }
 </style>
