@@ -1,50 +1,117 @@
 <script setup>
-defineProps({
-  title: {
-    type: String,
-    default: '3D Model Viewer'
-  },
-  description: {
-    type: String,
-    default: 'Explore 3D models with our interactive viewer'
-  }
-})
+import { onMounted, ref } from "vue";
+
+const beamData = ref(null);
+const loading = ref(true);
+const error = ref(null);
+
+onMounted(async () => {
+    try {
+        const response = await fetch(
+            "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/web_app/web_data/beams/beam_1.json",
+        );
+        if (!response.ok) throw new Error("Failed to fetch beam data");
+        beamData.value = await response.json();
+    } catch (e) {
+        error.value = e.message;
+    } finally {
+        loading.value = false;
+    }
+});
 </script>
 
 <template>
-  <div class="info-panel">
-    <h1>{{ title }}</h1>
-    <p>{{ description }}</p>
-  </div>
+    <div class="info-panel">
+        <div v-if="loading" class="status">Loading...</div>
+        <div v-else-if="error" class="error">Error: {{ error }}</div>
+        <div v-else-if="beamData" class="beam-info">
+            <h2>{{ beamData.name }}</h2>
+            <ul class="specs-list">
+                <li class="spec-item">
+                    <span class="label">ID</span>
+                    <span class="value">{{ beamData.beam_id }}</span>
+                </li>
+                <li class="spec-item">
+                    <span class="label">Length</span>
+                    <span class="value">{{ beamData.length }} m</span>
+                </li>
+                <li class="spec-item">
+                    <span class="label">Width</span>
+                    <span class="value">{{ beamData.width }} m</span>
+                </li>
+                <li class="spec-item">
+                    <span class="label">Height</span>
+                    <span class="value">{{ beamData.height }} m</span>
+                </li>
+            </ul>
+        </div>
+    </div>
 </template>
 
 <style scoped>
 .info-panel {
-  padding: 32px;
-  background: var(--bg);
-  border-bottom: 1px solid var(--border);
-  text-align: center;
-
-  @media (max-width: 1024px) {
-    padding: 24px 20px;
-  }
+    padding: 12px 16px;
+    background: #fff;
+    border-bottom: 1px solid #000;
 }
 
-h1 {
-  margin: 0 0 16px 0;
-  font-size: 48px;
-  color: var(--text-h);
-
-  @media (max-width: 1024px) {
-    font-size: 32px;
-  }
+h2 {
+    margin: 0 0 8px 0;
+    font-size: 18px;
+    color: #000;
+    line-height: 1.2;
+    font-weight: 600;
 }
 
-p {
-  margin: 0;
-  font-size: 18px;
-  color: var(--text);
-  max-width: 600px;
-  margin: 0 auto;
+.status,
+.error {
+    font-size: 13px;
+    color: #666;
+    padding: 4px 0;
+}
+
+.error {
+    color: #000;
+}
+
+.beam-info {
+    width: 100%;
+}
+
+.specs-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.spec-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    padding: 8px 0;
+    border-bottom: 1px solid #e0e0e0;
+    font-size: 13px;
+}
+
+.spec-item:last-child {
+    border-bottom: none;
+}
+
+.label {
+    color: #666;
+    font-weight: 400;
+    flex: 0 0 auto;
+}
+
+.value {
+    color: #000;
+    font-family: monospace;
+    font-weight: 500;
+    text-align: right;
+    flex: 0 0 auto;
 }
 </style>

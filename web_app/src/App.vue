@@ -5,10 +5,7 @@ import ModelViewer from "./components/ModelViewer.vue";
 
 <template>
     <div class="app-container">
-        <InfoPanel
-            title="3D Model Viewer"
-            description="Explore 3D models with our interactive viewer. Use your mouse to rotate and interact with the scene."
-        />
+        <InfoPanel />
         <div class="viewer-container">
             <ModelViewer />
         </div>
