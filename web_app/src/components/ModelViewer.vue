@@ -16,13 +16,36 @@ let scene, camera, renderer, model, controls;
 let animationId;
 
 const loadModel = (stlUrl) => {
-    console.log("Loading STL from:", stlUrl);
-    const loader = new STLLoader();
+    console.log("🔍 Loading STL from:", stlUrl);
 
-    loader.load(
-        stlUrl,
-        (geometry) => {
-            console.log("STL loaded successfully");
+    // Fetch the file first to handle CORS
+    fetch(stlUrl, {
+        mode: "cors",
+        headers: {
+            Accept: "*/*",
+        },
+    })
+        .then((response) => {
+            console.log("📥 Fetch response status:", response.status);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.arrayBuffer();
+        })
+        .then((arrayBuffer) => {
+            console.log(
+                "✅ STL file fetched, size:",
+                arrayBuffer.byteLength,
+                "bytes",
+            );
+
+            const geometry = STLLoader.prototype.parse(arrayBuffer);
+
+            console.log(
+                "✅ STL parsed successfully, geometry vertices:",
+                geometry.attributes.position.count,
+            );
+
             // Remove old model if exists
             if (model) {
                 scene.remove(model);
@@ -30,7 +53,7 @@ const loadModel = (stlUrl) => {
 
             // Create beige/wood material
             const material = new THREE.MeshPhongMaterial({
-                color: 0xd4b896, // Beige wood color
+                color: 0xd4b896,
                 shininess: 30,
                 side: THREE.DoubleSide,
             });
@@ -41,6 +64,7 @@ const loadModel = (stlUrl) => {
             model.receiveShadow = true;
 
             scene.add(model);
+            console.log("✅ Model added to scene");
 
             // Center and scale model
             geometry.computeBoundingBox();
@@ -54,24 +78,22 @@ const loadModel = (stlUrl) => {
             const scale = 2 / maxDim;
 
             model.scale.multiplyScalar(scale);
+            console.log("✅ Model centered and scaled");
 
             // Update controls target to center of model
             controls.target.set(0, 0, 0);
             controls.update();
-        },
-        (progress) => {
-            console.log(
-                "Loading model...",
-                ((progress.loaded / progress.total) * 100).toFixed(2) + "%",
-            );
-        },
-        (error) => {
-            console.error("Error loading STL model:", error);
-        },
-    );
+            console.log("✅ Controls updated");
+        })
+        .catch((error) => {
+            console.error("❌ Error loading STL model:", error);
+            console.error("Error message:", error.message);
+        });
 };
 
 onMounted(async () => {
+    console.log("🚀 ModelViewer mounting...");
+
     // Scene setup
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0xffffff);
@@ -100,7 +122,7 @@ onMounted(async () => {
     controls.enablePan = true;
     controls.target.set(0, 0, 0);
 
-    // Add lighting - optimized for white background and wooden beam
+    // Add lighting
     const directionalLight = new THREE.DirectionalLight(0xffffff, 1.2);
     directionalLight.position.set(5, 8, 5);
     directionalLight.castShadow = true;
@@ -121,13 +143,13 @@ onMounted(async () => {
             throw new Error("No beam URL provided");
         }
 
-        console.log("ModelViewer fetching from:", props.beamUrl);
+        console.log("📍 Beam URL:", props.beamUrl);
 
-        // Construct JSON URL - if URL ends with /beam_1, fetch /beam_1/beam_1.json
+        // Construct JSON URL
         const beamName = props.beamUrl.split("/").pop();
         const jsonUrl = props.beamUrl + "/" + beamName + ".json";
 
-        console.log("Fetching JSON from:", jsonUrl);
+        console.log("🔗 Fetching JSON from:", jsonUrl);
 
         const response = await fetch(jsonUrl);
         if (!response.ok) {
@@ -137,23 +159,22 @@ onMounted(async () => {
         }
         const beamData = await response.json();
 
-        console.log("Beam data loaded:", beamData);
+        console.log("📦 Beam data loaded:", beamData);
 
         if (!beamData["3d_model"]) {
             throw new Error("No 3D model URL in beam data");
         }
 
+        console.log("🎯 3D Model URL from JSON:", beamData["3d_model"]);
         loadModel(beamData["3d_model"]);
     } catch (error) {
-        console.error("Error loading beam:", error);
+        console.error("❌ Error loading beam:", error);
     }
 
     // Animation loop
     const animate = () => {
         animationId = requestAnimationFrame(animate);
-
         controls.update();
-
         renderer.render(scene, camera);
     };
     animate();
