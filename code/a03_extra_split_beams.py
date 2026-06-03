@@ -39,6 +39,41 @@ def _add_support_marker(beam, point, end_key):
     beam.attributes[end_key] = True
 
 
+def mark_support_points_on_beams(model, support_points, tolerance=0.01):
+    """Store support points on beams whose centerline contains the points.
+
+    This does not split timber beams and does not alter joints. It only marks
+    points for later structural/Tekton processing, where structural segments can
+    be split at these locations and supports assigned to the generated nodes.
+    """
+    compas_points = [_to_compas_point(point) for point in support_points or []]
+
+    for beam in model.beams:
+        centerline = beam.centerline
+        marked_points = list(beam.attributes.get("support_points", []))
+
+        for point in compas_points:
+            if distance_point_line(point, (centerline.start, centerline.end)) > tolerance:
+                continue
+
+            projected = Point(*closest_point_on_segment(point, centerline))
+            distance_from_start = distance_point_point(centerline.start, projected)
+            distance_from_end = beam.length - distance_from_start
+
+            if distance_from_start <= tolerance or distance_from_end <= tolerance:
+                continue
+
+            point_data = _point_data(projected)
+            if point_data not in marked_points:
+                marked_points.append(point_data)
+
+        if marked_points:
+            beam.attributes["has_support_points"] = True
+            beam.attributes["support_points"] = marked_points
+
+    return model
+
+
 def _deduplicate_points_on_line(points_with_distances, tolerance):
     deduplicated = []
     for distance, point in sorted(points_with_distances, key=lambda item: item[0]):
