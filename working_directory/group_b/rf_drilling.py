@@ -1,4 +1,4 @@
-from compas.geometry import Point, Vector, Line, intersection_line_line
+from compas.geometry import Frame, Point, Vector, Line, intersection_line_line
 from compas_timber.fabrication import Drilling
 from compas_timber.connections import (
     LMiterJoint,
@@ -26,8 +26,8 @@ class DrillingProcessor:
         """
         print("--- Starting Drilling Generation ---")
         
-        # Access joints gracefully (handles slight differences in API versions)
-        # joints = getattr(self.timber_model, 'joints', None) or getattr(self.timber_model, 'interactions', [])
+        # FIXED: Uncommented so 'joints' is actually defined!
+        joints = getattr(self.timber_model, 'joints', None) or getattr(self.timber_model, 'interactions', [])
         
         for joint in joints:
             self._apply_drilling_to_joint(joint)
@@ -65,10 +65,10 @@ class DrillingProcessor:
             (pt_a[1] + pt_b[1]) / 2.0,
             (pt_a[2] + pt_b[2]) / 2.0
         )
-        from compas.geometry import Frame, Point, Vector, intersection_line_line
-from compas_timber.fabrication import Drilling
+        
+        # FIXED: Removed the mid-script imports and copy-paste comments. 
+        # (Frame is now properly imported at the top of the file).
 
-# ... [previous setup code remains the same] ...
         # 4. Calculate Screw Direction (Z-axis of the drill)
         dir_a = line_a.direction
         dir_b = line_b.direction
@@ -108,3 +108,5 @@ from compas_timber.fabrication import Drilling
         elif hasattr(beam_a, 'add_feature'):
             beam_a.add_feature(drilling_feature)
             beam_b.add_feature(drilling_feature)
+            
+        self.drilling_count += 1
