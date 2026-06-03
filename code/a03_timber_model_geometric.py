@@ -36,6 +36,7 @@ class GeometricTimberModelCreator:
         max_distance: float = None,
         max_distance_L: float = None,
         max_distance_T: float = None,
+        max_distance_T_arch_base: float = None,
         max_distance_X: float = None,
         z_height_threshold: float = None,
         sampling_points: int = 20,
@@ -52,6 +53,7 @@ class GeometricTimberModelCreator:
         base_dist = max_distance if max_distance is not None else self.beam_radius
         self.max_distance_L = max_distance_L if max_distance_L is not None else base_dist
         self.max_distance_T = max_distance_T if max_distance_T is not None else base_dist
+        self.max_distance_T_arch_base = max_distance_T_arch_base if max_distance_T_arch_base is not None else self.max_distance_T
         self.max_distance_X = max_distance_X if max_distance_X is not None else base_dist
         self.z_height_threshold = z_height_threshold
         self.sampling_points = sampling_points
@@ -164,15 +166,15 @@ class GeometricTimberModelCreator:
 
     def _find_intersections_with_topology(self) -> None:
         """
-        Three-pass topology detection — each pass uses its own max_distance.
-        Pass order: L → T → X.  A beam pair is only processed in the first pass
-        that finds a non-UNKNOWN topology for it, preventing duplicates.
+        Four-pass topology detection — each pass uses its own max_distance.
+        Pass order: L → T(arch+base) → T → X.  A beam pair is only processed in
+        the first pass that finds a non-UNKNOWN topology for it, preventing duplicates.
         """
         beams = list(self.timber_model.beams)
         solver = ConnectionSolver()
 
         print(f"\nChecking {len(beams)} beams for intersections...")
-        print(f"max_distance  L={self.max_distance_L:.3f}  T={self.max_distance_T:.3f}  X={self.max_distance_X:.3f}")
+        print(f"max_distance  L={self.max_distance_L:.3f}  T={self.max_distance_T:.3f}  T(arch+base)={self.max_distance_T_arch_base:.3f}  X={self.max_distance_X:.3f}")
 
         topology_counts = {
             JointTopology.TOPO_L: 0,
@@ -181,14 +183,15 @@ class GeometricTimberModelCreator:
         }
 
         passes = [
-            (JointTopology.TOPO_L, self.max_distance_L),
-            (JointTopology.TOPO_T, self.max_distance_T),
-            (JointTopology.TOPO_X, self.max_distance_X),
+            (JointTopology.TOPO_L,  self.max_distance_L,           None),
+            (JointTopology.TOPO_T,  self.max_distance_T_arch_base, {"arch", "base"}),
+            (JointTopology.TOPO_T,  self.max_distance_T,           None),
+            (JointTopology.TOPO_X,  self.max_distance_X,           None),
         ]
 
         processed_pairs = set()
 
-        for target_topo, max_dist in passes:
+        for target_topo, max_dist, category_filter in passes:
             for i, beam_a in enumerate(beams):
                 for j, beam_b in enumerate(beams):
                     if j <= i:
@@ -196,6 +199,12 @@ class GeometricTimberModelCreator:
                     pair = (i, j)
                     if pair in processed_pairs:
                         continue
+
+                    if category_filter is not None:
+                        cat_a = beam_a.attributes.get("category", "inner")
+                        cat_b = beam_b.attributes.get("category", "inner")
+                        if {cat_a, cat_b} != category_filter:
+                            continue
 
                     result = solver.find_topology(beam_a, beam_b, max_distance=max_dist)
                     topology = result.topology
@@ -239,7 +248,7 @@ class GeometricTimberModelCreator:
                 if {cat_main, cat_cross} == {"arch", "base"}:
                     base_b = main_beam if cat_main == "base" else cross_beam
                     arch_b = cross_beam if cat_main == "base" else main_beam
-                    return LButtJoint, [arch_b, base_b]
+                    return TBirdsmouthJoint, [arch_b, base_b]
                 return LMiterJoint, [main_beam, cross_beam]
             return None, None
 
@@ -248,6 +257,10 @@ class GeometricTimberModelCreator:
                 base_b  = main_beam  if cat_main == "base" else cross_beam
                 inner_b = cross_beam if cat_main == "base" else main_beam
                 return TBirdsmouthJoint, [inner_b, base_b]
+            if "base" in (cat_main, cat_cross) and "arch" in (cat_main, cat_cross):
+                base_b = main_beam if cat_main == "base" else cross_beam
+                arch_b = cross_beam if cat_main == "base" else main_beam
+                return TBirdsmouthJoint, [arch_b, base_b]
             return TButtJoint, [main_beam, cross_beam]
 
         elif topology == JointTopology.TOPO_X:
