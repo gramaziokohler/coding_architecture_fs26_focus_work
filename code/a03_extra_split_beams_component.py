@@ -1,9 +1,8 @@
-
 # venv: ca-fs26-focus-work
 
 from compas_rhino.devtools import DevTools
 DevTools.ensure_path()
-ghenv.Component.Message = "Timber Model (Geometric + Split Foundations)"
+ghenv.Component.Message = "Timber Model (Geometric + Support Points)"
 
 # -------------------- IMPORTS ---------------------
 
@@ -15,7 +14,7 @@ importlib.reload(a03_timber_model_geometric)
 importlib.reload(a03_extra_split_beams)
 
 from a03_timber_model_geometric import GeometricTimberModelCreator
-from a03_extra_split_beams import split_beams_at_points_with_i_joints
+from a03_extra_split_beams import mark_support_points_on_beams
 from a03_rf_system_hybrid import RFSystemHybrid
 
 # ------------------- DEFAULTS ---------------------
@@ -35,7 +34,7 @@ if 'z_height_threshold' not in dir():             z_height_threshold = None
 if 'arch_plane_A' not in dir():                   arch_plane_A = None
 if 'arch_plane_B' not in dir():                   arch_plane_B = None
 if 'arch_split_axis' not in dir():                arch_split_axis = "x"
-if 'split_tolerance' not in dir():                split_tolerance = 0.01
+if 'support_tolerance' not in dir():              support_tolerance = 0.01
 if 'rhino_points' not in dir():                   rhino_points = None
 
 # ---------------- RF SYSTEM WRAPPING --------------
@@ -97,39 +96,24 @@ creator = GeometricTimberModelCreator(
     arch_split_axis=arch_split_axis,
 )
 
-print("=" * 60)
-print("GEOMETRIC TIMBER MODEL CREATOR WITH FOUNDATION SPLIT")
-print("=" * 60)
-
-# 1. Nur Beams erzeugen.
-creator._create_beams()
-print("Generated {} beams before split".format(len(list(creator.timber_model.beams))))
-
-# 2. Foundation/Base-Beams splitten, bevor externe Joints erzeugt werden.
-if rhino_points:
-    split_beams_at_points_with_i_joints(
-        creator.timber_model,
-        rhino_points,
-        tolerance=float(split_tolerance),
-        remove_old_interactions=True,
-        mark_supports=True,
-    )
-    print("Generated {} beams after split".format(len(list(creator.timber_model.beams))))
-else:
-    print("No foundation split points provided.")
-
-# 3. Jetzt auf dem gesplitteten Modell Intersections/Joints erkennen.
-creator._find_intersections_with_topology()
-
-# 4. Regeln anwenden und optional Joinery schneiden.
-creator._apply_rules(process_joinery)
-
-timber_model = creator.timber_model
+timber_model = creator.create_timber_model(process_joinery)
 joining_errors = creator.joining_errors
 
-print("=" * 60)
-print("Model generation complete")
-print("=" * 60)
+# ---------------- SUPPORT ATTRIBUTES --------------
+
+if rhino_points:
+    mark_support_points_on_beams(
+        timber_model,
+        rhino_points,
+        tolerance=float(support_tolerance),
+    )
+    support_beams = [
+        beam for beam in timber_model.beams
+        if beam.attributes.get("support_points")
+    ]
+    print("Marked support points on {} beams.".format(len(support_beams)))
+else:
+    print("No support points provided.")
 
 # ------------------- OUTPUT GEOMETRY --------------
 
