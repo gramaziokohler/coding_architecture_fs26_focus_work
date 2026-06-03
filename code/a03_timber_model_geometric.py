@@ -331,8 +331,12 @@ class GeometricTimberModelCreator:
                         if {cat_a, cat_b} != category_filter:
                             continue
                         processed_pairs.add(pair)
+                        result = solver.find_topology(beam_a, beam_b, max_distance=max_dist)
+                        topo_name = JointTopology.get_name(result.topology) if result.topology != JointTopology.TOPO_UNKNOWN else "UNKNOWN"
+                        print(f"  [arch+base] pair({i},{j}) -> {topo_name}  (max_dist={max_dist:.3f})")
+                    else:
+                        result = solver.find_topology(beam_a, beam_b, max_distance=max_dist)
 
-                    result = solver.find_topology(beam_a, beam_b, max_distance=max_dist)
                     topology = result.topology
                     main_beam = result.beam_a
                     cross_beam = result.beam_b
