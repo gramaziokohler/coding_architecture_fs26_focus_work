@@ -156,7 +156,7 @@ h2 {
 }
 
 .label {
-    color: #666;
+    color: #3a28e0;
     font-weight: 400;
     text-transform: capitalize;
 }
