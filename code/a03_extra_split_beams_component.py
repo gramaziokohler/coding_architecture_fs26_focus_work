@@ -34,6 +34,8 @@ if 'z_height_threshold' not in dir():             z_height_threshold = None
 if 'arch_plane_A' not in dir():                   arch_plane_A = None
 if 'arch_plane_B' not in dir():                   arch_plane_B = None
 if 'arch_split_axis' not in dir():                arch_split_axis = "x"
+if 'tbutt_mill_depth' not in dir():               tbutt_mill_depth = 0.0
+if 'base_mill_depth' not in dir():                base_mill_depth = 0.0
 if 'support_tolerance' not in dir():              support_tolerance = 0.01
 if 'rhino_points' not in dir():                   rhino_points = None
 
@@ -94,6 +96,8 @@ creator = GeometricTimberModelCreator(
     arch_plane_A=arch_plane_A,
     arch_plane_B=arch_plane_B,
     arch_split_axis=arch_split_axis,
+    tbutt_mill_depth=float(tbutt_mill_depth),
+    base_mill_depth=float(base_mill_depth),
 )
 
 timber_model = creator.create_timber_model(process_joinery)
