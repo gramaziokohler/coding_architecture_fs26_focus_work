@@ -205,7 +205,7 @@ h2 {
 .joint-type {
     color: #666;
     font-weight: 500;
-    background: #f5f5f5;
+    background: #ff0000;
     padding: 2px 6px;
     border-radius: 3px;
     flex: 0 0 auto;
