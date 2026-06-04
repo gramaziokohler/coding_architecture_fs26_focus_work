@@ -21,7 +21,6 @@ onMounted(async () => {
         console.log("InfoPanel fetching from:", props.beamUrl);
 
         // Construct JSON URL from beam URL
-        // If URL ends with /beam_1, fetch /beam_1/beam_1.json
         const beamName = props.beamUrl.split("/").pop();
         const jsonUrl = props.beamUrl + "/" + beamName + ".json";
 
@@ -42,6 +41,23 @@ onMounted(async () => {
         loading.value = false;
     }
 });
+
+// Helper to check if value is an object
+const isObject = (value) => typeof value === "object" && value !== null;
+
+// Helper to check if value is an array
+const isArray = (value) => Array.isArray(value);
+
+// Helper to format complex values
+const formatValue = (value) => {
+    if (isArray(value)) {
+        return value.join(", ");
+    }
+    if (isObject(value)) {
+        return JSON.stringify(value);
+    }
+    return value;
+};
 </script>
 
 <template>
@@ -51,21 +67,34 @@ onMounted(async () => {
         <div v-else-if="beamData" class="beam-info">
             <h2>{{ beamData.name }}</h2>
             <ul class="specs-list">
-                <li class="spec-item">
-                    <span class="label">ID</span>
-                    <span class="value">{{ beamData.beam_id }}</span>
-                </li>
-                <li v-if="beamData.length" class="spec-item">
-                    <span class="label">Length</span>
-                    <span class="value">{{ beamData.length }} m</span>
-                </li>
-                <li v-if="beamData.width" class="spec-item">
-                    <span class="label">Width</span>
-                    <span class="value">{{ beamData.width }} m</span>
-                </li>
-                <li v-if="beamData.height" class="spec-item">
-                    <span class="label">Height</span>
-                    <span class="value">{{ beamData.height }} m</span>
+                <li
+                    v-for="(value, key) in beamData"
+                    :key="key"
+                    v-show="!['name', '3d_model'].includes(key)"
+                    class="spec-item"
+                >
+                    <!-- Joints - special list format -->
+                    <div v-if="key === 'joints'" class="joints-item">
+                        <span class="label">{{ key }}</span>
+                        <div class="joints-container">
+                            <div
+                                v-for="(items, jointType) in value"
+                                :key="jointType"
+                                class="joint-row"
+                            >
+                                <span class="joint-type">{{ jointType }}</span>
+                                <span class="joint-values">{{
+                                    items.length > 0 ? items.join(", ") : "—"
+                                }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Regular values -->
+                    <div v-else class="regular-item">
+                        <span class="label">{{ key }}</span>
+                        <span class="value">{{ formatValue(value) }}</span>
+                    </div>
                 </li>
             </ul>
         </div>
@@ -77,6 +106,8 @@ onMounted(async () => {
     padding: 12px 16px;
     background: #fff;
     border-bottom: 1px solid #000;
+    max-height: 40vh;
+    overflow-y: auto;
 }
 
 h2 {
@@ -113,9 +144,8 @@ h2 {
 
 .spec-item {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 16px;
+    flex-direction: column;
+    gap: 4px;
     padding: 8px 0;
     border-bottom: 1px solid #e0e0e0;
     font-size: 13px;
@@ -128,7 +158,15 @@ h2 {
 .label {
     color: #666;
     font-weight: 400;
-    flex: 0 0 auto;
+    text-transform: capitalize;
+}
+
+/* Regular items - same as before */
+.regular-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
 }
 
 .value {
@@ -136,6 +174,49 @@ h2 {
     font-family: monospace;
     font-weight: 500;
     text-align: right;
+    flex: 1;
+    word-break: break-word;
+}
+
+/* Joints specific styling */
+.joints-item {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.joints-container {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-left: 12px;
+    padding-left: 8px;
+    border-left: 2px solid #e0e0e0;
+}
+
+.joint-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    font-size: 12px;
+}
+
+.joint-type {
+    color: #666;
+    font-weight: 500;
+    background: #f5f5f5;
+    padding: 2px 6px;
+    border-radius: 3px;
     flex: 0 0 auto;
+}
+
+.joint-values {
+    color: #000;
+    font-family: monospace;
+    font-weight: 500;
+    text-align: right;
+    flex: 1;
+    word-break: break-word;
 }
 </style>
