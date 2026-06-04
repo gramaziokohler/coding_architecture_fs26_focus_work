@@ -160,7 +160,7 @@ h2 {
 .label {
     color: #666;
     font-weight: 400;
-    text-transform: capitalize;
+    text-transform: none;
 }
 
 /* Regular items - same as before */
