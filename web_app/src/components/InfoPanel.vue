@@ -212,7 +212,7 @@ h2 {
 }
 
 .joint-values {
-    color: #000;
+    color: rgb(201, 37, 201);
     font-family: monospace;
     font-weight: 500;
     text-align: right;
