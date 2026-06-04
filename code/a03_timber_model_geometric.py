@@ -44,6 +44,8 @@ class GeometricTimberModelCreator:
         arch_plane_B=None,
         arch_split_axis: str = "x",
         arch_align_axis: str = "z",
+        tbutt_mill_depth: float = 0.0,
+        base_mill_depth: float = 0.0,
     ):
         self.rf_system = rf_system
         self.timber_model = TimberModel()
@@ -70,6 +72,8 @@ class GeometricTimberModelCreator:
 
         self.arch_plane_A_normal = self._vector_from_rhino_plane_normal(arch_plane_A)
         self.arch_plane_B_normal = self._vector_from_rhino_plane_normal(arch_plane_B)
+        self.tbutt_mill_depth = tbutt_mill_depth
+        self.base_mill_depth = base_mill_depth
 
 
     def _arch_reference_vector_for_centerline(self, centerline):
@@ -229,7 +233,6 @@ class GeometricTimberModelCreator:
                 continue
 
             if normal is None:
-                from compas.geometry import Vector
                 normal = Vector(0, 0, 1)
 
             category = self._edge_category(edge)
@@ -247,6 +250,16 @@ class GeometricTimberModelCreator:
                         centerline,
                         reference_vector
                     )
+
+                # Rotate normal 90° around beam axis — cross product gives the perpendicular
+                # in the cross-section plane, effectively swapping width and height faces.
+                beam_axis = Vector.from_start_end(centerline.start, centerline.end)
+                beam_axis.unitize()
+                rotated = beam_axis.cross(normal)
+                if rotated.length > 0.001:
+                    rotated.unitize()
+                    normal = rotated
+
                 dA = self._distance_point_to_rhino_plane(centerline.midpoint, self.arch_plane_A) if self.arch_plane_A else None
                 dB = self._distance_point_to_rhino_plane(centerline.midpoint, self.arch_plane_B) if self.arch_plane_B else None
                 print(f"ARCH edge {edge}: distance to plane A={dA}, distance to plane B={dB}")                
@@ -359,7 +372,14 @@ class GeometricTimberModelCreator:
                     )
 
                     if joint_type and beam_order:
-                        rule = DirectRule(joint_type, beam_order, max_distance=max_dist)
+                        kwargs = {}
+                        if joint_type is TButtJoint:
+                            is_base_joint = "base" in (cat_main, cat_cross)
+                            if is_base_joint and self.base_mill_depth:
+                                kwargs["mill_depth"] = self.base_mill_depth
+                            elif not is_base_joint and self.tbutt_mill_depth:
+                                kwargs["mill_depth"] = self.tbutt_mill_depth
+                        rule = DirectRule(joint_type, beam_order, max_distance=max_dist, **kwargs)
                         self._rules.append(rule)
 
         print("Topology detection results:")
@@ -378,7 +398,7 @@ class GeometricTimberModelCreator:
                 if {cat_main, cat_cross} == {"arch", "base"}:
                     base_b = main_beam if cat_main == "base" else cross_beam
                     arch_b = cross_beam if cat_main == "base" else main_beam
-                    return TBirdsmouthJoint, [arch_b, base_b]
+                    return TButtJoint, [arch_b, base_b]
                 return LMiterJoint, [main_beam, cross_beam]
             return None, None
 
@@ -386,11 +406,11 @@ class GeometricTimberModelCreator:
             if "base" in (cat_main, cat_cross) and "inner" in (cat_main, cat_cross):
                 base_b  = main_beam  if cat_main == "base" else cross_beam
                 inner_b = cross_beam if cat_main == "base" else main_beam
-                return TBirdsmouthJoint, [inner_b, base_b]
+                return TButtJoint, [inner_b, base_b]
             if "base" in (cat_main, cat_cross) and "arch" in (cat_main, cat_cross):
                 base_b = main_beam if cat_main == "base" else cross_beam
                 arch_b = cross_beam if cat_main == "base" else main_beam
-                return TBirdsmouthJoint, [arch_b, base_b]
+                return TButtJoint, [arch_b, base_b]
             return TButtJoint, [main_beam, cross_beam]
 
         elif topology == JointTopology.TOPO_X:
