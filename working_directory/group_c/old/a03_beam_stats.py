@@ -3,6 +3,19 @@ from compas.geometry import Transformation
 from compas_rhino.conversions import point_to_compas
 
 
+def basic_arrange_beams(timber_model, origin, gap):
+    origin = point_to_compas(point)
+
+    frame = Frame(origin, [0, 1, 0], [0, 0, 1])
+    beam_grid = []
+    for i, beam in enumerate(timber_model.beams):
+        stock_beam = beam.geometry
+        trans = Transformation.from_frame_to_frame(beam.frame, frame)
+        stock_beam = stock_beam.transformed(trans)
+        beam_grid.append(stock_beam)
+        frame.point.x += gap
+
+
 def get_stats(timber_model, wood_density=500):
     """
     Erstellt allgemeine Statistiken über das Timber-Modell.
