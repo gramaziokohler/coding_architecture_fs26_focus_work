@@ -1,3 +1,5 @@
+website 
+
 <script setup>
 import { onMounted, ref } from "vue";
 
@@ -158,7 +160,7 @@ h2 {
 .label {
     color: #666;
     font-weight: 400;
-    text-transform: capitalize;
+    text-transform: none;
 }
 
 /* Regular items - same as before */
@@ -171,7 +173,7 @@ h2 {
 
 .value {
     color: #000;
-    font-family: monospace;
+    font-family: Helvetica Neue;
     font-weight: 500;
     text-align: right;
     flex: 1;
@@ -213,10 +215,11 @@ h2 {
 
 .joint-values {
     color: #000;
-    font-family: monospace;
+    font-family: Helvetica Neue;
     font-weight: 500;
     text-align: right;
     flex: 1;
     word-break: break-word;
 }
 </style>
+
