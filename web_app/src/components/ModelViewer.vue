@@ -53,7 +53,7 @@ const loadModel = (stlUrl) => {
 
             // Create beige/wood material
             const material = new THREE.MeshPhongMaterial({
-                color: 0xd4b896,
+                color: 0xf0dec5,
                 shininess: 80,
                 side: THREE.DoubleSide,
             });
