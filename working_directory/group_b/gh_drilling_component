@@ -1,0 +1,58 @@
+# venv: ca-fs26-focus-work
+
+from compas_rhino.devtools import DevTools
+DevTools.ensure_path()
+ghenv.Component.Message = "Drilling Processor"
+
+# -------------------- IMPORTS ---------------------
+from rf_drilling import DrillingProcessor
+import Rhino.Geometry as rg
+
+# ------------------- EXECUTION --------------------
+
+# Default outputs
+drilled_model = timber_model
+beams = []
+screws = [] # Output for the solid screw geometry
+geometry_errors = []
+
+if process_drillings and timber_model:
+    dia = screw_diameter if screw_diameter else 0.008
+    length = screw_length if screw_length else 0.120
+
+    processor = DrillingProcessor(timber_model, screw_diameter=dia, screw_length=length)
+    drilled_model = processor.process_drillings()
+    
+    # --- GENERATE RHINO GEOMETRY FOR SCREWS ---
+    radius = dia / 2.0
+    for compas_line in processor.screw_lines:
+        # 1. Convert compas points to Rhino points
+        start_pt = rg.Point3d(compas_line.start.x, compas_line.start.y, compas_line.start.z)
+        end_pt = rg.Point3d(compas_line.end.x, compas_line.end.y, compas_line.end.z)
+        
+        # 2. Define the normal vector of the screw
+        direction = end_pt - start_pt
+        
+        # 3. Create a Rhino Base Plane and Circle
+        base_plane = rg.Plane(start_pt, direction)
+        base_circle = rg.Circle(base_plane, radius)
+        
+        # 4. Extrude into a solid Cylinder and cast to a BREP
+        rhino_cylinder = rg.Cylinder(base_circle, direction.Length)
+        screws.append(rhino_cylinder.ToBrep(True, True)) 
+        
+    ghenv.Component.Message = f"Generated {processor.drilling_count} drillings"
+
+elif not process_drillings:
+    ghenv.Component.Message = "Drilling skipped"
+
+# --- OUTPUT TIMBER GEOMETRY ---
+if drilled_model:
+    for beam in drilled_model.beams:
+        try:
+            beams.append(beam.geometry)
+        except Exception as e:
+            geometry_errors.append(e)
+
+    if len(geometry_errors) > 0:
+        print(f"Failed to load {len(geometry_errors)} beam geometries.")
