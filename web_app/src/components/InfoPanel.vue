@@ -1,3 +1,5 @@
+website 
+
 <script setup>
 import { onMounted, ref } from "vue";
 
@@ -156,7 +158,7 @@ h2 {
 }
 
 .label {
-    color: #3a28e0;
+    color: #666;
     font-weight: 400;
     text-transform: capitalize;
 }
@@ -191,7 +193,7 @@ h2 {
     gap: 4px;
     margin-left: 12px;
     padding-left: 8px;
-    border-left: 2px solid #118a3f;
+    border-left: 2px solid #e0e0e0;
 }
 
 .joint-row {
@@ -205,14 +207,14 @@ h2 {
 .joint-type {
     color: #666;
     font-weight: 500;
-    background: #ff0000;
+    background: #f5f5f5;
     padding: 2px 6px;
     border-radius: 3px;
     flex: 0 0 auto;
 }
 
 .joint-values {
-    color: rgb(201, 37, 201);
+    color: #000;
     font-family: monospace;
     font-weight: 500;
     text-align: right;
@@ -220,3 +222,4 @@ h2 {
     word-break: break-word;
 }
 </style>
+
