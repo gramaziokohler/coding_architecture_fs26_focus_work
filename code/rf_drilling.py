@@ -21,6 +21,8 @@ class DrillingProcessor:
         self.screw_spacing = screw_spacing 
         self.drilling_count = 0
         self.screw_lines = []
+        self.failed_screw_info = []
+
         
         self.total_joints_by_type = {}
         self.screwed_joints_by_type = {}
@@ -31,7 +33,7 @@ class DrillingProcessor:
         self.total_joints_by_type = {}
         self.screwed_joints_by_type = {}
         self.drilling_count = 0
-        self.screw_lines = []
+        self.failed_screw_info = []
         self.summary_text = "" # ADDED: Initialize the summary text variable
         
         # Cleanup ghost drillings
@@ -91,6 +93,7 @@ class DrillingProcessor:
         return self.timber_model
     
     def _apply_butt_drilling(self, joint):
+        joint_type = type(joint).__name__
         """
         Geometrically isolates the abutting beam from the continuous beam 
         to ensure proper vector alignment for the screws.
@@ -154,9 +157,10 @@ class DrillingProcessor:
         screw_line_1 = Line(center_1, center_1 + dir_s * drill_len)
         screw_line_2 = Line(center_2, center_2 + dir_s * drill_len)
         
-        return self._generate_features([screw_line_1, screw_line_2], abut_beam, cont_beam)
+        return self._generate_features([screw_line_1, screw_line_2], abut_beam, cont_beam, joint_type)
 
     def _apply_lap_drilling(self, joint):
+        joint_type = type(joint).__name__
         elements = getattr(joint, 'elements', None)
         if not elements and hasattr(joint, 'main_beam'):
             elements = [joint.main_beam, getattr(joint, 'cross_beam')]
@@ -201,13 +205,11 @@ class DrillingProcessor:
         screw_line_2 = Line(center_2 + screw_dir * (-self.screw_length / 2.0), 
                             center_2 + screw_dir * (self.screw_length / 2.0))
         
-        return self._generate_features([screw_line_1, screw_line_2], beam_a, beam_b)
+        # Added joint_type argument here
+        return self._generate_features([screw_line_1, screw_line_2], beam_a, beam_b, joint_type)
 
-    def _generate_features(self, screw_lines, beam_1, beam_2):
-        """
-        Evaluates intersection mappings independently. If the BTLx logic rejects 
-        the end-grain side, the physical screw geometry is still passed to Grasshopper.
-        """
+    def _generate_features(self, screw_lines, beam_1, beam_2, joint_type): 
+        # Properly indented to belong to the DrillingProcessor class
         success = False
         
         for s_line in screw_lines:
@@ -228,5 +230,10 @@ class DrillingProcessor:
                 self.drilling_count += 1
                 self.screw_lines.append(s_line)
                 success = True
+            else:
+                self.failed_screw_info.append({
+                    "line": s_line,
+                    "type": joint_type
+                })
                 
         return success
