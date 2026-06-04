@@ -173,7 +173,7 @@ h2 {
 
 .value {
     color: #000;
-    font-family: monospace;
+    font-family: Helvetica Neue;
     font-weight: 500;
     text-align: right;
     flex: 1;
