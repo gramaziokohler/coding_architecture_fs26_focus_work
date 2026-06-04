@@ -256,22 +256,22 @@ class TimberModelCreator:
             if next_edge and next_is_boundary:
                 if next_beam:
                     self._rules.append(DirectRule(TButtJoint, [beam, next_beam], self.tolerance))
-                # if prev_beam:
-                #     self._rules.append(DirectRule(XLapJoint, [prev_beam, beam], self.tolerance))
+                if prev_beam:
+                    self._rules.append(DirectRule(XLapJoint, [prev_beam, beam], self.tolerance))
                 continue
 
             if prev_edge and prev_is_boundary:
                 if prev_beam:
                     self._rules.append(DirectRule(TButtJoint, [beam, prev_beam], self.tolerance))
-                # if next_beam:
-                #     self._rules.append(DirectRule(XLapJoint, [next_beam, beam], self.tolerance))
+                if next_beam:
+                    self._rules.append(DirectRule(XLapJoint, [next_beam, beam], self.tolerance))
                 continue
 
             # Interior-interior transitions: use lap joints on both sides.
-            # if next_beam:
-            #     self._rules.append(DirectRule(XLapJoint, [next_beam, beam], self.tolerance))
-            # if prev_beam:
-            #     self._rules.append(DirectRule(XLapJoint, [prev_beam, beam], self.tolerance))
+            if next_beam:
+                self._rules.append(DirectRule(XLapJoint, [next_beam, beam], self.tolerance))
+            if prev_beam:
+                self._rules.append(DirectRule(XLapJoint, [prev_beam, beam], self.tolerance))
         
         print(f"Created {len(self._rules)} direct joint rules from interior edges")
 
