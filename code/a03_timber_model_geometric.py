@@ -65,6 +65,8 @@ class GeometricTimberModelCreator:
         self.sampling_points = sampling_points
         self.joining_errors = []
         self._rules = []
+        self.trimmed_inner_beams = []
+        self._topology_records = []
         self.arch_plane_A = arch_plane_A
         self.arch_plane_B = arch_plane_B
         self.arch_split_axis = arch_split_axis
@@ -119,6 +121,9 @@ class GeometricTimberModelCreator:
 
         # Step 2: Find intersections and detect actual topology
         self._find_intersections_with_topology()
+
+        # Step 2b: Mark inner beams that will later be trimmed
+        self._mark_trimmed_inner_beam_candidates()
 
         # Step 3: Apply rules
         self._apply_rules(process_joinery)
@@ -310,6 +315,7 @@ class GeometricTimberModelCreator:
         """
         beams = list(self.timber_model.beams)
         solver = ConnectionSolver()
+        self._topology_records = []
 
         print(f"\nChecking {len(beams)} beams for intersections...")
         print(f"max_distance  L={self.max_distance_L:.3f}  T={self.max_distance_T:.3f}  T(arch+base)={self.max_distance_T_arch_base:.3f}  X={self.max_distance_X:.3f}")
@@ -371,6 +377,16 @@ class GeometricTimberModelCreator:
                         topology, main_beam, cross_beam, cat_main, cat_cross
                     )
 
+                    # Store topology/joint information for later beam classification.
+                    self._topology_records.append({
+                        "topology": topology,
+                        "joint_type": joint_type,
+                        "main_beam": main_beam,
+                        "cross_beam": cross_beam,
+                        "beam_order": beam_order,
+                        "max_distance": max_dist,
+                    })
+
                     if joint_type and beam_order:
                         kwargs = {}
                         if joint_type is TButtJoint:
@@ -424,6 +440,198 @@ class GeometricTimberModelCreator:
             return None, None
 
         return None, None
+
+    @staticmethod
+    def _beam_axis_point_at_end(beam, end_name):
+        """Return beam centerline start or end point."""
+        line = getattr(beam, "centerline", None)
+
+        if line is None:
+            edge = beam.attributes.get("edge")
+            return None
+
+        if end_name == "start":
+            return line.start
+        return line.end
+
+    @staticmethod
+    def _closest_points_between_segments(line_a, line_b):
+        """Return closest points and parameters on two finite line segments."""
+
+        from compas.geometry import Point
+
+        p1 = line_a.start
+        q1 = line_a.end
+        p2 = line_b.start
+        q2 = line_b.end
+
+        d1 = Vector.from_start_end(p1, q1)
+        d2 = Vector.from_start_end(p2, q2)
+        r = Vector.from_start_end(p2, p1)
+
+        a = d1.dot(d1)
+        e = d2.dot(d2)
+        f = d2.dot(r)
+
+        eps = 1e-9
+
+        if a <= eps and e <= eps:
+            return p1, p2, 0.0, 0.0
+
+        if a <= eps:
+            s = 0.0
+            t = max(0.0, min(1.0, f / e))
+        else:
+            c = d1.dot(r)
+
+            if e <= eps:
+                t = 0.0
+                s = max(0.0, min(1.0, -c / a))
+            else:
+                b = d1.dot(d2)
+                denom = a * e - b * b
+
+                if abs(denom) > eps:
+                    s = max(0.0, min(1.0, (b * f - c * e) / denom))
+                else:
+                    s = 0.0
+
+                tnom = b * s + f
+
+                if tnom < 0.0:
+                    t = 0.0
+                    s = max(0.0, min(1.0, -c / a))
+                elif tnom > e:
+                    t = 1.0
+                    s = max(0.0, min(1.0, (b - c) / a))
+                else:
+                    t = tnom / e
+
+        cp1 = Point(
+            p1.x + (q1.x - p1.x) * s,
+            p1.y + (q1.y - p1.y) * s,
+            p1.z + (q1.z - p1.z) * s,
+        )
+
+        cp2 = Point(
+            p2.x + (q2.x - p2.x) * t,
+            p2.y + (q2.y - p2.y) * t,
+            p2.z + (q2.z - p2.z) * t,
+        )
+
+        return cp1, cp2, s, t
+
+    def _mark_trimmed_inner_beam_candidates(self):
+        """Tag inner beams that have a TButt at one end and an open other end.
+
+        XLap joints are ignored for this classification.
+        """
+
+        self.trimmed_inner_beams = []
+
+        end_tol = max(
+            float(self.max_distance_L),
+            float(self.max_distance_T),
+            float(self.max_distance_T_arch_base),
+            float(self.max_distance_X),
+            float(self.beam_radius),
+        )
+
+        # Track only end joints.
+        # Structure:
+        # beam_id -> {"start": {"tbutt": 0, "other": 0}, "end": {"tbutt": 0, "other": 0}}
+        end_status = {}
+
+        for beam in self.timber_model.beams:
+            if beam.attributes.get("category") != "inner":
+                continue
+
+            end_status[id(beam)] = {
+                "start": {"tbutt": 0, "other": 0},
+                "end": {"tbutt": 0, "other": 0},
+            }
+
+        for record in self._topology_records:
+            joint_type = record.get("joint_type")
+            topology = record.get("topology")
+
+            # Ignore XLap completely for this step.
+            if topology == JointTopology.TOPO_X or joint_type is XLapJoint:
+                continue
+
+            if joint_type is None:
+                continue
+
+            beam_a = record.get("main_beam")
+            beam_b = record.get("cross_beam")
+
+            if beam_a is None or beam_b is None:
+                continue
+
+            line_a = getattr(beam_a, "centerline", None)
+            line_b = getattr(beam_b, "centerline", None)
+
+            if line_a is None or line_b is None:
+                continue
+
+            joint_a, joint_b, _, _ = self._closest_points_between_segments(line_a, line_b)
+
+            for beam, line, joint_point in (
+                (beam_a, line_a, joint_a),
+                (beam_b, line_b, joint_b),
+            ):
+                if id(beam) not in end_status:
+                    continue
+
+                d_start = distance_point_point(joint_point, line.start)
+                d_end = distance_point_point(joint_point, line.end)
+
+                end_name = None
+
+                if d_start <= end_tol and d_start <= d_end:
+                    end_name = "start"
+                elif d_end <= end_tol:
+                    end_name = "end"
+
+                if end_name is None:
+                    continue
+
+                if joint_type is TButtJoint:
+                    end_status[id(beam)][end_name]["tbutt"] += 1
+                else:
+                    end_status[id(beam)][end_name]["other"] += 1
+
+        for beam in self.timber_model.beams:
+            if beam.attributes.get("category") != "inner":
+                beam.attributes["trimmed_inner_candidate"] = False
+                continue
+
+            status = end_status.get(id(beam))
+            if not status:
+                beam.attributes["trimmed_inner_candidate"] = False
+                continue
+
+            start_has_tbutt = status["start"]["tbutt"] > 0
+            start_has_any = status["start"]["tbutt"] > 0 or status["start"]["other"] > 0
+
+            end_has_tbutt = status["end"]["tbutt"] > 0
+            end_has_any = status["end"]["tbutt"] > 0 or status["end"]["other"] > 0
+
+            candidate = (
+                (start_has_tbutt and not end_has_any) or
+                (end_has_tbutt and not start_has_any)
+            )
+
+            beam.attributes["trimmed_inner_candidate"] = candidate
+
+            if candidate:
+                self.trimmed_inner_beams.append(beam)
+
+        print(
+            "Detected {} trimmed inner beam candidates.".format(
+                len(self.trimmed_inner_beams)
+            )
+        )
 
     def _apply_rules(self, process_joinery: bool) -> None:
         """Apply the direct rules we created."""
