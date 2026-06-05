@@ -14,28 +14,21 @@ const beamData = ref(null);
 const loading = ref(true);
 const error = ref(null);
 
+// Chiavi da nascondere completamente
+const HIDDEN_KEYS = ["name", "3d_model", "local_frame", "global_position", "connected_beams"];
+
 onMounted(async () => {
     try {
         if (!props.beamUrl) {
             throw new Error("No beam URL provided");
         }
-
-        console.log("InfoPanel fetching from:", props.beamUrl);
-
-        // Construct JSON URL from beam URL
         const beamName = props.beamUrl.split("/").pop();
         const jsonUrl = props.beamUrl + "/" + beamName + ".json";
-
-        console.log("Fetching JSON from:", jsonUrl);
-
         const response = await fetch(jsonUrl);
         if (!response.ok) {
-            throw new Error(
-                `Failed to fetch beam data: ${response.status} ${response.statusText}`,
-            );
+            throw new Error(`Failed to fetch beam data: ${response.status} ${response.statusText}`);
         }
         beamData.value = await response.json();
-        console.log("Beam data loaded:", beamData.value);
     } catch (e) {
         error.value = e.message;
         console.error("InfoPanel error:", e);
@@ -44,21 +37,18 @@ onMounted(async () => {
     }
 });
 
-// Helper to check if value is an object
 const isObject = (value) => typeof value === "object" && value !== null;
-
-// Helper to check if value is an array
 const isArray = (value) => Array.isArray(value);
 
-// Helper to format complex values
 const formatValue = (value) => {
-    if (isArray(value)) {
-        return value.join(", ");
-    }
-    if (isObject(value)) {
-        return JSON.stringify(value);
-    }
+    if (isArray(value)) return value.join(", ");
+    if (isObject(value)) return JSON.stringify(value);
     return value;
+};
+
+// Formatta il nome della chiave: toglie underscore, capitalizza
+const formatLabel = (key) => {
+    return key.replace(/_/g, " ");
 };
 </script>
 
@@ -69,15 +59,17 @@ const formatValue = (value) => {
         <div v-else-if="beamData" class="beam-info">
             <h2>{{ beamData.name }}</h2>
             <ul class="specs-list">
+
+                <!-- Righe normali, escluse le chiavi nascoste -->
                 <li
                     v-for="(value, key) in beamData"
                     :key="key"
-                    v-show="!['name', '3d_model'].includes(key)"
+                    v-show="!HIDDEN_KEYS.includes(key)"
                     class="spec-item"
                 >
-                    <!-- Joints - special list format -->
+                    <!-- Joints -->
                     <div v-if="key === 'joints'" class="joints-item">
-                        <span class="label">{{ key }}</span>
+                        <span class="label">{{ formatLabel(key) }}</span>
                         <div class="joints-container">
                             <div
                                 v-for="(items, jointType) in value"
@@ -92,12 +84,24 @@ const formatValue = (value) => {
                         </div>
                     </div>
 
-                    <!-- Regular values -->
+                    <!-- Regular -->
                     <div v-else class="regular-item">
-                        <span class="label">{{ key }}</span>
+                        <span class="label">{{ formatLabel(key) }}</span>
                         <span class="value">{{ formatValue(value) }}</span>
                     </div>
                 </li>
+
+                <!-- Riga connected beams separata, in fondo -->
+                <li
+                    v-if="beamData.connected_beams && beamData.connected_beams.length > 0"
+                    class="spec-item"
+                >
+                    <div class="regular-item">
+                        <span class="label">connected beams</span>
+                        <span class="value">{{ beamData.connected_beams.join(", ") }}</span>
+                    </div>
+                </li>
+
             </ul>
         </div>
     </div>
@@ -127,13 +131,9 @@ h2 {
     padding: 4px 0;
 }
 
-.error {
-    color: #000;
-}
+.error { color: #000; }
 
-.beam-info {
-    width: 100%;
-}
+.beam-info { width: 100%; }
 
 .specs-list {
     list-style: none;
@@ -153,17 +153,13 @@ h2 {
     font-size: 13px;
 }
 
-.spec-item:last-child {
-    border-bottom: none;
-}
+.spec-item:last-child { border-bottom: none; }
 
 .label {
     color: #666;
     font-weight: 400;
-    text-transform: none;
 }
 
-/* Regular items - same as before */
 .regular-item {
     display: flex;
     justify-content: space-between;
@@ -180,7 +176,6 @@ h2 {
     word-break: break-word;
 }
 
-/* Joints specific styling */
 .joints-item {
     display: flex;
     flex-direction: column;
@@ -222,4 +217,3 @@ h2 {
     word-break: break-word;
 }
 </style>
-
