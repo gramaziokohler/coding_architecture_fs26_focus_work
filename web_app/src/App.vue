@@ -28,9 +28,7 @@ onMounted(() => {
 
 <template>
     <div class="app-container">
-        <div class="left-panel">
-            <InfoPanel v-if="beamUrl" :beam-url="beamUrl" />
-        </div>
+        <InfoPanel v-if="beamUrl" :beam-url="beamUrl" />
         <div class="viewer-container">
             <ModelViewer v-if="beamUrl" :beam-url="beamUrl" />
         </div>
@@ -58,23 +56,14 @@ body {
     width: 100%;
     height: 100vh;
     display: flex;
-    flex-direction: row;
-}
-
-.left-panel {
-    width: 380px;
-    min-width: 280px;
-    height: 100vh;
-    overflow-y: auto;
-    border-right: 1px solid #e0e0e0;
+    flex-direction: column;
     background: #fff;
-    flex-shrink: 0;
 }
 
 .viewer-container {
     flex: 1;
-    height: 100vh;
     overflow: hidden;
     background: #ffffff;
+    min-height: 0;
 }
 </style>
