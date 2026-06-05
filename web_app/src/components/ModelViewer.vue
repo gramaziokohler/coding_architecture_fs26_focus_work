@@ -56,6 +56,42 @@ const clearBeams = () => {
     toRemove.forEach((c) => scene.remove(c));
 };
 
+// ─── Clear axis arrows ────────────────────────────────────────────────
+const clearAxes = () => {
+    const toRemove = scene.children.filter((c) => c.userData.isAxis);
+    toRemove.forEach((c) => scene.remove(c));
+};
+
+// ─── Draw local frame axes ────────────────────────────────────────────
+const drawLocalFrame = (scale = 1) => {
+    clearAxes();
+    if (!currentBeamData?.local_frame) return;
+
+    const { x_axis, y_axis, z_axis } = currentBeamData.local_frame;
+
+    const o = new THREE.Vector3(0, 0, 0);
+
+    const axes = [
+        { dir: x_axis, color: 0xff4444 },
+        { dir: y_axis, color: 0x44ff44 },
+        { dir: z_axis, color: 0x4488ff },
+    ];
+
+    axes.forEach(({ dir, color }) => {
+        const direction = new THREE.Vector3(...dir).normalize();
+        const arrow = new THREE.ArrowHelper(
+            direction,
+            o,
+            scale,
+            color,
+            scale * 0.15,
+            scale * 0.08
+        );
+        arrow.userData.isAxis = true;
+        scene.add(arrow);
+    });
+};
+
 // ─── Center scene around loaded meshes ───────────────────────────────
 const centerScene = () => {
     const box = new THREE.Box3();
@@ -79,6 +115,7 @@ const centerScene = () => {
 // ─── Load single beam ─────────────────────────────────────────────────
 const loadSingleBeam = async () => {
     clearBeams();
+    clearAxes();
     const stlUrl = currentBeamData["3d_model"];
     const geo = await loadSTL(stlUrl);
     geo.computeBoundingBox();
@@ -94,11 +131,16 @@ const loadSingleBeam = async () => {
     scene.add(mesh);
     controls.target.set(0, 0, 0);
     controls.update();
+
+    // Draw local frame axes scaled to beam size
+    const axisScale = 1.2 * scale * Math.max(size.x, size.y, size.z) * 0.5;
+    drawLocalFrame(axisScale);
 };
 
 // ─── Load connected beams ─────────────────────────────────────────────
 const loadConnectedBeams = async () => {
     clearBeams();
+    clearAxes();
     const connectedIds = currentBeamData.connected_beams || [];
 
     try {
@@ -128,6 +170,7 @@ const loadConnectedBeams = async () => {
 // ─── Load full pavilion ───────────────────────────────────────────────
 const loadPavilion = async () => {
     clearBeams();
+    clearAxes();
     const currentId = currentBeamData["beam ID"];
 
     try {
@@ -164,6 +207,7 @@ const loadPavilion = async () => {
 const setMode = async (mode) => {
     viewMode.value = mode;
     isLoading.value = true;
+    clearAxes();
     try {
         if (mode === "single") await loadSingleBeam();
         else if (mode === "connected") await loadConnectedBeams();
@@ -313,6 +357,22 @@ onMounted(async () => {
             >Pavilion</button>
         </div>
 
+        <!-- Axis legend (solo in modalità single) -->
+        <div v-if="viewMode === 'single'" class="axis-legend">
+            <div class="axis-item">
+                <span class="axis-dot" style="background: #ff4444"></span>
+                <span>X</span>
+            </div>
+            <div class="axis-item">
+                <span class="axis-dot" style="background: #44ff44"></span>
+                <span>Y</span>
+            </div>
+            <div class="axis-item">
+                <span class="axis-dot" style="background: #4488ff"></span>
+                <span>Z</span>
+            </div>
+        </div>
+
         <!-- Loading indicator -->
         <div v-if="isLoading" class="loading-overlay">
             <div class="loading-spinner"></div>
@@ -364,6 +424,37 @@ onMounted(async () => {
     background: #000;
     color: #fff;
     border-color: #000;
+}
+
+.axis-legend {
+    position: absolute;
+    bottom: 16px;
+    left: 16px;
+    z-index: 10;
+    background: rgba(255, 255, 255, 0.85);
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 6px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-family: "Helvetica Neue", sans-serif;
+    font-size: 11px;
+    color: #333;
+}
+
+.axis-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.axis-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+    flex-shrink: 0;
 }
 
 .gizmo-canvas {
