@@ -58,11 +58,12 @@ const clearAxes = () => {
     toRemove.forEach((c) => scene.remove(c));
 };
 
-const drawLocalFrame = (scale = 1, origin = new THREE.Vector3(0, 0, 0)) => {
+const drawLocalFrame = (scale = 1) => {
     clearAxes();
     if (!currentBeamData?.local_frame) return;
 
     const { x_axis, y_axis, z_axis } = currentBeamData.local_frame;
+    const o = new THREE.Vector3(0, 0, 0);
 
     const headLength = scale * 0.15;
     const headWidth = scale * 0.08;
@@ -78,7 +79,7 @@ const drawLocalFrame = (scale = 1, origin = new THREE.Vector3(0, 0, 0)) => {
         const arrowLength = scale * lengthMult;
         const arrow = new THREE.ArrowHelper(
             direction,
-            origin,
+            o,
             arrowLength,
             color,
             headLength,
@@ -89,122 +90,29 @@ const drawLocalFrame = (scale = 1, origin = new THREE.Vector3(0, 0, 0)) => {
     });
 };
 
-const initScene = () => {
-    scene = new THREE.Scene();
-    scene.background = new THREE.Color(0xfafafa);
-    scene.fog = new THREE.Fog(0xfafafa, 500, 1000);
-
-    camera = new THREE.PerspectiveCamera(
-        50,
-        containerRef.value.clientWidth / containerRef.value.clientHeight,
-        0.1,
-        10000
-    );
-
-    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
-    renderer.setPixelRatio(window.devicePixelRatio);
-    renderer.setSize(
-        containerRef.value.clientWidth,
-        containerRef.value.clientHeight
-    );
-    renderer.shadowMap.enabled = true;
-    containerRef.value.appendChild(renderer.domElement);
-
-    controls = new OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = true;
-    controls.dampingFactor = 0.05;
-    controls.autoRotate = false;
-
-    const ambLight = new THREE.AmbientLight(0xffffff, 0.8);
-    scene.add(ambLight);
-
-    const dirLight = new THREE.DirectionalLight(0xffffff, 0.6);
-    dirLight.position.set(50, 50, 50);
-    dirLight.castShadow = true;
-    dirLight.shadow.mapSize.width = 2048;
-    dirLight.shadow.mapSize.height = 2048;
-    scene.add(dirLight);
-
-    initGizmo();
-    animate();
-};
-
-const initGizmo = () => {
-    gizmoRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    gizmoRenderer.setPixelRatio(window.devicePixelRatio);
-    gizmoRenderer.setSize(80, 80);
-    gizmoRef.value.appendChild(gizmoRenderer.domElement);
-
-    gizmoScene = new THREE.Scene();
-    gizmoScene.background = null;
-
-    gizmoCamera = new THREE.PerspectiveCamera(50, 1, 0.1, 1000);
-    gizmoCamera.position.z = 2;
-
-    const ambLight = new THREE.AmbientLight(0xffffff, 1);
-    gizmoScene.add(ambLight);
-
-    drawGizmoAxes();
-};
-
-const drawGizmoAxes = () => {
-    gizmoScene.children = [];
-
-    if (!currentBeamData?.local_frame) {
-        const defaultX = new THREE.ArrowHelper(
-            new THREE.Vector3(1, 0, 0),
-            new THREE.Vector3(0, 0, 0),
-            1,
-            0xff4444,
-            0.3,
-            0.2
-        );
-        const defaultY = new THREE.ArrowHelper(
-            new THREE.Vector3(0, 1, 0),
-            new THREE.Vector3(0, 0, 0),
-            1,
-            0x44ff44,
-            0.3,
-            0.2
-        );
-        const defaultZ = new THREE.ArrowHelper(
-            new THREE.Vector3(0, 0, 1),
-            new THREE.Vector3(0, 0, 0),
-            1,
-            0x4488ff,
-            0.3,
-            0.2
-        );
-        gizmoScene.add(defaultX, defaultY, defaultZ);
-        return;
-    }
-
-    const { x_axis, y_axis, z_axis } = currentBeamData.local_frame;
-
-    const axes = [
-        { dir: x_axis, color: 0xff4444 },
-        { dir: y_axis, color: 0x44ff44 },
-        { dir: z_axis, color: 0x4488ff },
-    ];
-
-    axes.forEach(({ dir, color }) => {
-        const direction = new THREE.Vector3(...dir).normalize();
-        const arrow = new THREE.ArrowHelper(
-            direction,
-            new THREE.Vector3(0, 0, 0),
-            1,
-            color,
-            0.3,
-            0.2
-        );
-        gizmoScene.add(arrow);
-    });
+const centerScene = () => {
+    const box = new THREE.Box3();
+    scene.children
+        .filter((c) => c.userData.isBeam)
+        .forEach((c) => box.expandByObject(c));
+    if (box.isEmpty()) return;
+    const center = new THREE.Vector3();
+    box.getCenter(center);
+    scene.children
+        .filter((c) => c.userData.isBeam)
+        .forEach((c) => c.position.sub(center));
+    controls.target.set(0, 0, 0);
+    const size = new THREE.Vector3();
+    box.getSize(size);
+    const maxDim = Math.max(size.x, size.y, size.z);
+    camera.position.set(0, -maxDim * 2, maxDim * 0.8);
+    camera.lookAt(0, 0, 0);
+    controls.update();
 };
 
 const loadSingleBeam = async () => {
     clearBeams();
     clearAxes();
-    
     const stlUrl = currentBeamData["3d_model"];
     const geo = await loadSTL(stlUrl);
     geo.computeBoundingBox();
@@ -216,18 +124,13 @@ const loadSingleBeam = async () => {
     const mesh = makeMesh(geo, WOOD_COLOR);
     mesh.userData.isBeam = true;
     
-    // Centra la mesh usando position
+    // Centra la mesh usando position, non geometry
     const center = new THREE.Vector3();
     geo.boundingBox.getCenter(center);
     mesh.position.copy(center).negate();
     
     scene.add(mesh);
 
-    // Usa beam.frame per l'origine reale
-    const beamOrigin = currentBeamData.frame 
-        ? new THREE.Vector3(...currentBeamData.frame.origin).sub(center)
-        : new THREE.Vector3().sub(center);
-    
     const dist = maxDim * 3.5;
     camera.position.set(0, -dist, dist * 0.6);
     camera.lookAt(0, 0, 0);
@@ -235,202 +138,226 @@ const loadSingleBeam = async () => {
     controls.update();
 
     const axisScale = maxDim * 0.6;
-    drawLocalFrame(axisScale, beamOrigin);
-
-    drawGizmoAxes();
+    drawLocalFrame(axisScale);
 };
 
 const loadConnectedBeams = async () => {
     clearBeams();
     clearAxes();
+    const connectedIds = currentBeamData.connected_beams || [];
 
-    const beamIds = currentBeamData.connected_beams || [];
-    const stlUrl = currentBeamData["3d_model"];
-    const geo = await loadSTL(stlUrl);
-    geo.computeBoundingBox();
-
-    const size = new THREE.Vector3();
-    geo.boundingBox.getSize(size);
-    const maxDim = Math.max(size.x, size.y, size.z);
-
-    // Main beam
-    const mainMesh = makeMesh(geo, HIGHLIGHT_COLOR);
-    mainMesh.userData.isBeam = true;
-    const center = new THREE.Vector3();
-    geo.boundingBox.getCenter(center);
-    mainMesh.position.copy(center).negate();
-    scene.add(mainMesh);
-
-    // Connected beams
-    for (const id of beamIds) {
-        try {
-            const connGeo = await loadSTL(`${BASE_URL}/beams/${id}.stl`);
-            const connMesh = makeMesh(connGeo, WOOD_COLOR, 0.7);
-            connMesh.userData.isBeam = true;
-            scene.add(connMesh);
-        } catch (err) {
-            console.warn(`Failed to load beam ${id}:`, err);
-        }
+    try {
+        const geo = await loadSTL(currentBeamData["3d_model"]);
+        const mesh = makeMesh(geo, HIGHLIGHT_COLOR);
+        mesh.userData.isBeam = true;
+        scene.add(mesh);
+    } catch (e) {
+        console.error("Error loading main beam", e);
     }
 
-    const dist = maxDim * 3.5;
-    camera.position.set(0, -dist, dist * 0.6);
-    camera.lookAt(0, 0, 0);
-    controls.target.set(0, 0, 0);
-    controls.update();
-
-    const axisScale = maxDim * 0.6;
-    const beamOrigin = currentBeamData.frame 
-        ? new THREE.Vector3(...currentBeamData.frame.origin).sub(center)
-        : new THREE.Vector3().sub(center);
-    drawLocalFrame(axisScale, beamOrigin);
-
-    drawGizmoAxes();
-};
-
-const loadStructure = async () => {
-    clearBeams();
-    clearAxes();
-
-    const allBeamsUrl = `${BASE_URL}/all_beams.json`;
-    const allBeamsData = await fetch(allBeamsUrl).then((r) => r.json());
-
-    const currentId = currentBeamData.name;
-    let minBound = new THREE.Vector3(Infinity, Infinity, Infinity);
-    let maxBound = new THREE.Vector3(-Infinity, -Infinity, -Infinity);
-
-    // Load all beams
-    for (const beamData of allBeamsData) {
+    for (const id of connectedIds) {
         try {
-            const stlUrl = beamData["3d_model"];
+            const stlUrl = `${BASE_URL}/beams/${id}/${id}.stl`;
             const geo = await loadSTL(stlUrl);
-            geo.computeBoundingBox();
-
-            const color = beamData.name === currentId ? HIGHLIGHT_COLOR : WOOD_COLOR;
-            const mesh = makeMesh(geo, color, beamData.name === currentId ? 1 : 0.5);
+            const mesh = makeMesh(geo, WOOD_COLOR);
             mesh.userData.isBeam = true;
             scene.add(mesh);
-
-            minBound.min(geo.boundingBox.min);
-            maxBound.max(geo.boundingBox.max);
-        } catch (err) {
-            console.warn(`Failed to load beam ${beamData.name}:`, err);
+        } catch (e) {
+            console.warn(`Could not load beam ${id}`, e);
         }
     }
 
-    const center = new THREE.Vector3().addVectors(minBound, maxBound).multiplyScalar(0.5);
-    const size = new THREE.Vector3().subVectors(maxBound, minBound);
-    const maxDim = Math.max(size.x, size.y, size.z);
-
-    const dist = maxDim * 2;
-    camera.position.set(center.x, center.y - dist, center.z + dist * 0.6);
-    camera.lookAt(center);
-    controls.target.copy(center);
-    controls.update();
-
-    const axisScale = maxDim * 0.3;
-    const beamOrigin = currentBeamData.frame 
-        ? new THREE.Vector3(...currentBeamData.frame.origin)
-        : center.clone();
-    drawLocalFrame(axisScale, beamOrigin);
-
-    drawGizmoAxes();
+    centerScene();
 };
 
-const handleViewChange = async (mode) => {
+const loadPavilion = async () => {
+    clearBeams();
+    clearAxes();
+    const currentId = currentBeamData["beam ID"];
+
+    try {
+        const structureUrl = `${BASE_URL}/structure.json`;
+        const res = await fetch(structureUrl);
+        if (!res.ok) throw new Error("No structure.json");
+        const structure = await res.json();
+
+        const loadPromises = structure.beams.map(async (beam) => {
+            const id = beam.beam_id;
+            const isCurrentBeam = id === currentId;
+            const color = isCurrentBeam ? HIGHLIGHT_COLOR : WOOD_COLOR;
+
+            try {
+                const stlUrl = `${BASE_URL}/beams/${id}/${id}.stl`;
+                const geo = await loadSTL(stlUrl);
+                const mesh = makeMesh(geo, color);
+                mesh.userData.isBeam = true;
+                scene.add(mesh);
+            } catch (e) {
+                console.warn(`Could not load STL for ${id}`, e);
+            }
+        });
+
+        await Promise.all(loadPromises);
+        centerScene();
+    } catch (e) {
+        console.warn("structure.json not found:", e);
+        await loadSingleBeam();
+    }
+};
+
+const setMode = async (mode) => {
     viewMode.value = mode;
     isLoading.value = true;
-
+    clearAxes();
     try {
-        if (mode === "single") {
-            await loadSingleBeam();
-        } else if (mode === "connected") {
-            await loadConnectedBeams();
-        } else if (mode === "structure") {
-            await loadStructure();
-        }
-    } catch (err) {
-        console.error("Error loading view:", err);
+        if (mode === "single") await loadSingleBeam();
+        else if (mode === "connected") await loadConnectedBeams();
+        else if (mode === "pavilion") await loadPavilion();
     } finally {
         isLoading.value = false;
     }
 };
 
-const animate = () => {
-    animationId = requestAnimationFrame(animate);
+const initGizmo = () => {
+    const canvas = gizmoRef.value;
+    gizmoRenderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+    gizmoRenderer.setSize(80, 80);
+    gizmoRenderer.setPixelRatio(window.devicePixelRatio);
 
-    controls.update();
-    renderer.render(scene, camera);
+    gizmoScene = new THREE.Scene();
+    gizmoCamera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
+    gizmoCamera.position.set(0, 0, 3);
 
-    if (gizmoRenderer && gizmoScene && gizmoCamera) {
-        gizmoRenderer.render(gizmoScene, gizmoCamera);
-    }
+    const axesHelper = new THREE.AxesHelper(1);
+    gizmoScene.add(axesHelper);
+
+    const makeLabel = (text, pos, color) => {
+        const canvas2 = document.createElement("canvas");
+        canvas2.width = 64;
+        canvas2.height = 64;
+        const ctx = canvas2.getContext("2d");
+        ctx.fillStyle = color;
+        ctx.font = "bold 40px Arial";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(text, 32, 32);
+        const tex = new THREE.CanvasTexture(canvas2);
+        const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex }));
+        sprite.position.copy(pos);
+        sprite.scale.set(0.4, 0.4, 1);
+        gizmoScene.add(sprite);
+    };
+    makeLabel("X", new THREE.Vector3(1.4, 0, 0), "#ff4444");
+    makeLabel("Y", new THREE.Vector3(0, 1.4, 0), "#44ff44");
+    makeLabel("Z", new THREE.Vector3(0, 0, 1.4), "#4488ff");
+
+    gizmoScene.add(new THREE.AmbientLight(0xffffff, 1));
 };
 
-const loadBeam = async () => {
-    isLoading.value = true;
-    try {
-        const response = await fetch(props.beamUrl);
-        currentBeamData = await response.json();
-        viewMode.value = "single";
-        await loadSingleBeam();
-    } catch (error) {
-        console.error("Failed to load beam:", error);
-    } finally {
-        isLoading.value = false;
-    }
+const updateGizmo = () => {
+    if (!gizmoRenderer) return;
+    gizmoCamera.position.copy(camera.position).normalize().multiplyScalar(3);
+    gizmoCamera.lookAt(0, 0, 0);
+    gizmoCamera.up.copy(camera.up);
+    gizmoRenderer.render(gizmoScene, gizmoCamera);
 };
 
-const handleWindowResize = () => {
-    if (!containerRef.value) return;
+onMounted(async () => {
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xffffff);
 
     const width = containerRef.value.clientWidth;
     const height = containerRef.value.clientHeight;
 
-    camera.aspect = width / height;
-    camera.updateProjectionMatrix();
+    camera = new THREE.PerspectiveCamera(75, width / height, 0.01, 100000);
+    camera.position.set(0, -5, 3);
+    camera.up.set(0, 0, 1);
+    camera.lookAt(0, 0, 0);
+
+    renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(width, height);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.shadowMap.enabled = true;
+    containerRef.value.appendChild(renderer.domElement);
 
-    if (gizmoRenderer) {
-        gizmoRenderer.setSize(80, 80);
-    }
-};
+    controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.autoRotate = true;
+    controls.autoRotateSpeed = 4;
+    controls.enableZoom = true;
+    controls.target.set(0, 0, 0);
 
-onMounted(() => {
-    if (containerRef.value) {
-        initScene();
-        if (props.beamUrl) {
-            loadBeam();
-        }
-        window.addEventListener("resize", handleWindowResize);
+    const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+    dirLight.position.set(5, 8, 5);
+    dirLight.castShadow = true;
+    scene.add(dirLight);
+    scene.add(new THREE.AmbientLight(0xffffff, 0.8));
+    const fillLight = new THREE.DirectionalLight(0xffffff, 0.4);
+    fillLight.position.set(-5, 3, -5);
+    scene.add(fillLight);
+
+    try {
+        if (!props.beamUrl) throw new Error("No beam URL");
+        const beamName = props.beamUrl.split("/").pop();
+        const jsonUrl = `${props.beamUrl}/${beamName}.json`;
+        const response = await fetch(jsonUrl);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        currentBeamData = await response.json();
+        isLoading.value = true;
+        await loadSingleBeam();
+        isLoading.value = false;
+    } catch (e) {
+        console.error("Error loading beam:", e);
+        isLoading.value = false;
     }
+
+    initGizmo();
+
+    const animate = () => {
+        animationId = requestAnimationFrame(animate);
+        controls.update();
+        renderer.render(scene, camera);
+        updateGizmo();
+    };
+    animate();
+
+    const handleResize = () => {
+        const w = containerRef.value.clientWidth;
+        const h = containerRef.value.clientHeight;
+        camera.aspect = w / h;
+        camera.updateProjectionMatrix();
+        renderer.setSize(w, h);
+    };
+    window.addEventListener("resize", handleResize);
+
+    return () => {
+        window.removeEventListener("resize", handleResize);
+        cancelAnimationFrame(animationId);
+        controls.dispose();
+        renderer.dispose();
+    };
 });
 </script>
 
 <template>
-    <div class="model-viewer" ref="containerRef">
+    <div ref="containerRef" class="model-viewer">
         <div class="view-buttons">
             <button
-                @click="handleViewChange('single')"
                 :class="{ active: viewMode === 'single' }"
-            >
-                Single Beam
-            </button>
+                @click="setMode('single')"
+            >Beam</button>
             <button
-                @click="handleViewChange('connected')"
                 :class="{ active: viewMode === 'connected' }"
-            >
-                Connected Beams
-            </button>
+                @click="setMode('connected')"
+            >Connected</button>
             <button
-                @click="handleViewChange('structure')"
-                :class="{ active: viewMode === 'structure' }"
-            >
-                Full Structure
-            </button>
+                :class="{ active: viewMode === 'pavilion' }"
+                @click="setMode('pavilion')"
+            >Pavilion</button>
         </div>
 
-        <div class="axis-legend">
+        <div v-if="viewMode === 'single'" class="axis-legend">
             <div class="axis-item">
                 <span class="axis-dot" style="background: #ff4444"></span>
                 <span>X</span>
@@ -445,12 +372,12 @@ onMounted(() => {
             </div>
         </div>
 
-        <div ref="gizmoRef" class="gizmo-canvas"></div>
-
         <div v-if="isLoading" class="loading-overlay">
             <div class="loading-spinner"></div>
             <span>Loading...</span>
         </div>
+
+        <canvas ref="gizmoRef" class="gizmo-canvas"></canvas>
     </div>
 </template>
 
@@ -567,8 +494,6 @@ onMounted(() => {
 }
 
 @keyframes spin {
-    to {
-        transform: rotate(360deg);
-    }
+    to { transform: rotate(360deg); }
 }
 </style>
