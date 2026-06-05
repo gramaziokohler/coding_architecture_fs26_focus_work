@@ -58,12 +58,12 @@ const clearAxes = () => {
     toRemove.forEach((c) => scene.remove(c));
 };
 
-const drawLocalFrame = (scale = 1) => {
+const drawLocalFrame = (origin, local_frame, scale = 1) => {
     clearAxes();
-    if (!currentBeamData?.local_frame) return;
+    if (!local_frame) return;
 
-    const { x_axis, y_axis, z_axis } = currentBeamData.local_frame;
-    const o = new THREE.Vector3(0, 0, 0);
+    const { x_axis, y_axis, z_axis } = local_frame;
+    const o = new THREE.Vector3(origin.x, origin.y, origin.z);
 
     const headLength = scale * 0.15;
     const headWidth = scale * 0.08;
@@ -116,19 +116,20 @@ const loadSingleBeam = async () => {
     const stlUrl = currentBeamData["3d_model"];
     const geo = await loadSTL(stlUrl);
     geo.computeBoundingBox();
-    
+
+    // Centra la geometria normalmente (senza traslare)
     const size = new THREE.Vector3();
     geo.boundingBox.getSize(size);
     const maxDim = Math.max(size.x, size.y, size.z);
 
     const mesh = makeMesh(geo, WOOD_COLOR);
     mesh.userData.isBeam = true;
-    
-    // Centra la mesh usando position, non geometry
+
+    // Centra la mesh
     const center = new THREE.Vector3();
     geo.boundingBox.getCenter(center);
     mesh.position.copy(center).negate();
-    
+
     scene.add(mesh);
 
     const dist = maxDim * 3.5;
@@ -137,8 +138,13 @@ const loadSingleBeam = async () => {
     controls.target.set(0, 0, 0);
     controls.update();
 
+    // IMPORTANTE: Usa global_position e local_frame dal JSON
     const axisScale = maxDim * 0.6;
-    drawLocalFrame(axisScale);
+    const origin = currentBeamData.global_position 
+        ? new THREE.Vector3(...currentBeamData.global_position)
+        : new THREE.Vector3(0, 0, 0);
+    
+    drawLocalFrame(origin, currentBeamData.local_frame, axisScale);
 };
 
 const loadConnectedBeams = async () => {
@@ -304,6 +310,7 @@ onMounted(async () => {
         const response = await fetch(jsonUrl);
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         currentBeamData = await response.json();
+        console.log("Beam Data:", currentBeamData);
         isLoading.value = true;
         await loadSingleBeam();
         isLoading.value = false;
