@@ -24,7 +24,7 @@ const viewMode = ref("single");
 const isLoading = ref(false);
 
 const WOOD_COLOR = 0xd4b896;
-const HIGHLIGHT_COLOR = 0xe8643a;
+const HIGHLIGHT_COLOR = 0xff4d6d;
 
 // ─── STL loader helper ───────────────────────────────────────────────
 const loadSTL = (url) =>
