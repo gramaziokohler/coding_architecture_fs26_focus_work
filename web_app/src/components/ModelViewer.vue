@@ -68,8 +68,10 @@ const drawLocalFrame = (scale = 1) => {
     if (!currentBeamData?.local_frame) return;
 
     const { x_axis, y_axis, z_axis } = currentBeamData.local_frame;
-
     const o = new THREE.Vector3(0, 0, 0);
+
+    const headLength = scale * 0.15;
+    const headWidth = scale * 0.08;
 
     const axes = [
         { dir: x_axis, color: 0xff4444, lengthMult: 1.6 },
@@ -85,8 +87,8 @@ const drawLocalFrame = (scale = 1) => {
             o,
             arrowLength,
             color,
-            arrowLength * 0.15,
-            arrowLength * 0.08
+            headLength,
+            headWidth
         );
         arrow.userData.isAxis = true;
         scene.add(arrow);
@@ -357,7 +359,6 @@ onMounted(async () => {
             >Pavilion</button>
         </div>
 
-        <!-- Axis legend shown only in single beam mode -->
         <div v-if="viewMode === 'single'" class="axis-legend">
             <div class="axis-item">
                 <span class="axis-dot" style="background: #ff4444"></span>
@@ -373,7 +374,6 @@ onMounted(async () => {
             </div>
         </div>
 
-        <!-- Loading indicator -->
         <div v-if="isLoading" class="loading-overlay">
             <div class="loading-spinner"></div>
             <span>Loading...</span>
