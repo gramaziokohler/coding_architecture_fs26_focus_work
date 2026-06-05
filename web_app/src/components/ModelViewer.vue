@@ -110,7 +110,6 @@ const centerScene = () => {
     controls.update();
 };
 
-// ← MODIFICA PRINCIPALE: rimuovo la scala fissa e uso centerScene
 const loadSingleBeam = async () => {
     clearBeams();
     clearAxes();
@@ -129,7 +128,8 @@ const loadSingleBeam = async () => {
     scene.add(mesh);
 
     // Camera si adatta alla dimensione reale del beam
-    const dist = maxDim * 2.2;
+    // Aumenta il moltiplicatore se il beam è troppo piccolo
+    const dist = maxDim * 3.5;
     camera.position.set(0, -dist, dist * 0.6);
     camera.lookAt(0, 0, 0);
     controls.target.set(0, 0, 0);
@@ -267,7 +267,6 @@ onMounted(async () => {
     const width = containerRef.value.clientWidth;
     const height = containerRef.value.clientHeight;
 
-    // ← far clipping plane aumentato per beam grandi
     camera = new THREE.PerspectiveCamera(75, width / height, 0.01, 100000);
     camera.position.set(0, -5, 3);
     camera.up.set(0, 0, 1);
