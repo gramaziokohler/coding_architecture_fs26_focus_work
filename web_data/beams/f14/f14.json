@@ -1,12 +1,63 @@
 {
-  "beam ID": "f14",
+  "beam_id": "f14",
   "name": "F14",
   "module": "F",
-  "width": 0.06,
-  "height": 0.08,
-  "length": 1.1416,
-  "volume (m\u00b3)": 0.00548,
-  "weight (kg)": 2.74,
+  "width_m": 0.06,
+  "height_m": 0.08,
+  "length_m": 1.1416,
+  "volume_m3": 0.00548,
+  "weight_kg": 2.74,
+  "local_frame": {
+    "origin": [
+      5.1652,
+      0.8159,
+      0.7049
+    ],
+    "x_axis": [
+      0.6903,
+      0.0229,
+      -0.7232
+    ],
+    "y_axis": [
+      0.7228,
+      0.024,
+      0.6907
+    ],
+    "z_axis": [
+      0.0331,
+      -0.9995,
+      0.0
+    ]
+  },
+  "connected_beams": [
+    "f15",
+    "e13",
+    "f4",
+    "f13",
+    "f11"
+  ],
+  "global_position": {
+    "centerline_start": [
+      4.7711,
+      0.8029,
+      1.1177
+    ],
+    "centerline_end": [
+      5.5592,
+      0.829,
+      0.2921
+    ],
+    "midpoint": [
+      5.1652,
+      0.8159,
+      0.7049
+    ],
+    "midpoint_normalized": [
+      0.8551,
+      0.5302,
+      0.2555
+    ]
+  },
   "joints": {
     "all": [
       "351",
