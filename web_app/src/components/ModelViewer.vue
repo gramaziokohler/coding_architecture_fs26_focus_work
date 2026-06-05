@@ -20,7 +20,7 @@ let gizmoRenderer, gizmoScene, gizmoCamera;
 
 const BASE_URL = "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data";
 
-const viewMode = ref("single"); // 'single' | 'connected' | 'pavilion'
+const viewMode = ref("single");
 
 const WOOD_COLOR = 0xd4b896;
 const HIGHLIGHT_COLOR = 0xe8643a;
@@ -68,7 +68,6 @@ const centerScene = () => {
         .filter((c) => c.userData.isBeam)
         .forEach((c) => c.position.sub(center));
     controls.target.set(0, 0, 0);
-    // fit camera
     const size = new THREE.Vector3();
     box.getSize(size);
     const maxDim = Math.max(size.x, size.y, size.z);
@@ -100,9 +99,7 @@ const loadSingleBeam = async () => {
 const loadConnectedBeams = async () => {
     clearBeams();
     const connectedIds = currentBeamData.connected_beams || [];
-    const currentId = currentBeamData.name;
 
-    // Load current beam highlighted
     try {
         const geo = await loadSTL(currentBeamData["3d_model"]);
         const mesh = makeMesh(geo, HIGHLIGHT_COLOR);
@@ -112,7 +109,6 @@ const loadConnectedBeams = async () => {
         console.error("Error loading main beam", e);
     }
 
-    // Load connected beams in wood color
     for (const id of connectedIds) {
         try {
             const stlUrl = `${BASE_URL}/beams/${id}/${id}.stl`;
@@ -131,25 +127,26 @@ const loadConnectedBeams = async () => {
 // ─── Load full pavilion ───────────────────────────────────────────────
 const loadPavilion = async () => {
     clearBeams();
-    const currentId = currentBeamData.name;
+    const currentId = currentBeamData["beam ID"]; // lowercase e.g. "b3"
 
-    // Try to load structure JSON
     try {
         const structureUrl = `${BASE_URL}/structure.json`;
         const res = await fetch(structureUrl);
         if (!res.ok) throw new Error("No structure.json");
         const structure = await res.json();
 
-        // Draw all centerlines as thin cylinders
         for (const beam of structure.beams) {
+            if (!beam.centerline_start || !beam.centerline_end) continue;
+
             const start = new THREE.Vector3(...beam.centerline_start);
             const end = new THREE.Vector3(...beam.centerline_end);
             const dir = new THREE.Vector3().subVectors(end, start);
             const len = dir.length();
             const mid = new THREE.Vector3().addVectors(start, end).multiplyScalar(0.5);
 
-            const color = beam.id === currentId ? HIGHLIGHT_COLOR : WOOD_COLOR;
-            const radius = beam.id === currentId ? 0.025 : 0.01;
+            const isCurrentBeam = beam.beam_id === currentId;
+            const color = isCurrentBeam ? HIGHLIGHT_COLOR : WOOD_COLOR;
+            const radius = isCurrentBeam ? 0.025 : 0.01;
 
             const geo = new THREE.CylinderGeometry(radius, radius, len, 6);
             const mat = new THREE.MeshPhongMaterial({ color, shininess: 5 });
@@ -157,16 +154,17 @@ const loadPavilion = async () => {
             mesh.userData.isBeam = true;
 
             mesh.position.copy(mid);
-            mesh.quaternion.setFromUnitVectors(
-                new THREE.Vector3(0, 1, 0),
-                dir.clone().normalize()
-            );
+            if (dir.length() > 0.0001) {
+                mesh.quaternion.setFromUnitVectors(
+                    new THREE.Vector3(0, 1, 0),
+                    dir.clone().normalize()
+                );
+            }
             scene.add(mesh);
         }
         centerScene();
     } catch (e) {
-        // Fallback: just show current beam
-        console.warn("structure.json not found, loading single beam");
+        console.warn("structure.json not found:", e);
         await loadSingleBeam();
     }
 };
@@ -193,10 +191,10 @@ const initGizmo = () => {
     const axesHelper = new THREE.AxesHelper(1);
     gizmoScene.add(axesHelper);
 
-    // Labels
     const makeLabel = (text, pos, color) => {
         const canvas2 = document.createElement("canvas");
-        canvas2.width = 64; canvas2.height = 64;
+        canvas2.width = 64;
+        canvas2.height = 64;
         const ctx = canvas2.getContext("2d");
         ctx.fillStyle = color;
         ctx.font = "bold 40px Arial";
@@ -218,7 +216,6 @@ const initGizmo = () => {
 
 const updateGizmo = () => {
     if (!gizmoRenderer) return;
-    // Sync gizmo camera rotation with main camera
     gizmoCamera.position.copy(camera.position).normalize().multiplyScalar(3);
     gizmoCamera.lookAt(0, 0, 0);
     gizmoCamera.up.copy(camera.up);
@@ -227,7 +224,6 @@ const updateGizmo = () => {
 
 // ─── Mount ────────────────────────────────────────────────────────────
 onMounted(async () => {
-    // Scene
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0xffffff);
 
@@ -252,7 +248,6 @@ onMounted(async () => {
     controls.enableZoom = true;
     controls.target.set(0, 0, 0);
 
-    // Lights
     const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
     dirLight.position.set(5, 8, 5);
     dirLight.castShadow = true;
@@ -262,7 +257,6 @@ onMounted(async () => {
     fillLight.position.set(-5, 3, -5);
     scene.add(fillLight);
 
-    // Load beam JSON
     try {
         if (!props.beamUrl) throw new Error("No beam URL");
         const beamName = props.beamUrl.split("/").pop();
@@ -275,10 +269,8 @@ onMounted(async () => {
         console.error("Error loading beam:", e);
     }
 
-    // Init gizmo
     initGizmo();
 
-    // Animation loop
     const animate = () => {
         animationId = requestAnimationFrame(animate);
         controls.update();
@@ -287,7 +279,6 @@ onMounted(async () => {
     };
     animate();
 
-    // Resize
     const handleResize = () => {
         const w = containerRef.value.clientWidth;
         const h = containerRef.value.clientHeight;
@@ -308,7 +299,6 @@ onMounted(async () => {
 
 <template>
     <div ref="containerRef" class="model-viewer">
-        <!-- Buttons top-left -->
         <div class="view-buttons">
             <button
                 :class="{ active: viewMode === 'single' }"
@@ -324,7 +314,6 @@ onMounted(async () => {
             >Pavilion</button>
         </div>
 
-        <!-- Gizmo bottom-right -->
         <canvas ref="gizmoRef" class="gizmo-canvas"></canvas>
     </div>
 </template>
