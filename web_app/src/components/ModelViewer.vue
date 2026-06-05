@@ -12,182 +12,279 @@ const props = defineProps({
 });
 
 const containerRef = ref(null);
-let scene, camera, renderer, model, controls;
+const gizmoRef = ref(null);
+let scene, camera, renderer, controls;
 let animationId;
+let currentBeamData = null;
+let gizmoRenderer, gizmoScene, gizmoCamera;
 
-const loadModel = (stlUrl) => {
-    console.log("🔍 Loading STL from:", stlUrl);
+const BASE_URL = "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data";
 
-    // Fetch the file first to handle CORS
-    fetch(stlUrl, {
-        mode: "cors",
-        headers: {
-            Accept: "*/*",
-        },
-    })
-        .then((response) => {
-            console.log("📥 Fetch response status:", response.status);
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            return response.arrayBuffer();
+const viewMode = ref("single");
+const isLoading = ref(false);
+
+const WOOD_COLOR = 0xd4b896;
+const HIGHLIGHT_COLOR = 0xe8643a;
+
+// ─── STL loader helper ───────────────────────────────────────────────
+const loadSTL = (url) =>
+    fetch(url, { mode: "cors" })
+        .then((r) => {
+            if (!r.ok) throw new Error(`HTTP ${r.status}`);
+            return r.arrayBuffer();
         })
-        .then((arrayBuffer) => {
-            console.log(
-                "✅ STL file fetched, size:",
-                arrayBuffer.byteLength,
-                "bytes",
-            );
+        .then((buf) => STLLoader.prototype.parse(buf));
 
-            const geometry = STLLoader.prototype.parse(arrayBuffer);
-
-            console.log(
-                "✅ STL parsed successfully, geometry vertices:",
-                geometry.attributes.position.count,
-            );
-
-            // Remove old model if exists
-            if (model) {
-                scene.remove(model);
-            }
-
-            // Create beige/wood material
-            const material = new THREE.MeshPhongMaterial({
-                color: 0xd4b896,
-                shininess: 10,
-                side: THREE.DoubleSide,
-            });
-
-            // Create mesh from geometry
-            model = new THREE.Mesh(geometry, material);
-            model.castShadow = true;
-            model.receiveShadow = true;
-
-            scene.add(model);
-            console.log("✅ Model added to scene");
-
-            // Center and scale model
-            geometry.computeBoundingBox();
-            const center = new THREE.Vector3();
-            geometry.boundingBox.getCenter(center);
-            geometry.translate(-center.x, -center.y, -center.z);
-
-            const size = new THREE.Vector3();
-            geometry.boundingBox.getSize(size);
-            const maxDim = Math.max(size.x, size.y, size.z);
-            const scale = 2 / maxDim;
-
-            model.scale.multiplyScalar(scale);
-            console.log("✅ Model centered and scaled");
-
-            // Update controls target to center of model
-            controls.target.set(0, 0, 0);
-            controls.update();
-            console.log("✅ Controls updated");
-        })
-        .catch((error) => {
-            console.error("❌ Error loading STL model:", error);
-            console.error("Error message:", error.message);
-        });
+const makeMesh = (geometry, color, opacity = 1) => {
+    geometry.computeBoundingBox();
+    const mat = new THREE.MeshPhongMaterial({
+        color,
+        shininess: 10,
+        side: THREE.DoubleSide,
+        transparent: opacity < 1,
+        opacity,
+    });
+    const mesh = new THREE.Mesh(geometry, mat);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    return mesh;
 };
 
-onMounted(async () => {
-    console.log("🚀 ModelViewer mounting...");
+// ─── Clear all beam meshes ────────────────────────────────────────────
+const clearBeams = () => {
+    const toRemove = scene.children.filter((c) => c.userData.isBeam);
+    toRemove.forEach((c) => scene.remove(c));
+};
 
-    // Scene setup
+// ─── Center scene around loaded meshes ───────────────────────────────
+const centerScene = () => {
+    const box = new THREE.Box3();
+    scene.children
+        .filter((c) => c.userData.isBeam)
+        .forEach((c) => box.expandByObject(c));
+    if (box.isEmpty()) return;
+    const center = new THREE.Vector3();
+    box.getCenter(center);
+    scene.children
+        .filter((c) => c.userData.isBeam)
+        .forEach((c) => c.position.sub(center));
+    controls.target.set(0, 0, 0);
+    const size = new THREE.Vector3();
+    box.getSize(size);
+    const maxDim = Math.max(size.x, size.y, size.z);
+    camera.position.set(maxDim * 1.5, maxDim * 1.5, maxDim);
+    controls.update();
+};
+
+// ─── Load single beam ─────────────────────────────────────────────────
+const loadSingleBeam = async () => {
+    clearBeams();
+    const stlUrl = currentBeamData["3d_model"];
+    const geo = await loadSTL(stlUrl);
+    geo.computeBoundingBox();
+    const center = new THREE.Vector3();
+    geo.boundingBox.getCenter(center);
+    geo.translate(-center.x, -center.y, -center.z);
+    const size = new THREE.Vector3();
+    geo.boundingBox.getSize(size);
+    const scale = 2 / Math.max(size.x, size.y, size.z);
+    const mesh = makeMesh(geo, WOOD_COLOR);
+    mesh.scale.multiplyScalar(scale);
+    mesh.userData.isBeam = true;
+    scene.add(mesh);
+    controls.target.set(0, 0, 0);
+    controls.update();
+};
+
+// ─── Load connected beams ─────────────────────────────────────────────
+const loadConnectedBeams = async () => {
+    clearBeams();
+    const connectedIds = currentBeamData.connected_beams || [];
+
+    try {
+        const geo = await loadSTL(currentBeamData["3d_model"]);
+        const mesh = makeMesh(geo, HIGHLIGHT_COLOR);
+        mesh.userData.isBeam = true;
+        scene.add(mesh);
+    } catch (e) {
+        console.error("Error loading main beam", e);
+    }
+
+    for (const id of connectedIds) {
+        try {
+            const stlUrl = `${BASE_URL}/beams/${id}/${id}.stl`;
+            const geo = await loadSTL(stlUrl);
+            const mesh = makeMesh(geo, WOOD_COLOR);
+            mesh.userData.isBeam = true;
+            scene.add(mesh);
+        } catch (e) {
+            console.warn(`Could not load beam ${id}`, e);
+        }
+    }
+
+    centerScene();
+};
+
+// ─── Load full pavilion ───────────────────────────────────────────────
+const loadPavilion = async () => {
+    clearBeams();
+    const currentId = currentBeamData["beam ID"];
+
+    try {
+        const structureUrl = `${BASE_URL}/structure.json`;
+        const res = await fetch(structureUrl);
+        if (!res.ok) throw new Error("No structure.json");
+        const structure = await res.json();
+
+        const loadPromises = structure.beams.map(async (beam) => {
+            const id = beam.beam_id;
+            const isCurrentBeam = id === currentId;
+            const color = isCurrentBeam ? HIGHLIGHT_COLOR : WOOD_COLOR;
+
+            try {
+                const stlUrl = `${BASE_URL}/beams/${id}/${id}.stl`;
+                const geo = await loadSTL(stlUrl);
+                const mesh = makeMesh(geo, color);
+                mesh.userData.isBeam = true;
+                scene.add(mesh);
+            } catch (e) {
+                console.warn(`Could not load STL for ${id}`, e);
+            }
+        });
+
+        await Promise.all(loadPromises);
+        centerScene();
+    } catch (e) {
+        console.warn("structure.json not found:", e);
+        await loadSingleBeam();
+    }
+};
+
+// ─── View mode buttons ────────────────────────────────────────────────
+const setMode = async (mode) => {
+    viewMode.value = mode;
+    isLoading.value = true;
+    try {
+        if (mode === "single") await loadSingleBeam();
+        else if (mode === "connected") await loadConnectedBeams();
+        else if (mode === "pavilion") await loadPavilion();
+    } finally {
+        isLoading.value = false;
+    }
+};
+
+// ─── Gizmo setup ─────────────────────────────────────────────────────
+const initGizmo = () => {
+    const canvas = gizmoRef.value;
+    gizmoRenderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+    gizmoRenderer.setSize(80, 80);
+    gizmoRenderer.setPixelRatio(window.devicePixelRatio);
+
+    gizmoScene = new THREE.Scene();
+    gizmoCamera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
+    gizmoCamera.position.set(0, 0, 3);
+
+    const axesHelper = new THREE.AxesHelper(1);
+    gizmoScene.add(axesHelper);
+
+    const makeLabel = (text, pos, color) => {
+        const canvas2 = document.createElement("canvas");
+        canvas2.width = 64;
+        canvas2.height = 64;
+        const ctx = canvas2.getContext("2d");
+        ctx.fillStyle = color;
+        ctx.font = "bold 40px Arial";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(text, 32, 32);
+        const tex = new THREE.CanvasTexture(canvas2);
+        const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex }));
+        sprite.position.copy(pos);
+        sprite.scale.set(0.4, 0.4, 1);
+        gizmoScene.add(sprite);
+    };
+    makeLabel("X", new THREE.Vector3(1.4, 0, 0), "#ff4444");
+    makeLabel("Y", new THREE.Vector3(0, 1.4, 0), "#44ff44");
+    makeLabel("Z", new THREE.Vector3(0, 0, 1.4), "#4488ff");
+
+    gizmoScene.add(new THREE.AmbientLight(0xffffff, 1));
+};
+
+const updateGizmo = () => {
+    if (!gizmoRenderer) return;
+    gizmoCamera.position.copy(camera.position).normalize().multiplyScalar(3);
+    gizmoCamera.lookAt(0, 0, 0);
+    gizmoCamera.up.copy(camera.up);
+    gizmoRenderer.render(gizmoScene, gizmoCamera);
+};
+
+// ─── Mount ────────────────────────────────────────────────────────────
+onMounted(async () => {
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0xffffff);
 
-    // Camera setup (Z-up coordinate system)
     const width = containerRef.value.clientWidth;
     const height = containerRef.value.clientHeight;
+
     camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
     camera.position.set(3, 3, 2);
     camera.up.set(0, 0, 1);
 
-    // Renderer setup
     renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(width, height);
     renderer.setPixelRatio(window.devicePixelRatio);
     renderer.shadowMap.enabled = true;
     containerRef.value.appendChild(renderer.domElement);
 
-    // OrbitControls setup
     controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
     controls.autoRotate = true;
     controls.autoRotateSpeed = 4;
     controls.enableZoom = true;
-    controls.enablePan = true;
     controls.target.set(0, 0, 0);
 
-    // Add lighting
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 1.2);
-    directionalLight.position.set(5, 8, 5);
-    directionalLight.castShadow = true;
-    directionalLight.shadow.mapSize.width = 2048;
-    directionalLight.shadow.mapSize.height = 2048;
-    scene.add(directionalLight);
-
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
-    scene.add(ambientLight);
-
+    const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+    dirLight.position.set(5, 8, 5);
+    dirLight.castShadow = true;
+    scene.add(dirLight);
+    scene.add(new THREE.AmbientLight(0xffffff, 0.8));
     const fillLight = new THREE.DirectionalLight(0xffffff, 0.4);
     fillLight.position.set(-5, 3, -5);
     scene.add(fillLight);
 
-    // Fetch beam JSON and load model
     try {
-        if (!props.beamUrl) {
-            throw new Error("No beam URL provided");
-        }
-
-        console.log("📍 Beam URL:", props.beamUrl);
-
-        // Construct JSON URL
+        if (!props.beamUrl) throw new Error("No beam URL");
         const beamName = props.beamUrl.split("/").pop();
-        const jsonUrl = props.beamUrl + "/" + beamName + ".json";
-
-        console.log("🔗 Fetching JSON from:", jsonUrl);
-
+        const jsonUrl = `${props.beamUrl}/${beamName}.json`;
         const response = await fetch(jsonUrl);
-        if (!response.ok) {
-            throw new Error(
-                `Failed to fetch beam data: ${response.status} ${response.statusText}`,
-            );
-        }
-        const beamData = await response.json();
-
-        console.log("📦 Beam data loaded:", beamData);
-
-        if (!beamData["3d_model"]) {
-            throw new Error("No 3D model URL in beam data");
-        }
-
-        console.log("🎯 3D Model URL from JSON:", beamData["3d_model"]);
-        loadModel(beamData["3d_model"]);
-    } catch (error) {
-        console.error("❌ Error loading beam:", error);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        currentBeamData = await response.json();
+        isLoading.value = true;
+        await loadSingleBeam();
+        isLoading.value = false;
+    } catch (e) {
+        console.error("Error loading beam:", e);
+        isLoading.value = false;
     }
 
-    // Animation loop
+    initGizmo();
+
     const animate = () => {
         animationId = requestAnimationFrame(animate);
         controls.update();
         renderer.render(scene, camera);
+        updateGizmo();
     };
     animate();
 
-    // Handle window resize
     const handleResize = () => {
-        const newWidth = containerRef.value.clientWidth;
-        const newHeight = containerRef.value.clientHeight;
-        camera.aspect = newWidth / newHeight;
+        const w = containerRef.value.clientWidth;
+        const h = containerRef.value.clientHeight;
+        camera.aspect = w / h;
         camera.updateProjectionMatrix();
-        renderer.setSize(newWidth, newHeight);
+        renderer.setSize(w, h);
     };
-
     window.addEventListener("resize", handleResize);
 
     return () => {
@@ -200,7 +297,30 @@ onMounted(async () => {
 </script>
 
 <template>
-    <div ref="containerRef" class="model-viewer"></div>
+    <div ref="containerRef" class="model-viewer">
+        <div class="view-buttons">
+            <button
+                :class="{ active: viewMode === 'single' }"
+                @click="setMode('single')"
+            >Beam</button>
+            <button
+                :class="{ active: viewMode === 'connected' }"
+                @click="setMode('connected')"
+            >Connected</button>
+            <button
+                :class="{ active: viewMode === 'pavilion' }"
+                @click="setMode('pavilion')"
+            >Pavilion</button>
+        </div>
+
+        <!-- Loading indicator -->
+        <div v-if="isLoading" class="loading-overlay">
+            <div class="loading-spinner"></div>
+            <span>Loading...</span>
+        </div>
+
+        <canvas ref="gizmoRef" class="gizmo-canvas"></canvas>
+    </div>
 </template>
 
 <style scoped>
@@ -213,5 +333,78 @@ onMounted(async () => {
 :deep(canvas) {
     display: block;
     touch-action: none;
+}
+
+.view-buttons {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    z-index: 10;
+    display: flex;
+    gap: 8px;
+}
+
+.view-buttons button {
+    padding: 6px 14px;
+    font-size: 12px;
+    font-family: "Helvetica Neue", sans-serif;
+    font-weight: 500;
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.view-buttons button:hover {
+    background: #f0f0f0;
+}
+
+.view-buttons button.active {
+    background: #000;
+    color: #fff;
+    border-color: #000;
+}
+
+.gizmo-canvas {
+    position: absolute;
+    bottom: 16px;
+    right: 16px;
+    width: 80px;
+    height: 80px;
+    z-index: 10;
+    pointer-events: none;
+    border-radius: 4px;
+}
+
+.loading-overlay {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    background: rgba(255, 255, 255, 0.85);
+    padding: 20px 30px;
+    border-radius: 8px;
+    font-family: "Helvetica Neue", sans-serif;
+    font-size: 13px;
+    color: #333;
+}
+
+.loading-spinner {
+    width: 28px;
+    height: 28px;
+    border: 3px solid #ddd;
+    border-top-color: #e8643a;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
 }
 </style>
