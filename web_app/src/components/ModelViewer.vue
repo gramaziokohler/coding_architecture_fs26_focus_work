@@ -21,6 +21,7 @@ let gizmoRenderer, gizmoScene, gizmoCamera;
 const BASE_URL = "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data";
 
 const viewMode = ref("single");
+const isLoading = ref(false);
 
 const WOOD_COLOR = 0xd4b896;
 const HIGHLIGHT_COLOR = 0xe8643a;
@@ -127,7 +128,7 @@ const loadConnectedBeams = async () => {
 // ─── Load full pavilion ───────────────────────────────────────────────
 const loadPavilion = async () => {
     clearBeams();
-    const currentId = currentBeamData["beam ID"]; // lowercase e.g. "b3"
+    const currentId = currentBeamData["beam ID"];
 
     try {
         const structureUrl = `${BASE_URL}/structure.json`;
@@ -135,33 +136,23 @@ const loadPavilion = async () => {
         if (!res.ok) throw new Error("No structure.json");
         const structure = await res.json();
 
-        for (const beam of structure.beams) {
-            if (!beam.centerline_start || !beam.centerline_end) continue;
-
-            const start = new THREE.Vector3(...beam.centerline_start);
-            const end = new THREE.Vector3(...beam.centerline_end);
-            const dir = new THREE.Vector3().subVectors(end, start);
-            const len = dir.length();
-            const mid = new THREE.Vector3().addVectors(start, end).multiplyScalar(0.5);
-
-            const isCurrentBeam = beam.beam_id === currentId;
+        const loadPromises = structure.beams.map(async (beam) => {
+            const id = beam.beam_id;
+            const isCurrentBeam = id === currentId;
             const color = isCurrentBeam ? HIGHLIGHT_COLOR : WOOD_COLOR;
-            const radius = isCurrentBeam ? 0.025 : 0.01;
 
-            const geo = new THREE.CylinderGeometry(radius, radius, len, 6);
-            const mat = new THREE.MeshPhongMaterial({ color, shininess: 5 });
-            const mesh = new THREE.Mesh(geo, mat);
-            mesh.userData.isBeam = true;
-
-            mesh.position.copy(mid);
-            if (dir.length() > 0.0001) {
-                mesh.quaternion.setFromUnitVectors(
-                    new THREE.Vector3(0, 1, 0),
-                    dir.clone().normalize()
-                );
+            try {
+                const stlUrl = `${BASE_URL}/beams/${id}/${id}.stl`;
+                const geo = await loadSTL(stlUrl);
+                const mesh = makeMesh(geo, color);
+                mesh.userData.isBeam = true;
+                scene.add(mesh);
+            } catch (e) {
+                console.warn(`Could not load STL for ${id}`, e);
             }
-            scene.add(mesh);
-        }
+        });
+
+        await Promise.all(loadPromises);
         centerScene();
     } catch (e) {
         console.warn("structure.json not found:", e);
@@ -172,9 +163,14 @@ const loadPavilion = async () => {
 // ─── View mode buttons ────────────────────────────────────────────────
 const setMode = async (mode) => {
     viewMode.value = mode;
-    if (mode === "single") await loadSingleBeam();
-    else if (mode === "connected") await loadConnectedBeams();
-    else if (mode === "pavilion") await loadPavilion();
+    isLoading.value = true;
+    try {
+        if (mode === "single") await loadSingleBeam();
+        else if (mode === "connected") await loadConnectedBeams();
+        else if (mode === "pavilion") await loadPavilion();
+    } finally {
+        isLoading.value = false;
+    }
 };
 
 // ─── Gizmo setup ─────────────────────────────────────────────────────
@@ -264,9 +260,12 @@ onMounted(async () => {
         const response = await fetch(jsonUrl);
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         currentBeamData = await response.json();
+        isLoading.value = true;
         await loadSingleBeam();
+        isLoading.value = false;
     } catch (e) {
         console.error("Error loading beam:", e);
+        isLoading.value = false;
     }
 
     initGizmo();
@@ -312,6 +311,12 @@ onMounted(async () => {
                 :class="{ active: viewMode === 'pavilion' }"
                 @click="setMode('pavilion')"
             >Pavilion</button>
+        </div>
+
+        <!-- Loading indicator -->
+        <div v-if="isLoading" class="loading-overlay">
+            <div class="loading-spinner"></div>
+            <span>Loading...</span>
         </div>
 
         <canvas ref="gizmoRef" class="gizmo-canvas"></canvas>
@@ -370,5 +375,36 @@ onMounted(async () => {
     z-index: 10;
     pointer-events: none;
     border-radius: 4px;
+}
+
+.loading-overlay {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    background: rgba(255, 255, 255, 0.85);
+    padding: 20px 30px;
+    border-radius: 8px;
+    font-family: "Helvetica Neue", sans-serif;
+    font-size: 13px;
+    color: #333;
+}
+
+.loading-spinner {
+    width: 28px;
+    height: 28px;
+    border: 3px solid #ddd;
+    border-top-color: #e8643a;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
 }
 </style>
