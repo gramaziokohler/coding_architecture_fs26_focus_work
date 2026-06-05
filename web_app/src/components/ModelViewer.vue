@@ -101,16 +101,20 @@ const centerScene = () => {
         .filter((c) => c.userData.isBeam)
         .forEach((c) => box.expandByObject(c));
     if (box.isEmpty()) return;
+
     const center = new THREE.Vector3();
     box.getCenter(center);
     scene.children
         .filter((c) => c.userData.isBeam)
         .forEach((c) => c.position.sub(center));
-    controls.target.set(0, 0, 0);
+
     const size = new THREE.Vector3();
     box.getSize(size);
     const maxDim = Math.max(size.x, size.y, size.z);
-    camera.position.set(maxDim * 1.5, maxDim * 1.5, maxDim);
+
+    controls.target.set(0, 0, 0);
+    camera.position.set(maxDim * 1.5, maxDim * 1.5, maxDim * 1.5);
+    camera.lookAt(0, 0, 0);
     controls.update();
 };
 
@@ -132,6 +136,7 @@ const loadSingleBeam = async () => {
     mesh.userData.isBeam = true;
     scene.add(mesh);
     controls.target.set(0, 0, 0);
+    camera.lookAt(0, 0, 0);
     controls.update();
 
     const axisScale = 1.2 * scale * Math.max(size.x, size.y, size.z) * 0.5;
