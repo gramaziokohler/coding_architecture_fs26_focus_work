@@ -12,7 +12,7 @@ class CutItem:
         self.height = height
         self.center_pt = None
 
-def create_geometry_text(text, position, text_height=0.06):
+def create_geometry_text(text, position, text_height=0.03):
     te = rg.TextEntity()
     te.Text = text
     te.FontIndex = 0
