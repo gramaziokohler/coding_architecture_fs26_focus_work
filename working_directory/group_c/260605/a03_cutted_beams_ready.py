@@ -1,4 +1,5 @@
 # venv: ca-fs26-focus-work
+# keyword: timber-packing, 3d-engraving, collision-check
 import Rhino.Geometry as rg
 import math
 from importlib import reload
@@ -284,8 +285,7 @@ def run_packing(timber_model, origin, stock_length_beam_6x8, stock_length_beam_1
                 packed_bars.append(new_bar)
                 bar_global_counter += 1
 
-    # 4. GENERAZIONE DEL LAYOUT SPAZIALE COERENTE
-    # CORRETTO: Inizializzate esattamente tutte e 10 le variabili finali
+    # 4. GENERAZIONE DEL LAYOUT SPAZIALE COERENTE + SPOSTAMENTO ENGRAVING ANTI-COLLISIONE
     arranged_boxes, max_len_boxes, stock_beams, max_len_lines, arranged_names, label_curves, max_len_num_txt, engraving, dimensions, report_sections = [], [], [], [], [], [], [], [], [], []
     total_waste_material, total_material_bought = 0.0, 0.0
     current_y_accumulator = base_pt.Y
@@ -332,14 +332,32 @@ def run_packing(timber_model, origin, stock_length_beam_6x8, stock_length_beam_1
             label_curves.extend(create_geometry_text(item["name"], rg.Point3d(lbl_x, lbl_y, new_bbox.Max.Z + l_off), text_height=0.04))
             max_len_num_txt.extend(create_geometry_text("{:.2f}m".format(item["length_x"]), rg.Point3d(lbl_x, lbl_y - 0.08, new_bbox.Max.Z + l_off), text_height=0.04))
 
-            # Generazione del solido 3D di testo per l'incisione sulla parte superiore
-            pt_engrave_loc = rg.Point3d(lbl_x, lbl_y, new_bbox.Max.Z)
-            solid_text = create_3d_text_engraving(
-                text=item["name"], 
-                position=pt_engrave_loc, 
-                text_height=0.03,        
-                engraving_depth=0.005    
-            )
+            # === LOGICA SPOSTAMENTO ENGRAVING 3D SE INCONTRA UN VUOTO (JOINT) ===
+            test_x = lbl_x
+            step = 0.01  
+            max_shift = item["length_x"] / 2.0 - 0.05  
+            current_shift = 0.0
+            
+            pt_engrave_loc = rg.Point3d(test_x, lbl_y, new_bbox.Max.Z)
+            solid_text = create_3d_text_engraving(text=item["name"], position=pt_engrave_loc, text_height=0.03, engraving_depth=0.005)
+            
+            if solid_text and pure_beam_geo:
+                while current_shift < max_shift:
+                    intersection_breps = rg.Brep.CreateBooleanIntersection(pure_beam_geo, solid_text, 0.001)
+                    
+                    if intersection_breps and len(intersection_breps) > 0:
+                        vmp_text = rg.VolumeMassProperties.Compute(solid_text)
+                        vmp_inter = rg.VolumeMassProperties.Compute(intersection_breps[0])
+                        
+                        if vmp_text and vmp_inter and (vmp_inter.Volume > vmp_text.Volume * 0.95):
+                            break # Trovata zona di legno piena! Ci fermiamo qui.
+                    
+                    # Slitta progressivamente verso sinistra se sotto c'è aria (taglio del giunto)
+                    test_x -= step
+                    current_shift += step
+                    pt_engrave_loc = rg.Point3d(test_x, lbl_y, new_bbox.Max.Z)
+                    solid_text = create_3d_text_engraving(text=item["name"], position=pt_engrave_loc, text_height=0.03, engraving_depth=0.005)
+
             if solid_text:
                 engraving.append(solid_text)
 
@@ -358,5 +376,4 @@ def run_packing(timber_model, origin, stock_length_beam_6x8, stock_length_beam_1
     total_efficiency = ((total_material_bought - total_waste_material) / total_material_bought) * 100.0 if total_material_bought > 0 else 0.0
     report = "==================================================\n        REPORT DETTAGLIATO DI SECOLO DI TAGLIO    \n==================================================\n" + "\n\n".join(report_sections) + "\n\n--- TOTAL PACKING SUMMARY ---\nTotal Stocks needed: {} pcs\nTotal Material:      {:.2f} m\nTotal Waste:         {:.2f} m\nTotal Efficiency:    {:.1f}%\nTotal Cost:          {:.2f} EUR\n-----------------------------\n==================================================".format(len(packed_bars), total_material_bought, total_waste_material, total_efficiency, total_material_bought * p_lm)
 
-    # Restituisce esattamente 10 elementi ordinati
     return arranged_boxes, max_len_boxes, stock_beams, max_len_lines, arranged_names, label_curves, max_len_num_txt, engraving, dimensions, report
