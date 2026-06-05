@@ -58,16 +58,12 @@ const clearAxes = () => {
     toRemove.forEach((c) => scene.remove(c));
 };
 
-const drawLocalFrameAtPosition = (scale = 1, position = null) => {
+const drawLocalFrame = (scale = 1) => {
     clearAxes();
     if (!currentBeamData?.local_frame) return;
 
     const { x_axis, y_axis, z_axis } = currentBeamData.local_frame;
-    
-    const origin = position || new THREE.Vector3(0, 0, 0);
-    if (!position && currentBeamData.global_position) {
-        origin.set(...currentBeamData.global_position);
-    }
+    const o = new THREE.Vector3(0, 0, 0);
 
     const headLength = scale * 0.15;
     const headWidth = scale * 0.08;
@@ -83,7 +79,7 @@ const drawLocalFrameAtPosition = (scale = 1, position = null) => {
         const arrowLength = scale * lengthMult;
         const arrow = new THREE.ArrowHelper(
             direction,
-            origin,
+            o,
             arrowLength,
             color,
             headLength,
@@ -100,15 +96,17 @@ const centerScene = () => {
         .filter((c) => c.userData.isBeam)
         .forEach((c) => box.expandByObject(c));
     if (box.isEmpty()) return;
-    
+    const center = new THREE.Vector3();
+    box.getCenter(center);
+    scene.children
+        .filter((c) => c.userData.isBeam)
+        .forEach((c) => c.position.sub(center));
+    controls.target.set(0, 0, 0);
     const size = new THREE.Vector3();
     box.getSize(size);
     const maxDim = Math.max(size.x, size.y, size.z);
-    
-    const center = box.getCenter(new THREE.Vector3());
-    camera.position.copy(center).add(new THREE.Vector3(0, -maxDim * 2, maxDim * 0.8));
-    camera.lookAt(center);
-    controls.target.copy(center);
+    camera.position.set(0, -maxDim * 2, maxDim * 0.8);
+    camera.lookAt(0, 0, 0);
     controls.update();
 };
 
@@ -119,11 +117,6 @@ const loadSingleBeam = async () => {
     const geo = await loadSTL(stlUrl);
     geo.computeBoundingBox();
 
-    // Trasla la geometria al suo inizio locale
-    const minPoint = geo.boundingBox.min.clone();
-    geo.translate(-minPoint.x, -minPoint.y, -minPoint.z);
-    geo.computeBoundingBox();
-    
     const size = new THREE.Vector3();
     geo.boundingBox.getSize(size);
     const maxDim = Math.max(size.x, size.y, size.z);
@@ -131,24 +124,21 @@ const loadSingleBeam = async () => {
     const mesh = makeMesh(geo, WOOD_COLOR);
     mesh.userData.isBeam = true;
 
-    // NON applicare matrix4, solo posiziona
-    if (currentBeamData.global_position) {
-        const pos = currentBeamData.global_position;
-        mesh.position.set(pos[0], pos[1], pos[2]);
-    }
+    // Centra la mesh usando position, non geometry
+    const center = new THREE.Vector3();
+    geo.boundingBox.getCenter(center);
+    mesh.position.copy(center).negate();
 
     scene.add(mesh);
 
-    // Camera
     const dist = maxDim * 3.5;
-    const beamPos = mesh.position.clone();
-    camera.position.copy(beamPos).add(new THREE.Vector3(0, -dist, dist * 0.6));
-    camera.lookAt(beamPos);
-    controls.target.copy(beamPos);
+    camera.position.set(0, -dist, dist * 0.6);
+    camera.lookAt(0, 0, 0);
+    controls.target.set(0, 0, 0);
     controls.update();
 
     const axisScale = maxDim * 0.6;
-    drawLocalFrameAtPosition(axisScale, beamPos.clone());
+    drawLocalFrame(axisScale);
 };
 
 const loadConnectedBeams = async () => {
@@ -158,20 +148,8 @@ const loadConnectedBeams = async () => {
 
     try {
         const geo = await loadSTL(currentBeamData["3d_model"]);
-        geo.computeBoundingBox();
-
-        const minPoint = geo.boundingBox.min.clone();
-        geo.translate(-minPoint.x, -minPoint.y, -minPoint.z);
-        geo.computeBoundingBox();
-
         const mesh = makeMesh(geo, HIGHLIGHT_COLOR);
         mesh.userData.isBeam = true;
-
-        if (currentBeamData.global_position) {
-            const pos = currentBeamData.global_position;
-            mesh.position.set(pos[0], pos[1], pos[2]);
-        }
-
         scene.add(mesh);
     } catch (e) {
         console.error("Error loading main beam", e);
@@ -180,24 +158,9 @@ const loadConnectedBeams = async () => {
     for (const id of connectedIds) {
         try {
             const stlUrl = `${BASE_URL}/beams/${id}/${id}.stl`;
-            const jsonUrl = `${BASE_URL}/beams/${id}/${id}.json`;
-            
             const geo = await loadSTL(stlUrl);
-            const beamJson = await fetch(jsonUrl).then(r => r.json());
-            
-            geo.computeBoundingBox();
-            const minPoint = geo.boundingBox.min.clone();
-            geo.translate(-minPoint.x, -minPoint.y, -minPoint.z);
-            geo.computeBoundingBox();
-
             const mesh = makeMesh(geo, WOOD_COLOR);
             mesh.userData.isBeam = true;
-
-            if (beamJson.global_position) {
-                const pos = beamJson.global_position;
-                mesh.position.set(pos[0], pos[1], pos[2]);
-            }
-
             scene.add(mesh);
         } catch (e) {
             console.warn(`Could not load beam ${id}`, e);
@@ -225,24 +188,9 @@ const loadPavilion = async () => {
 
             try {
                 const stlUrl = `${BASE_URL}/beams/${id}/${id}.stl`;
-                const jsonUrl = `${BASE_URL}/beams/${id}/${id}.json`;
-                
                 const geo = await loadSTL(stlUrl);
-                const beamJson = await fetch(jsonUrl).then(r => r.json());
-                
-                geo.computeBoundingBox();
-                const minPoint = geo.boundingBox.min.clone();
-                geo.translate(-minPoint.x, -minPoint.y, -minPoint.z);
-                geo.computeBoundingBox();
-
                 const mesh = makeMesh(geo, color);
                 mesh.userData.isBeam = true;
-
-                if (beamJson.global_position) {
-                    const pos = beamJson.global_position;
-                    mesh.position.set(pos[0], pos[1], pos[2]);
-                }
-
                 scene.add(mesh);
             } catch (e) {
                 console.warn(`Could not load STL for ${id}`, e);
