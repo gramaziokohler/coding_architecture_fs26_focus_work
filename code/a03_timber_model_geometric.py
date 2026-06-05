@@ -37,6 +37,7 @@ class GeometricTimberModelCreator:
         max_distance_L: float = None,
         max_distance_T: float = None,
         max_distance_T_arch_base: float = None,
+        max_distance_T_inner_base: float = None,
         max_distance_X: float = None,
         z_height_threshold: float = None,
         sampling_points: int = 20,
@@ -60,6 +61,7 @@ class GeometricTimberModelCreator:
         self.max_distance_L = max_distance_L if max_distance_L is not None else base_dist
         self.max_distance_T = max_distance_T if max_distance_T is not None else base_dist
         self.max_distance_T_arch_base = max_distance_T_arch_base if max_distance_T_arch_base is not None else self.max_distance_T
+        self.max_distance_T_inner_base = max_distance_T_inner_base if max_distance_T_inner_base is not None else self.max_distance_T
         self.max_distance_X = max_distance_X if max_distance_X is not None else base_dist
         self.z_height_threshold = z_height_threshold
         self.sampling_points = sampling_points
@@ -318,7 +320,7 @@ class GeometricTimberModelCreator:
         self._topology_records = []
 
         print(f"\nChecking {len(beams)} beams for intersections...")
-        print(f"max_distance  L={self.max_distance_L:.3f}  T={self.max_distance_T:.3f}  T(arch+base)={self.max_distance_T_arch_base:.3f}  X={self.max_distance_X:.3f}")
+        print(f"max_distance  L={self.max_distance_L:.3f}  T={self.max_distance_T:.3f}  T(arch+base)={self.max_distance_T_arch_base:.3f}  T(inner+base)={self.max_distance_T_inner_base:.3f}  X={self.max_distance_X:.3f}")
 
         topology_counts = {
             JointTopology.TOPO_L: 0,
@@ -327,10 +329,11 @@ class GeometricTimberModelCreator:
         }
 
         passes = [
-            (JointTopology.TOPO_L,  self.max_distance_L,           None),
-            (JointTopology.TOPO_T,  self.max_distance_T_arch_base, {"arch", "base"}),
-            (JointTopology.TOPO_T,  self.max_distance_T,           None),
-            (JointTopology.TOPO_X,  self.max_distance_X,           None),
+            (JointTopology.TOPO_L,  self.max_distance_L,            None),
+            (JointTopology.TOPO_T,  self.max_distance_T_arch_base,  {"arch", "base"}),
+            (JointTopology.TOPO_T,  self.max_distance_T_inner_base, {"inner", "base"}),
+            (JointTopology.TOPO_T,  self.max_distance_T,            None),
+            (JointTopology.TOPO_X,  self.max_distance_X,            None),
         ]
 
         processed_pairs = set()
@@ -352,7 +355,8 @@ class GeometricTimberModelCreator:
                         processed_pairs.add(pair)
                         result = solver.find_topology(beam_a, beam_b, max_distance=max_dist)
                         topo_name = JointTopology.get_name(result.topology) if result.topology != JointTopology.TOPO_UNKNOWN else "UNKNOWN"
-                        print(f"  [arch+base] pair({i},{j}) -> {topo_name}  (max_dist={max_dist:.3f})")
+                        filter_label = "+".join(sorted(category_filter))
+                        print(f"  [{filter_label}] pair({i},{j}) -> {topo_name}  (max_dist={max_dist:.3f})")
                     else:
                         result = solver.find_topology(beam_a, beam_b, max_distance=max_dist)
 
@@ -533,6 +537,7 @@ class GeometricTimberModelCreator:
             float(self.max_distance_L),
             float(self.max_distance_T),
             float(self.max_distance_T_arch_base),
+            float(self.max_distance_T_inner_base),
             float(self.max_distance_X),
             float(self.beam_radius),
         )
