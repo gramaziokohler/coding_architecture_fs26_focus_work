@@ -1,5 +1,5 @@
 # venv: ca-fs26-focus-work
-# keyword: timber-packing, 3d-engraving, collision-check
+# keyword: timber-packing, 3d-engraving, fixed-z-height
 import Rhino.Geometry as rg
 import math
 from importlib import reload
@@ -285,7 +285,7 @@ def run_packing(timber_model, origin, stock_length_beam_6x8, stock_length_beam_1
                 packed_bars.append(new_bar)
                 bar_global_counter += 1
 
-    # 4. GENERAZIONE DEL LAYOUT SPAZIALE COERENTE + SPOSTAMENTO ENGRAVING ANTI-COLLISIONE
+    # 4. GENERAZIONE DEL LAYOUT SPAZIALE COERENTE + SPOSTAMENTO VELOCE ENGRAVING
     arranged_boxes, max_len_boxes, stock_beams, max_len_lines, arranged_names, label_curves, max_len_num_txt, engraving, dimensions, report_sections = [], [], [], [], [], [], [], [], [], []
     total_waste_material, total_material_bought = 0.0, 0.0
     current_y_accumulator = base_pt.Y
@@ -324,40 +324,64 @@ def run_packing(timber_model, origin, stock_length_beam_6x8, stock_length_beam_1
             max_len_boxes.append(raw_box_geo)
 
             new_bbox = pure_beam_geo.GetBoundingBox(True)
-            max_len_lines.append(rg.Line(rg.Point3d(new_bbox.Min.X, new_bbox.Min.Y, new_bbox.Min.Z + (item["height_z"] * 2.0)), rg.Point3d(new_bbox.Min.X + item["length_x"], new_bbox.Min.Y, new_bbox.Min.Z + (item["height_z"] * 2.0))))
+            
+            # BLOCCAGGIO CRITICO DEL PIANO Z: Corrisponde esattamente all'altezza nominale reale della sezione
+            exact_top_z = base_pt.Z + item["height_z"]
+            
+            max_len_lines.append(rg.Line(rg.Point3d(new_bbox.Min.X, new_bbox.Min.Y, exact_top_z + 0.01), rg.Point3d(new_bbox.Min.X + item["length_x"], new_bbox.Min.Y, exact_top_z + 0.01)))
             arranged_names.append(item["name"])
 
             lbl_x, lbl_y = (new_bbox.Min.X + new_bbox.Max.X) / 2.0, (new_bbox.Min.Y + new_bbox.Max.Y) / 2.0
             
-            label_curves.extend(create_geometry_text(item["name"], rg.Point3d(lbl_x, lbl_y, new_bbox.Max.Z + l_off), text_height=0.04))
-            max_len_num_txt.extend(create_geometry_text("{:.2f}m".format(item["length_x"]), rg.Point3d(lbl_x, lbl_y - 0.08, new_bbox.Max.Z + l_off), text_height=0.04))
+            label_curves.extend(create_geometry_text(item["name"], rg.Point3d(lbl_x, lbl_y, exact_top_z + l_off), text_height=0.04))
+            max_len_num_txt.extend(create_geometry_text("{:.2f}m".format(item["length_x"]), rg.Point3d(lbl_x, lbl_y - 0.08, exact_top_z + l_off), text_height=0.04))
 
-            # === LOGICA SPOSTAMENTO ENGRAVING 3D SE INCONTRA UN VUOTO (JOINT) ===
+            # === LOGICA DI CONTROLLO MATRICE A 5 PUNTI SUL PIANO Z BLOCATO ===
             test_x = lbl_x
-            step = 0.01  
-            max_shift = item["length_x"] / 2.0 - 0.05  
+            step = 0.02  
+            max_shift = (item["length_x"] / 2.0) - 0.10  
             current_shift = 0.0
             
-            pt_engrave_loc = rg.Point3d(test_x, lbl_y, new_bbox.Max.Z)
-            solid_text = create_3d_text_engraving(text=item["name"], position=pt_engrave_loc, text_height=0.03, engraving_depth=0.005)
+            t_height = 0.03  
+            t_width_approx = len(item["name"]) * (t_height * 0.7) 
             
-            if solid_text and pure_beam_geo:
-                while current_shift < max_shift:
-                    intersection_breps = rg.Brep.CreateBooleanIntersection(pure_beam_geo, solid_text, 0.001)
+            while current_shift < max_shift:
+                # I 5 raggi virtuali partono ora partendo in riferimento all'altezza nominale Z esatta
+                test_points = [
+                    rg.Point3d(test_x, lbl_y, exact_top_z + 0.01),                       
+                    rg.Point3d(test_x - t_width_approx/2, lbl_y - t_height/2, exact_top_z + 0.01), 
+                    rg.Point3d(test_x + t_width_approx/2, lbl_y - t_height/2, exact_top_z + 0.01), 
+                    rg.Point3d(test_x - t_width_approx/2, lbl_y + t_height/2, exact_top_z + 0.01), 
+                    rg.Point3d(test_x + t_width_approx/2, lbl_y + t_height/2, exact_top_z + 0.01)  
+                ]
+                
+                area_is_fully_solid = True
+                
+                for pt in test_points:
+                    ray = rg.Line(pt, rg.Point3d(pt.X, pt.Y, base_pt.Z - 0.01)).ToNurbsCurve()
+                    intersections = rg.Intersect.Intersection.CurveBrep(ray, pure_beam_geo, 0.001)
                     
-                    if intersection_breps and len(intersection_breps) > 0:
-                        vmp_text = rg.VolumeMassProperties.Compute(solid_text)
-                        vmp_inter = rg.VolumeMassProperties.Compute(intersection_breps[0])
-                        
-                        if vmp_text and vmp_inter and (vmp_inter.Volume > vmp_text.Volume * 0.95):
-                            break # Trovata zona di legno piena! Ci fermiamo qui.
-                    
-                    # Slitta progressivamente verso sinistra se sotto c'è aria (taglio del giunto)
-                    test_x -= step
-                    current_shift += step
-                    pt_engrave_loc = rg.Point3d(test_x, lbl_y, new_bbox.Max.Z)
-                    solid_text = create_3d_text_engraving(text=item["name"], position=pt_engrave_loc, text_height=0.03, engraving_depth=0.005)
+                    point_hits_solid_wood = False
+                    if intersections and len(intersections[2]) > 0:
+                        highest_z = max(p.Z for p in intersections[2])
+                        # Controllo coerente rispetto al piano esatto Z dell'altezza beam
+                        if abs(highest_z - exact_top_z) < 0.002:
+                            point_hits_solid_wood = True
+                            
+                    if not point_hits_solid_wood:
+                        area_is_fully_solid = False
+                        break
+                
+                if area_is_fully_solid:
+                    break  
+                
+                test_x -= step
+                current_shift += step
 
+            # Generiamo il testo solido posizionandolo sulla quota Z nominale della sezione
+            pt_engrave_loc = rg.Point3d(test_x, lbl_y, exact_top_z)
+            solid_text = create_3d_text_engraving(text=item["name"], position=pt_engrave_loc, text_height=t_height, engraving_depth=0.005)
+            
             if solid_text:
                 engraving.append(solid_text)
 
