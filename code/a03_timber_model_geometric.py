@@ -12,6 +12,7 @@ from compas_timber.connections import (
     ConnectionSolver,
 )
 from compas_timber.elements import Beam
+from a03_preferred_face_tbutt_joint import PreferredFaceTButtJoint
 from compas_timber.model import TimberModel
 from compas_timber.fabrication import JackRafterCut
 from timber_design.workflow import DirectRule
@@ -49,6 +50,7 @@ class GeometricTimberModelCreator:
         arch_align_axis: str = "z",
         tbutt_mill_depth: float = 0.0,
         base_mill_depth: float = 0.0,
+        preferred_face_vector=None,
         cutting_plane_inset_distance: float = 0.0,
     ):
         self.rf_system = rf_system
@@ -85,6 +87,7 @@ class GeometricTimberModelCreator:
         self.arch_plane_B_normal = self._vector_from_rhino_plane_normal(arch_plane_B)
         self.tbutt_mill_depth = tbutt_mill_depth
         self.base_mill_depth = base_mill_depth
+        self.preferred_face_vector = preferred_face_vector
         self.cutting_plane_inset_distance = float(cutting_plane_inset_distance or 0.0)
 
 
@@ -414,12 +417,15 @@ class GeometricTimberModelCreator:
 
                     if joint_type and beam_order:
                         kwargs = {}
-                        if joint_type is TButtJoint:
+                        if joint_type in (TButtJoint, PreferredFaceTButtJoint):
                             is_base_joint = "base" in (cat_main, cat_cross)
                             if is_base_joint and self.base_mill_depth:
                                 kwargs["mill_depth"] = self.base_mill_depth
                             elif not is_base_joint and self.tbutt_mill_depth:
                                 kwargs["mill_depth"] = self.tbutt_mill_depth
+                            if joint_type is PreferredFaceTButtJoint:
+                                if self.preferred_face_vector is not None:
+                                    kwargs["preferred_face_vector"] = self.preferred_face_vector
                         rule = DirectRule(joint_type, beam_order, max_distance=max_dist, **kwargs)
                         self._rules.append(rule)
 
@@ -439,7 +445,7 @@ class GeometricTimberModelCreator:
                 if {cat_main, cat_cross} == {"arch", "base"}:
                     base_b = main_beam if cat_main == "base" else cross_beam
                     arch_b = cross_beam if cat_main == "base" else main_beam
-                    return TButtJoint, [arch_b, base_b]
+                    return PreferredFaceTButtJoint, [arch_b, base_b]
                 return LMiterJoint, [main_beam, cross_beam]
             return None, None
 
@@ -447,11 +453,15 @@ class GeometricTimberModelCreator:
             if "base" in (cat_main, cat_cross) and "inner" in (cat_main, cat_cross):
                 base_b  = main_beam  if cat_main == "base" else cross_beam
                 inner_b = cross_beam if cat_main == "base" else main_beam
-                return TButtJoint, [inner_b, base_b]
+                return PreferredFaceTButtJoint, [inner_b, base_b]
             if "base" in (cat_main, cat_cross) and "arch" in (cat_main, cat_cross):
                 base_b = main_beam if cat_main == "base" else cross_beam
                 arch_b = cross_beam if cat_main == "base" else main_beam
-                return TButtJoint, [arch_b, base_b]
+                return PreferredFaceTButtJoint, [arch_b, base_b]
+            if "inner" in (cat_main, cat_cross) and "arch" in (cat_main, cat_cross):
+                inner_b = main_beam if cat_main == "inner" else cross_beam
+                arch_b = cross_beam if cat_main == "inner" else main_beam
+                return TButtJoint, [inner_b, arch_b]
             return TButtJoint, [main_beam, cross_beam]
 
         elif topology == JointTopology.TOPO_X:

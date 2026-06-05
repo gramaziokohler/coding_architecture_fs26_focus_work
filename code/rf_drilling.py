@@ -77,10 +77,43 @@ class DrillingProcessor:
                 
             self.processed_beam_pairs.add(pair_id)
             
+            # --- ROUTING SYSTEM ---
             if isinstance(joint, TButtJoint):
-                self._apply_butt_drilling(joint, elements[0], elements[1])
+                # 1. Resolve beam identities
+                if hasattr(joint, 'main_beam') and hasattr(joint, 'cross_beam'):
+                    cont_beam = joint.main_beam
+                    abut_beam = joint.cross_beam
+                else:
+                    line1, line2 = elements[0].centerline, elements[1].centerline
+                    res = intersection_line_line(line1, line2)
+                    if not res or res[0] is None: continue
+                    mid_pt = Point(*res[0])
+                    d1 = min(distance_point_point(mid_pt, line1.start), distance_point_point(mid_pt, line1.end))
+                    d2 = min(distance_point_point(mid_pt, line2.start), distance_point_point(mid_pt, line2.end))
+                    if d1 < d2:
+                        abut_beam, cont_beam = elements[0], elements[1]
+                    else:
+                        abut_beam, cont_beam = elements[1], elements[0]
+
+                # 2. Check categories and explicitly route to separate methods
+                cat_c = cont_beam.attributes.get("category", "inner")
+                cat_a = abut_beam.attributes.get("category", "inner")
+                
+                if cat_c == "base" or cat_a == "base":
+                    # Fix identities if custom solver flipped them
+                    if cat_a == "base":  
+                        cont_beam, abut_beam = abut_beam, cont_beam
+                    self._apply_foundation_butt_drilling(joint, abut_beam, cont_beam)
+                else:
+                    if cat_c == "arch" or cat_a == "arch":
+                        joint_label = "TButtJoint - arch"
+                    else:
+                        joint_label = "TButtJoint - interior interior"
+                    self._apply_standard_butt_drilling(joint, abut_beam, cont_beam, joint_label)
+
             elif isinstance(joint, (XLapJoint, TLapJoint)):
                 self._apply_lap_drilling(joint, elements[0], elements[1])
+                
             elif isinstance(joint, LMiterJoint):
                 cat1 = elements[0].attributes.get("category", "inner")
                 cat2 = elements[1].attributes.get("category", "inner")
@@ -174,38 +207,12 @@ class DrillingProcessor:
         candidates.sort(key=lambda pt: distance_point_point(pos, pt))
         return candidates[0]
 
-    def _apply_butt_drilling(self, joint, beam1, beam2):
-        joint_type = type(joint).__name__
+    # =====================================================================
+    # EXPLICIT FOUNDATION BUTT DRILLING
+    # =====================================================================
+    def _apply_foundation_butt_drilling(self, joint, abut_beam, cont_beam):
+        joint_label = "TButtJoint - foundation inner structure"
         
-        if hasattr(joint, 'main_beam') and hasattr(joint, 'cross_beam'):
-            cont_beam = joint.main_beam
-            abut_beam = joint.cross_beam
-        else:
-            line1, line2 = beam1.centerline, beam2.centerline
-            res = intersection_line_line(line1, line2)
-            if not res or res[0] is None: return False
-            mid_pt = Point(*res[0])
-            d1 = min(distance_point_point(mid_pt, line1.start), distance_point_point(mid_pt, line1.end))
-            d2 = min(distance_point_point(mid_pt, line2.start), distance_point_point(mid_pt, line2.end))
-            if d1 < d2:
-                abut_beam, cont_beam = beam1, beam2
-            else:
-                abut_beam, cont_beam = beam2, beam1
-
-        cat_c = cont_beam.attributes.get("category", "inner")
-        cat_a = abut_beam.attributes.get("category", "inner")
-        
-        is_foundation = False
-        if cat_c == "base" or cat_a == "base":
-            is_foundation = True
-            joint_label = "TButtJoint - foundation inner structure"
-            if cat_a == "base":  
-                cont_beam, abut_beam = abut_beam, cont_beam
-        elif cat_c == "arch" or cat_a == "arch":
-            joint_label = "TButtJoint - arch"
-        else:
-            joint_label = "TButtJoint - interior interior"
-
         line_a = abut_beam.centerline
         line_c = cont_beam.centerline
         
@@ -226,30 +233,22 @@ class DrillingProcessor:
             dir_s.scale(-1)
         dir_s.unitize()
         
-        if is_foundation:
-            if distance_point_point(line_a.start, anchor_pt) <= distance_point_point(line_a.end, anchor_pt):
-                joint_end = line_a.start
-            else:
-                joint_end = line_a.end
-
-            along = Vector(dir_s.x, dir_s.y, 0.0)
-            if along.length < 1e-6: along = Vector(1, 0, 0)
-            along.unitize()
-
-            screw_dir = Vector(0, 0, -1)                          
-            base_pt = joint_end + along * (0.5 * cont_beam.width) 
-            offset_dir = Vector(along.x, along.y, along.z)        
-            offset_dir.unitize()
-            target_beam = abut_beam                               
-
+        # Identify Contact End
+        if distance_point_point(line_a.start, anchor_pt) <= distance_point_point(line_a.end, anchor_pt):
+            joint_end = line_a.start
         else:
-            screw_dir = dir_s                                     
-            base_pt = anchor_pt
-            offset_dir = abut_beam.frame.yaxis                    
-            if offset_dir.length < 1e-5:
-                offset_dir = dir_s.cross(line_c.direction)
-            offset_dir.unitize()
-            target_beam = cont_beam                               
+            joint_end = line_a.end
+
+        # Horizontal direction along incoming beam
+        along = Vector(dir_s.x, dir_s.y, 0.0)
+        if along.length < 1e-6: along = Vector(1, 0, 0)
+        along.unitize()
+
+        screw_dir = Vector(0, 0, -1)                          
+        base_pt = joint_end + along * (0.5 * cont_beam.width) 
+        offset_dir = Vector(along.x, along.y, along.z)        
+        offset_dir.unitize()
+        target_beam = abut_beam                               
 
         offset_vec = offset_dir * (self.screw_spacing / 2.0)
         
@@ -272,7 +271,81 @@ class DrillingProcessor:
             cnc_lines.append(Line(cnc_head, cnc_tail))
 
         return self._generate_features(cnc_lines, hw_lines, abut_beam, cont_beam, joint_label, req_screw_length)
+# =====================================================================
+    # EXPLICIT STANDARD BUTT DRILLING
+    # =====================================================================
+    def _apply_standard_butt_drilling(self, joint, abut_beam, cont_beam, joint_label):
+        line_a = abut_beam.centerline
+        line_c = cont_beam.centerline
+        
+        res = intersection_line_line(line_a, line_c)
+        if not res or res[0] is None: return False
+        
+        anchor_pt = Point(res[0][0], res[0][1], res[0][2])
+        dir_s = line_a.direction
+        d_start = distance_point_point(anchor_pt, line_a.start)
+        d_end = distance_point_point(anchor_pt, line_a.end)
+        
+        if d_start > d_end:
+            vec_to_far = Vector.from_start_end(anchor_pt, line_a.start)
+        else:
+            vec_to_far = Vector.from_start_end(anchor_pt, line_a.end)
+            
+        if dir_s.dot(vec_to_far) < 0:
+            dir_s.scale(-1)
+        dir_s.unitize()
+        
+        screw_dir = dir_s                                     
+        base_pt = anchor_pt
+        offset_dir = abut_beam.frame.yaxis                    
+        if offset_dir.length < 1e-5:
+            offset_dir = dir_s.cross(line_c.direction)
+        offset_dir.unitize()
+        target_beam = cont_beam                               
 
+        offset_vec = offset_dir * (self.screw_spacing / 2.0)
+        
+        # --- NEW DYNAMIC LENGTH LOGIC ---
+        # 1. Shoot a ray to find the exact entry point on the continuous beam's outer face
+        center_head = self._surface_entry(base_pt, screw_dir, target_beam)
+        
+        if center_head:
+            # Distance from the outer face to the centerline intersection
+            half_thickness = distance_point_point(center_head, base_pt)
+            # True diagonal distance through the entire first beam
+            dist_through_beam1 = half_thickness * 2.0
+        else:
+            # Fallback if the ray misses
+            dist_through_beam1 = max(cont_beam.width, cont_beam.height)
+            
+        # 2. Rule: Penetrate beam 2 by the exact same distance it travels through beam 1
+        raw_screw_length = dist_through_beam1 * 2.0
+        req_screw_length = math.ceil(raw_screw_length / 0.010) * 0.010 # Round up to nearest 10mm
+        
+        cnc_lines = []
+        hw_lines = []
+        
+        for pos in (base_pt + offset_vec, base_pt - offset_vec):
+            head = self._surface_entry(pos, screw_dir, target_beam)
+            if head is None:
+                half = dist_through_beam1 / 2.0
+                head = pos - screw_dir * half
+                
+            tail = head + screw_dir * req_screw_length
+            
+            # Hardware Vis: Exact physical screw length
+            hw_lines.append(Line(head, tail))
+            
+            # CNC Toolpath: Overhangs entry surface by 10mm to satisfy the solver
+            cnc_head = head - screw_dir * 0.010
+            cnc_tail = tail + screw_dir * 0.010
+            cnc_lines.append(Line(cnc_head, cnc_tail))
+
+        return self._generate_features(cnc_lines, hw_lines, abut_beam, cont_beam, joint_label, req_screw_length)
+
+    # =====================================================================
+    # EXPLICIT LAP DRILLING
+    # =====================================================================
     def _apply_lap_drilling(self, joint, beam_a, beam_b):
         joint_label = type(joint).__name__
         line_a, line_b = beam_a.centerline, beam_b.centerline

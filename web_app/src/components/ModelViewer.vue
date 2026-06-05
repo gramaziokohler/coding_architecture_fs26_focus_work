@@ -58,17 +58,12 @@ const clearAxes = () => {
     toRemove.forEach((c) => scene.remove(c));
 };
 
-const drawLocalFrameAtPosition = (scale = 1) => {
+const drawLocalFrame = (scale = 1) => {
     clearAxes();
     if (!currentBeamData?.local_frame) return;
 
     const { x_axis, y_axis, z_axis } = currentBeamData.local_frame;
-    
-    // Posiziona gli assi a global_position (inizio del beam)
-    const origin = new THREE.Vector3(0, 0, 0);
-    if (currentBeamData.global_position) {
-        origin.set(...currentBeamData.global_position);
-    }
+    const o = new THREE.Vector3(0, 0, 0);
 
     const headLength = scale * 0.15;
     const headWidth = scale * 0.08;
@@ -84,7 +79,7 @@ const drawLocalFrameAtPosition = (scale = 1) => {
         const arrowLength = scale * lengthMult;
         const arrow = new THREE.ArrowHelper(
             direction,
-            origin,
+            o,
             arrowLength,
             color,
             headLength,
@@ -122,57 +117,28 @@ const loadSingleBeam = async () => {
     const geo = await loadSTL(stlUrl);
     geo.computeBoundingBox();
 
-    // ===== TRASLA LA GEOMETRIA AL SUO INIZIO =====
     const size = new THREE.Vector3();
     geo.boundingBox.getSize(size);
-    
-    // Traslazione relativa alla geometria
-    const minPoint = geo.boundingBox.min.clone();
-    geo.translate(-minPoint.x, -minPoint.y, -minPoint.z);
-    geo.computeBoundingBox();
-    
     const maxDim = Math.max(size.x, size.y, size.z);
 
     const mesh = makeMesh(geo, WOOD_COLOR);
     mesh.userData.isBeam = true;
 
-    // ===== POSIZIONA NEL SISTEMA GLOBALE =====
-    // Usa global_position per mettere il beam nel posto giusto
-    if (currentBeamData.global_position) {
-        const pos = currentBeamData.global_position;
-        mesh.position.set(pos[0], pos[1], pos[2]);
-    }
-
-    // Applica rotazione secondo local_frame
-    if (currentBeamData.local_frame) {
-        const { x_axis, y_axis, z_axis } = currentBeamData.local_frame;
-        
-        const xVec = new THREE.Vector3(...x_axis).normalize();
-        const yVec = new THREE.Vector3(...y_axis).normalize();
-        const zVec = new THREE.Vector3(...z_axis).normalize();
-        
-        const matrix = new THREE.Matrix4();
-        matrix.set(
-            xVec.x, yVec.x, zVec.x, mesh.position.x,
-            xVec.y, yVec.y, zVec.y, mesh.position.y,
-            xVec.z, yVec.z, zVec.z, mesh.position.z,
-            0, 0, 0, 1
-        );
-        mesh.applyMatrix4(matrix);
-    }
+    // Centra la mesh usando position, non geometry
+    const center = new THREE.Vector3();
+    geo.boundingBox.getCenter(center);
+    mesh.position.copy(center).negate();
 
     scene.add(mesh);
 
-    // ===== CAMERA FOLLOW BEAM =====
     const dist = maxDim * 3.5;
     camera.position.set(0, -dist, dist * 0.6);
     camera.lookAt(0, 0, 0);
     controls.target.set(0, 0, 0);
     controls.update();
 
-    // ===== DISEGNA ASSI SULL'ORIGINE DEL BEAM =====
     const axisScale = maxDim * 0.6;
-    drawLocalFrameAtPosition(axisScale);
+    drawLocalFrame(axisScale);
 };
 
 const loadConnectedBeams = async () => {
@@ -182,40 +148,8 @@ const loadConnectedBeams = async () => {
 
     try {
         const geo = await loadSTL(currentBeamData["3d_model"]);
-        geo.computeBoundingBox();
-
-        const size = new THREE.Vector3();
-        geo.boundingBox.getSize(size);
-        
-        const minPoint = geo.boundingBox.min.clone();
-        geo.translate(-minPoint.x, -minPoint.y, -minPoint.z);
-        geo.computeBoundingBox();
-
         const mesh = makeMesh(geo, HIGHLIGHT_COLOR);
         mesh.userData.isBeam = true;
-
-        if (currentBeamData.global_position) {
-            const pos = currentBeamData.global_position;
-            mesh.position.set(pos[0], pos[1], pos[2]);
-        }
-
-        if (currentBeamData.local_frame) {
-            const { x_axis, y_axis, z_axis } = currentBeamData.local_frame;
-            
-            const xVec = new THREE.Vector3(...x_axis).normalize();
-            const yVec = new THREE.Vector3(...y_axis).normalize();
-            const zVec = new THREE.Vector3(...z_axis).normalize();
-            
-            const matrix = new THREE.Matrix4();
-            matrix.set(
-                xVec.x, yVec.x, zVec.x, mesh.position.x,
-                xVec.y, yVec.y, zVec.y, mesh.position.y,
-                xVec.z, yVec.z, zVec.z, mesh.position.z,
-                0, 0, 0, 1
-            );
-            mesh.applyMatrix4(matrix);
-        }
-
         scene.add(mesh);
     } catch (e) {
         console.error("Error loading main beam", e);
@@ -224,41 +158,9 @@ const loadConnectedBeams = async () => {
     for (const id of connectedIds) {
         try {
             const stlUrl = `${BASE_URL}/beams/${id}/${id}.stl`;
-            const jsonUrl = `${BASE_URL}/beams/${id}/${id}.json`;
-            
             const geo = await loadSTL(stlUrl);
-            const beamJson = await fetch(jsonUrl).then(r => r.json());
-            
-            geo.computeBoundingBox();
-            const minPoint = geo.boundingBox.min.clone();
-            geo.translate(-minPoint.x, -minPoint.y, -minPoint.z);
-            geo.computeBoundingBox();
-
             const mesh = makeMesh(geo, WOOD_COLOR);
             mesh.userData.isBeam = true;
-
-            if (beamJson.global_position) {
-                const pos = beamJson.global_position;
-                mesh.position.set(pos[0], pos[1], pos[2]);
-            }
-
-            if (beamJson.local_frame) {
-                const { x_axis, y_axis, z_axis } = beamJson.local_frame;
-                
-                const xVec = new THREE.Vector3(...x_axis).normalize();
-                const yVec = new THREE.Vector3(...y_axis).normalize();
-                const zVec = new THREE.Vector3(...z_axis).normalize();
-                
-                const matrix = new THREE.Matrix4();
-                matrix.set(
-                    xVec.x, yVec.x, zVec.x, mesh.position.x,
-                    xVec.y, yVec.y, zVec.y, mesh.position.y,
-                    xVec.z, yVec.z, zVec.z, mesh.position.z,
-                    0, 0, 0, 1
-                );
-                mesh.applyMatrix4(matrix);
-            }
-
             scene.add(mesh);
         } catch (e) {
             console.warn(`Could not load beam ${id}`, e);
@@ -286,41 +188,9 @@ const loadPavilion = async () => {
 
             try {
                 const stlUrl = `${BASE_URL}/beams/${id}/${id}.stl`;
-                const jsonUrl = `${BASE_URL}/beams/${id}/${id}.json`;
-                
                 const geo = await loadSTL(stlUrl);
-                const beamJson = await fetch(jsonUrl).then(r => r.json());
-                
-                geo.computeBoundingBox();
-                const minPoint = geo.boundingBox.min.clone();
-                geo.translate(-minPoint.x, -minPoint.y, -minPoint.z);
-                geo.computeBoundingBox();
-
                 const mesh = makeMesh(geo, color);
                 mesh.userData.isBeam = true;
-
-                if (beamJson.global_position) {
-                    const pos = beamJson.global_position;
-                    mesh.position.set(pos[0], pos[1], pos[2]);
-                }
-
-                if (beamJson.local_frame) {
-                    const { x_axis, y_axis, z_axis } = beamJson.local_frame;
-                    
-                    const xVec = new THREE.Vector3(...x_axis).normalize();
-                    const yVec = new THREE.Vector3(...y_axis).normalize();
-                    const zVec = new THREE.Vector3(...z_axis).normalize();
-                    
-                    const matrix = new THREE.Matrix4();
-                    matrix.set(
-                        xVec.x, yVec.x, zVec.x, mesh.position.x,
-                        xVec.y, yVec.y, zVec.y, mesh.position.y,
-                        xVec.z, yVec.z, zVec.z, mesh.position.z,
-                        0, 0, 0, 1
-                    );
-                    mesh.applyMatrix4(matrix);
-                }
-
                 scene.add(mesh);
             } catch (e) {
                 console.warn(`Could not load STL for ${id}`, e);
