@@ -20,12 +20,12 @@ let gizmoRenderer, gizmoScene, gizmoCamera;
 
 const BASE_URL = "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data";
 
-const viewMode = ref("single"); // 'single' | 'connected' | 'pavilion'
+const viewMode = ref("single");
+const isLoading = ref(false);
 
 const WOOD_COLOR = 0xd4b896;
-const HIGHLIGHT_COLOR = 0xe8643a;
+const HIGHLIGHT_COLOR = 0xff8fa3;
 
-// ─── STL loader helper ───────────────────────────────────────────────
 const loadSTL = (url) =>
     fetch(url, { mode: "cors" })
         .then((r) => {
@@ -36,9 +36,8 @@ const loadSTL = (url) =>
 
 const makeMesh = (geometry, color, opacity = 1) => {
     geometry.computeBoundingBox();
-    const mat = new THREE.MeshPhongMaterial({
+    const mat = new THREE.MeshBasicMaterial({
         color,
-        shininess: 10,
         side: THREE.DoubleSide,
         transparent: opacity < 1,
         opacity,
@@ -49,13 +48,48 @@ const makeMesh = (geometry, color, opacity = 1) => {
     return mesh;
 };
 
-// ─── Clear all beam meshes ────────────────────────────────────────────
 const clearBeams = () => {
     const toRemove = scene.children.filter((c) => c.userData.isBeam);
     toRemove.forEach((c) => scene.remove(c));
 };
 
-// ─── Center scene around loaded meshes ───────────────────────────────
+const clearAxes = () => {
+    const toRemove = scene.children.filter((c) => c.userData.isAxis);
+    toRemove.forEach((c) => scene.remove(c));
+};
+
+const drawLocalFrame = (scale = 1) => {
+    clearAxes();
+    if (!currentBeamData?.local_frame) return;
+
+    const { x_axis, y_axis, z_axis } = currentBeamData.local_frame;
+    const o = new THREE.Vector3(0, 0, 0);
+
+    const headLength = scale * 0.15;
+    const headWidth = scale * 0.08;
+
+    const axes = [
+        { dir: x_axis, color: 0xff4444, lengthMult: 1.6 },
+        { dir: y_axis, color: 0x44ff44, lengthMult: 1.0 },
+        { dir: z_axis, color: 0x4488ff, lengthMult: 1.0 },
+    ];
+
+    axes.forEach(({ dir, color, lengthMult }) => {
+        const direction = new THREE.Vector3(...dir).normalize();
+        const arrowLength = scale * lengthMult;
+        const arrow = new THREE.ArrowHelper(
+            direction,
+            o,
+            arrowLength,
+            color,
+            headLength,
+            headWidth
+        );
+        arrow.userData.isAxis = true;
+        scene.add(arrow);
+    });
+};
+
 const centerScene = () => {
     const box = new THREE.Box3();
     scene.children
@@ -68,17 +102,18 @@ const centerScene = () => {
         .filter((c) => c.userData.isBeam)
         .forEach((c) => c.position.sub(center));
     controls.target.set(0, 0, 0);
-    // fit camera
     const size = new THREE.Vector3();
     box.getSize(size);
     const maxDim = Math.max(size.x, size.y, size.z);
-    camera.position.set(maxDim * 1.5, maxDim * 1.5, maxDim);
+    camera.position.set(0, -maxDim * 2, maxDim * 0.8);
+    camera.lookAt(0, 0, 0);
     controls.update();
 };
 
-// ─── Load single beam ─────────────────────────────────────────────────
+// ← MODIFICA PRINCIPALE: rimuovo la scala fissa e uso centerScene
 const loadSingleBeam = async () => {
     clearBeams();
+    clearAxes();
     const stlUrl = currentBeamData["3d_model"];
     const geo = await loadSTL(stlUrl);
     geo.computeBoundingBox();
@@ -87,22 +122,28 @@ const loadSingleBeam = async () => {
     geo.translate(-center.x, -center.y, -center.z);
     const size = new THREE.Vector3();
     geo.boundingBox.getSize(size);
-    const scale = 2 / Math.max(size.x, size.y, size.z);
+    const maxDim = Math.max(size.x, size.y, size.z);
+
     const mesh = makeMesh(geo, WOOD_COLOR);
-    mesh.scale.multiplyScalar(scale);
     mesh.userData.isBeam = true;
     scene.add(mesh);
+
+    // Camera si adatta alla dimensione reale del beam
+    const dist = maxDim * 2.2;
+    camera.position.set(0, -dist, dist * 0.6);
+    camera.lookAt(0, 0, 0);
     controls.target.set(0, 0, 0);
     controls.update();
+
+    const axisScale = maxDim * 0.6;
+    drawLocalFrame(axisScale);
 };
 
-// ─── Load connected beams ─────────────────────────────────────────────
 const loadConnectedBeams = async () => {
     clearBeams();
+    clearAxes();
     const connectedIds = currentBeamData.connected_beams || [];
-    const currentId = currentBeamData.name;
 
-    // Load current beam highlighted
     try {
         const geo = await loadSTL(currentBeamData["3d_model"]);
         const mesh = makeMesh(geo, HIGHLIGHT_COLOR);
@@ -112,7 +153,6 @@ const loadConnectedBeams = async () => {
         console.error("Error loading main beam", e);
     }
 
-    // Load connected beams in wood color
     for (const id of connectedIds) {
         try {
             const stlUrl = `${BASE_URL}/beams/${id}/${id}.stl`;
@@ -128,58 +168,54 @@ const loadConnectedBeams = async () => {
     centerScene();
 };
 
-// ─── Load full pavilion ───────────────────────────────────────────────
 const loadPavilion = async () => {
     clearBeams();
-    const currentId = currentBeamData.name;
+    clearAxes();
+    const currentId = currentBeamData["beam ID"];
 
-    // Try to load structure JSON
     try {
         const structureUrl = `${BASE_URL}/structure.json`;
         const res = await fetch(structureUrl);
         if (!res.ok) throw new Error("No structure.json");
         const structure = await res.json();
 
-        // Draw all centerlines as thin cylinders
-        for (const beam of structure.beams) {
-            const start = new THREE.Vector3(...beam.centerline_start);
-            const end = new THREE.Vector3(...beam.centerline_end);
-            const dir = new THREE.Vector3().subVectors(end, start);
-            const len = dir.length();
-            const mid = new THREE.Vector3().addVectors(start, end).multiplyScalar(0.5);
+        const loadPromises = structure.beams.map(async (beam) => {
+            const id = beam.beam_id;
+            const isCurrentBeam = id === currentId;
+            const color = isCurrentBeam ? HIGHLIGHT_COLOR : WOOD_COLOR;
 
-            const color = beam.id === currentId ? HIGHLIGHT_COLOR : WOOD_COLOR;
-            const radius = beam.id === currentId ? 0.025 : 0.01;
+            try {
+                const stlUrl = `${BASE_URL}/beams/${id}/${id}.stl`;
+                const geo = await loadSTL(stlUrl);
+                const mesh = makeMesh(geo, color);
+                mesh.userData.isBeam = true;
+                scene.add(mesh);
+            } catch (e) {
+                console.warn(`Could not load STL for ${id}`, e);
+            }
+        });
 
-            const geo = new THREE.CylinderGeometry(radius, radius, len, 6);
-            const mat = new THREE.MeshPhongMaterial({ color, shininess: 5 });
-            const mesh = new THREE.Mesh(geo, mat);
-            mesh.userData.isBeam = true;
-
-            mesh.position.copy(mid);
-            mesh.quaternion.setFromUnitVectors(
-                new THREE.Vector3(0, 1, 0),
-                dir.clone().normalize()
-            );
-            scene.add(mesh);
-        }
+        await Promise.all(loadPromises);
         centerScene();
     } catch (e) {
-        // Fallback: just show current beam
-        console.warn("structure.json not found, loading single beam");
+        console.warn("structure.json not found:", e);
         await loadSingleBeam();
     }
 };
 
-// ─── View mode buttons ────────────────────────────────────────────────
 const setMode = async (mode) => {
     viewMode.value = mode;
-    if (mode === "single") await loadSingleBeam();
-    else if (mode === "connected") await loadConnectedBeams();
-    else if (mode === "pavilion") await loadPavilion();
+    isLoading.value = true;
+    clearAxes();
+    try {
+        if (mode === "single") await loadSingleBeam();
+        else if (mode === "connected") await loadConnectedBeams();
+        else if (mode === "pavilion") await loadPavilion();
+    } finally {
+        isLoading.value = false;
+    }
 };
 
-// ─── Gizmo setup ─────────────────────────────────────────────────────
 const initGizmo = () => {
     const canvas = gizmoRef.value;
     gizmoRenderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
@@ -193,10 +229,10 @@ const initGizmo = () => {
     const axesHelper = new THREE.AxesHelper(1);
     gizmoScene.add(axesHelper);
 
-    // Labels
     const makeLabel = (text, pos, color) => {
         const canvas2 = document.createElement("canvas");
-        canvas2.width = 64; canvas2.height = 64;
+        canvas2.width = 64;
+        canvas2.height = 64;
         const ctx = canvas2.getContext("2d");
         ctx.fillStyle = color;
         ctx.font = "bold 40px Arial";
@@ -218,25 +254,24 @@ const initGizmo = () => {
 
 const updateGizmo = () => {
     if (!gizmoRenderer) return;
-    // Sync gizmo camera rotation with main camera
     gizmoCamera.position.copy(camera.position).normalize().multiplyScalar(3);
     gizmoCamera.lookAt(0, 0, 0);
     gizmoCamera.up.copy(camera.up);
     gizmoRenderer.render(gizmoScene, gizmoCamera);
 };
 
-// ─── Mount ────────────────────────────────────────────────────────────
 onMounted(async () => {
-    // Scene
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0xffffff);
 
     const width = containerRef.value.clientWidth;
     const height = containerRef.value.clientHeight;
 
-    camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
-    camera.position.set(3, 3, 2);
+    // ← far clipping plane aumentato per beam grandi
+    camera = new THREE.PerspectiveCamera(75, width / height, 0.01, 100000);
+    camera.position.set(0, -5, 3);
     camera.up.set(0, 0, 1);
+    camera.lookAt(0, 0, 0);
 
     renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(width, height);
@@ -252,7 +287,6 @@ onMounted(async () => {
     controls.enableZoom = true;
     controls.target.set(0, 0, 0);
 
-    // Lights
     const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
     dirLight.position.set(5, 8, 5);
     dirLight.castShadow = true;
@@ -262,7 +296,6 @@ onMounted(async () => {
     fillLight.position.set(-5, 3, -5);
     scene.add(fillLight);
 
-    // Load beam JSON
     try {
         if (!props.beamUrl) throw new Error("No beam URL");
         const beamName = props.beamUrl.split("/").pop();
@@ -270,15 +303,16 @@ onMounted(async () => {
         const response = await fetch(jsonUrl);
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         currentBeamData = await response.json();
+        isLoading.value = true;
         await loadSingleBeam();
+        isLoading.value = false;
     } catch (e) {
         console.error("Error loading beam:", e);
+        isLoading.value = false;
     }
 
-    // Init gizmo
     initGizmo();
 
-    // Animation loop
     const animate = () => {
         animationId = requestAnimationFrame(animate);
         controls.update();
@@ -287,7 +321,6 @@ onMounted(async () => {
     };
     animate();
 
-    // Resize
     const handleResize = () => {
         const w = containerRef.value.clientWidth;
         const h = containerRef.value.clientHeight;
@@ -308,7 +341,6 @@ onMounted(async () => {
 
 <template>
     <div ref="containerRef" class="model-viewer">
-        <!-- Buttons top-left -->
         <div class="view-buttons">
             <button
                 :class="{ active: viewMode === 'single' }"
@@ -324,7 +356,26 @@ onMounted(async () => {
             >Pavilion</button>
         </div>
 
-        <!-- Gizmo bottom-right -->
+        <div v-if="viewMode === 'single'" class="axis-legend">
+            <div class="axis-item">
+                <span class="axis-dot" style="background: #ff4444"></span>
+                <span>X</span>
+            </div>
+            <div class="axis-item">
+                <span class="axis-dot" style="background: #44ff44"></span>
+                <span>Y</span>
+            </div>
+            <div class="axis-item">
+                <span class="axis-dot" style="background: #4488ff"></span>
+                <span>Z</span>
+            </div>
+        </div>
+
+        <div v-if="isLoading" class="loading-overlay">
+            <div class="loading-spinner"></div>
+            <span>Loading...</span>
+        </div>
+
         <canvas ref="gizmoRef" class="gizmo-canvas"></canvas>
     </div>
 </template>
@@ -372,6 +423,37 @@ onMounted(async () => {
     border-color: #000;
 }
 
+.axis-legend {
+    position: absolute;
+    bottom: 16px;
+    left: 16px;
+    z-index: 10;
+    background: rgba(255, 255, 255, 0.85);
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 6px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-family: "Helvetica Neue", sans-serif;
+    font-size: 11px;
+    color: #333;
+}
+
+.axis-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.axis-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+    flex-shrink: 0;
+}
+
 .gizmo-canvas {
     position: absolute;
     bottom: 16px;
@@ -381,5 +463,36 @@ onMounted(async () => {
     z-index: 10;
     pointer-events: none;
     border-radius: 4px;
+}
+
+.loading-overlay {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    background: rgba(255, 255, 255, 0.85);
+    padding: 20px 30px;
+    border-radius: 8px;
+    font-family: "Helvetica Neue", sans-serif;
+    font-size: 13px;
+    color: #333;
+}
+
+.loading-spinner {
+    width: 28px;
+    height: 28px;
+    border: 3px solid #ddd;
+    border-top-color: #e8643a;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
 }
 </style>

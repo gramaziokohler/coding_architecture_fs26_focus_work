@@ -1,5 +1,8 @@
+# venv: ca-fs26-focus-work
+# keyword: timber-packing, 3d-engraving, collision-check
 import Rhino.Geometry as rg
 import math
+from importlib import reload
 from compas.datastructures import Graph
 
 class CutItem:
@@ -12,38 +15,124 @@ class CutItem:
         self.height = height
         self.center_pt = None
 
+
 def create_geometry_text(text, position, text_height=0.03):
+    """Genera le curve di un testo perfettamente piatto in Top View (XY) e centrato."""
     te = rg.TextEntity()
     te.Text = text
     te.FontIndex = 0
     te.TextHeight = text_height
+    
     plane = rg.Plane.WorldXY
     plane.Origin = position
     te.Plane = plane
+    
     curves = te.Explode()
-    if not curves: return []
+    if not curves:
+        return []
+        
     joined = rg.Curve.JoinCurves(curves, 0.001) or curves
     bbox = te.GetBoundingBox(True)
     if bbox.IsValid:
         center_x = (bbox.Max.X + bbox.Min.X) / 2.0
         center_y = (bbox.Max.Y + bbox.Min.Y) / 2.0
         move_to_center = rg.Transform.Translation(position.X - center_x, position.Y - center_y, 0)
-        for crv in joined: crv.Transform(move_to_center)
+        for crv in joined:
+            crv.Transform(move_to_center)
+            
     return joined
 
+
+def create_3d_text_engraving(text, position, text_height=0.03, engraving_depth=0.005):
+    """
+    Creates 3D solid text geometry centered at the specified position.
+    Uses large-scale generation and scales down to avoid Rhino's precision limits.
+    """
+    scale_factor = 1000.0
+
+    work_height = text_height * scale_factor
+    work_depth = engraving_depth * scale_factor
+
+    fine_tol = 0.001
+    boolean_tol = 0.01
+
+    te = rg.TextEntity()
+    te.Text = text
+    te.Plane = rg.Plane.WorldXY
+    te.FontIndex = 0
+    te.TextHeight = work_height
+
+    curves = te.Explode()
+    if not curves:
+        return None
+
+    joined_curves = rg.Curve.JoinCurves(curves, fine_tol) or []
+    text_breps = rg.Brep.CreatePlanarBreps(joined_curves, fine_tol)
+    if not text_breps:
+        return None
+
+    solids = []
+    for b in text_breps:
+        for face in b.Faces:
+            loops = [loop.To3dCurve() for loop in face.Loops]
+            if not loops:
+                continue
+
+            ext = rg.Extrusion.Create(loops[0], work_depth, True)
+            if ext:
+                solid = ext.ToBrep()
+                if len(loops) > 1:
+                    for i in range(1, len(loops)):
+                        inner_ext = rg.Extrusion.Create(loops[i], work_depth, True)
+                        if inner_ext:
+                            inner_solid = inner_ext.ToBrep()
+                            if inner_solid:
+                                diff = rg.Brep.CreateBooleanDifference(solid, inner_solid, boolean_tol)
+                                if diff:
+                                    solid = diff[0]
+                solids.append(solid)
+
+    final_3d = rg.Brep.MergeBreps(solids, boolean_tol)
+    if not final_3d:
+        return None
+
+    text_bbox = final_3d.GetBoundingBox(True)
+    cx = (text_bbox.Max.X + text_bbox.Min.X) / 2.0
+    cy = (text_bbox.Max.Y + text_bbox.Min.Y) / 2.0
+    cz = text_bbox.Max.Z 
+    
+    move_to_center = rg.Transform.Translation(-cx, -cy, -cz)
+    final_3d.Transform(move_to_center)
+
+    downscale_and_move = rg.Transform.Multiply(
+        rg.Transform.Translation(position.X, position.Y, position.Z),
+        rg.Transform.Scale(rg.Plane.WorldXY, 1.0/scale_factor, 1.0/scale_factor, 1.0/scale_factor)
+    )
+    final_3d.Transform(downscale_and_move)
+
+    return final_3d
+
+
 def get_pure_brep(cb):
-    if cb is None: return None
-    if hasattr(cb, "Geometry"): return cb.Geometry
-    if hasattr(cb, "Value"): return cb.Value
+    """Estrae la geometria pulita di Rhino svestendo i wrapper COMPAS."""
+    if cb is None:
+        return None
+    if hasattr(cb, "Geometry"):
+        return cb.Geometry
+    if hasattr(cb, "Value"):
+        return cb.Value
     if type(cb).__name__.endswith("RhinoBrep") or hasattr(cb, "brep"):
         return getattr(cb, "brep", getattr(cb, "native_brep", getattr(cb, "_brep", cb)))
     return cb
 
+
 def compas_frame_to_rhino_plane(compas_frame):
+    """Converte un Frame di COMPAS in un Plane di Rhino."""
     pt = rg.Point3d(compas_frame.point.x, compas_frame.point.y, compas_frame.point.z)
     xaxis = rg.Vector3d(compas_frame.xaxis.x, compas_frame.xaxis.y, compas_frame.xaxis.z)
     yaxis = rg.Vector3d(compas_frame.yaxis.x, compas_frame.yaxis.y, compas_frame.yaxis.z)
     return rg.Plane(pt, xaxis, yaxis)
+
 
 def run_packing(timber_model, origin, stock_length_beam_6x8, stock_length_beam_10x8, 
                 stock_length_beam_12x14, saw_gap, price_lm, row_tolerance, label_offset):
@@ -196,8 +285,8 @@ def run_packing(timber_model, origin, stock_length_beam_6x8, stock_length_beam_1
                 packed_bars.append(new_bar)
                 bar_global_counter += 1
 
-    # 4. GENERAZIONE DEL LAYOUT SPAZIALE COERENTE
-    arranged_boxes, max_len_boxes, stock_beams, max_len_lines, arranged_names, label_curves, max_len_num_txt, dimensions = [], [], [], [], [], [], [], []
+    # 4. GENERAZIONE DEL LAYOUT SPAZIALE COERENTE + SPOSTAMENTO ENGRAVING ANTI-COLLISIONE
+    arranged_boxes, max_len_boxes, stock_beams, max_len_lines, arranged_names, label_curves, max_len_num_txt, engraving, dimensions, report_sections = [], [], [], [], [], [], [], [], [], []
     total_waste_material, total_material_bought = 0.0, 0.0
     current_y_accumulator = base_pt.Y
     previous_section = None
@@ -239,13 +328,42 @@ def run_packing(timber_model, origin, stock_length_beam_6x8, stock_length_beam_1
             arranged_names.append(item["name"])
 
             lbl_x, lbl_y = (new_bbox.Min.X + new_bbox.Max.X) / 2.0, (new_bbox.Min.Y + new_bbox.Max.Y) / 2.0
-            label_curves.extend(create_geometry_text(item["name"], rg.Point3d(lbl_x, lbl_y, new_bbox.Max.Z + l_off), text_height=0.06))
-            max_len_num_txt.extend(create_geometry_text("{:.2f}m".format(item["length_x"]), rg.Point3d(lbl_x, lbl_y - 0.08, new_bbox.Max.Z + l_off), text_height=0.045))
+            
+            label_curves.extend(create_geometry_text(item["name"], rg.Point3d(lbl_x, lbl_y, new_bbox.Max.Z + l_off), text_height=0.04))
+            max_len_num_txt.extend(create_geometry_text("{:.2f}m".format(item["length_x"]), rg.Point3d(lbl_x, lbl_y - 0.08, new_bbox.Max.Z + l_off), text_height=0.04))
+
+            # === LOGICA SPOSTAMENTO ENGRAVING 3D SE INCONTRA UN VUOTO (JOINT) ===
+            test_x = lbl_x
+            step = 0.01  
+            max_shift = item["length_x"] / 2.0 - 0.05  
+            current_shift = 0.0
+            
+            pt_engrave_loc = rg.Point3d(test_x, lbl_y, new_bbox.Max.Z)
+            solid_text = create_3d_text_engraving(text=item["name"], position=pt_engrave_loc, text_height=0.03, engraving_depth=0.005)
+            
+            if solid_text and pure_beam_geo:
+                while current_shift < max_shift:
+                    intersection_breps = rg.Brep.CreateBooleanIntersection(pure_beam_geo, solid_text, 0.001)
+                    
+                    if intersection_breps and len(intersection_breps) > 0:
+                        vmp_text = rg.VolumeMassProperties.Compute(solid_text)
+                        vmp_inter = rg.VolumeMassProperties.Compute(intersection_breps[0])
+                        
+                        if vmp_text and vmp_inter and (vmp_inter.Volume > vmp_text.Volume * 0.95):
+                            break # Trovata zona di legno piena! Ci fermiamo qui.
+                    
+                    # Slitta progressivamente verso sinistra se sotto c'è aria (taglio del giunto)
+                    test_x -= step
+                    current_shift += step
+                    pt_engrave_loc = rg.Point3d(test_x, lbl_y, new_bbox.Max.Z)
+                    solid_text = create_3d_text_engraving(text=item["name"], position=pt_engrave_loc, text_height=0.03, engraving_depth=0.005)
+
+            if solid_text:
+                engraving.append(solid_text)
 
             dimensions.append("Stock beam n°: {} | {} | Sezione: {:.1f}x{:.1f}cm | L: {:.3f}m".format(bar["id"], item["name"], sec_w*100.0, sec_h*100.0, item["length_x"]))
 
     # 5. RENDICONTO STATISTICO
-    report_sections = []
     for sec in sorted(beams_by_section.keys()):
         sec_bars = [b for b in packed_bars if b["section"] == sec]
         sec_num_stocks = len(sec_bars)
@@ -258,5 +376,4 @@ def run_packing(timber_model, origin, stock_length_beam_6x8, stock_length_beam_1
     total_efficiency = ((total_material_bought - total_waste_material) / total_material_bought) * 100.0 if total_material_bought > 0 else 0.0
     report = "==================================================\n        REPORT DETTAGLIATO DI SECOLO DI TAGLIO    \n==================================================\n" + "\n\n".join(report_sections) + "\n\n--- TOTAL PACKING SUMMARY ---\nTotal Stocks needed: {} pcs\nTotal Material:      {:.2f} m\nTotal Waste:         {:.2f} m\nTotal Efficiency:    {:.1f}%\nTotal Cost:          {:.2f} EUR\n-----------------------------\n==================================================".format(len(packed_bars), total_material_bought, total_waste_material, total_efficiency, total_material_bought * p_lm)
 
-    # Restituisce una tupla contenente tutti i dati pronti per Grasshopper
-    return arranged_boxes, max_len_boxes, stock_beams, max_len_lines, arranged_names, label_curves, max_len_num_txt, dimensions, report
+    return arranged_boxes, max_len_boxes, stock_beams, max_len_lines, arranged_names, label_curves, max_len_num_txt, engraving, dimensions, report
