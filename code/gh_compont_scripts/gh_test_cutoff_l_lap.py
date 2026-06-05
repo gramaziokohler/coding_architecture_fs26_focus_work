@@ -4,7 +4,7 @@
 from compas_rhino.devtools import DevTools
 
 DevTools.ensure_path()
-ghenv.Component.Message = "Test Preferred TButt"
+ghenv.Component.Message = "Test Cutoff L-Lap"
 
 import Rhino.Geometry as rg
 
@@ -17,16 +17,21 @@ from compas_timber.model import TimberModel
 from timber_design.workflow import DirectRule
 from timber_design.workflow import JointRuleSolver
 
-from a03_preferred_face_tbutt_joint import PreferredFaceTButtJoint
+from a03_cutoff_l_lap_joint import CutoffLLapJoint
 
 
 beam_width = vars().get("beam_width") or 0.060
 beam_height = vars().get("beam_height") or 0.080
 joint_max_distance = vars().get("joint_max_distance") or 0.020
-mill_depth = vars().get("mill_depth") or 0.001
+cut_plane_bias = vars().get("cut_plane_bias") or 0.5
+cutoff_offset = vars().get("cutoff_offset") or 0.0
+cutoff_offset_a = vars().get("cutoff_offset_a")
+cutoff_offset_b = vars().get("cutoff_offset_b")
+limit_lap_removal = True if vars().get("limit_lap_removal") is None else vars().get("limit_lap_removal")
+invert_lap_removal_plane = vars().get("invert_lap_removal_plane") or False
+extend_lap_removal_to_inner_edge = vars().get("extend_lap_removal_to_inner_edge") or False
+flip_lap_side = vars().get("flip_lap_side") or False
 process_joinery = True if vars().get("process_joinery") is None else vars().get("process_joinery")
-preferred_face_vector = vars().get("preferred_face_vector") or Vector(0, 0, 1)
-cross_beam_ref_side_index = vars().get("cross_beam_ref_side_index")
 
 
 def rhino_curve_to_line(curve):
@@ -53,12 +58,6 @@ def rhino_curve_to_line(curve):
     )
 
 
-def vector_to_compas(vector):
-    if isinstance(vector, Vector):
-        return vector
-    return Vector(vector.X, vector.Y, vector.Z)
-
-
 def make_beam(curve):
     return Beam.from_centerline(
         rhino_curve_to_line(curve),
@@ -79,19 +78,24 @@ def to_rhino(geometry, errors):
 errors = []
 timber_model = TimberModel()
 
-main_beam = make_beam(main_curve)
-cross_beam = make_beam(cross_curve)
+beam_a = make_beam(beam_a_curve)
+beam_b = make_beam(beam_b_curve)
 
-timber_model.add_element(main_beam)
-timber_model.add_element(cross_beam)
+timber_model.add_element(beam_a)
+timber_model.add_element(beam_b)
 
 rule = DirectRule(
-    PreferredFaceTButtJoint,
-    [main_beam, cross_beam],
+    CutoffLLapJoint,
+    [beam_a, beam_b],
     max_distance=joint_max_distance,
-    mill_depth=mill_depth,
-    preferred_face_vector=vector_to_compas(preferred_face_vector),
-    cross_beam_ref_side_index=cross_beam_ref_side_index,
+    flip_lap_side=flip_lap_side,
+    cut_plane_bias=cut_plane_bias,
+    cutoff_offset=cutoff_offset,
+    cutoff_offset_a=cutoff_offset_a,
+    cutoff_offset_b=cutoff_offset_b,
+    limit_lap_removal=limit_lap_removal,
+    invert_lap_removal_plane=invert_lap_removal_plane,
+    extend_lap_removal_to_inner_edge=extend_lap_removal_to_inner_edge,
 )
 
 solver = JointRuleSolver([rule])
@@ -104,7 +108,7 @@ joints = list(getattr(timber_model, "joints", None) or getattr(timber_model, "in
 joint_count = len(joints)
 joint_errors = [getattr(error, "debug_info", repr(error)) for error in joining_errors]
 
-beams = [main_beam, cross_beam]
+beams = [beam_a, beam_b]
 beams_out = []
 beams_rhino = []
 for beam in beams:
@@ -117,11 +121,28 @@ for beam in beams:
         beams_out.append(None)
         beams_rhino.append(None)
 
-cross_ref_side_index = None
-cross_ref_side = None
+cutting_plane_a = None
+cutting_plane_b = None
+extension_plane_a = None
+extension_plane_b = None
+negative_volume_a = None
+negative_volume_b = None
+negative_volume_a_rhino = None
+negative_volume_b_rhino = None
+clip_status = []
+centerline_intersection = None
 if joints:
-    cross_ref_side_index = joints[0].cross_beam_ref_side_index
-    cross_ref_side = cross_beam.ref_sides[cross_ref_side_index]
+    joint = joints[0]
+    cutting_plane_a = joint.cutting_plane_a
+    cutting_plane_b = joint.cutting_plane_b
+    extension_plane_a = joint.extension_plane_a
+    extension_plane_b = joint.extension_plane_b
+    negative_volume_a = joint.debug_negative_volume_a
+    negative_volume_b = joint.debug_negative_volume_b
+    negative_volume_a_rhino = to_rhino(negative_volume_a.to_mesh(), errors) if negative_volume_a else None
+    negative_volume_b_rhino = to_rhino(negative_volume_b.to_mesh(), errors) if negative_volume_b else None
+    clip_status = joint.debug_clip_status
+    centerline_intersection = joint.centerline_intersection
 
-main_beam_out = main_beam
-cross_beam_out = cross_beam
+beam_a_out = beam_a.geometry    
+beam_b_out = beam_b.geometry
