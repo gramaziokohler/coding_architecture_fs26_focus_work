@@ -1,6 +1,6 @@
 from a03_rf_system import RFSystem
 from compas.datastructures import Mesh
-from compas.geometry import distance_point_point, Vector
+from compas.geometry import distance_point_point, Vector, Plane, Point
 from compas_timber.connections import (
     LButtJoint,
     LMiterJoint,
@@ -13,7 +13,9 @@ from compas_timber.connections import (
 )
 from compas_timber.elements import Beam
 from compas_timber.model import TimberModel
+from compas_timber.fabrication import JackRafterCut
 from timber_design.workflow import DirectRule
+
 
 
 class GeometricTimberModelCreator:
@@ -47,6 +49,7 @@ class GeometricTimberModelCreator:
         arch_align_axis: str = "z",
         tbutt_mill_depth: float = 0.0,
         base_mill_depth: float = 0.0,
+        cutting_plane_inset_distance: float = 0.0,
     ):
         self.rf_system = rf_system
         self.timber_model = TimberModel()
@@ -68,7 +71,11 @@ class GeometricTimberModelCreator:
         self.joining_errors = []
         self._rules = []
         self.trimmed_inner_beams = []
+        self.trimmed_inner_beam_geometries = []
         self._topology_records = []
+        self.cutting_planes_inner_beams = []
+        self.jack_rafter_cut_features_inner_beams = []
+
         self.arch_plane_A = arch_plane_A
         self.arch_plane_B = arch_plane_B
         self.arch_split_axis = arch_split_axis
@@ -78,6 +85,7 @@ class GeometricTimberModelCreator:
         self.arch_plane_B_normal = self._vector_from_rhino_plane_normal(arch_plane_B)
         self.tbutt_mill_depth = tbutt_mill_depth
         self.base_mill_depth = base_mill_depth
+        self.cutting_plane_inset_distance = float(cutting_plane_inset_distance or 0.0)
 
 
     def _arch_reference_vector_for_centerline(self, centerline):
@@ -127,8 +135,17 @@ class GeometricTimberModelCreator:
         # Step 2b: Mark inner beams that will later be trimmed
         self._mark_trimmed_inner_beam_candidates()
 
+        # Step 2c: Create preview cutting planes for those beams
+        self._create_cutting_planes_for_trimmed_inner_beams()
+
+        # Step 2d: Add JackRafterCut features to trimmed inner beams
+        self._add_jack_rafter_cuts_to_trimmed_inner_beams()
+
         # Step 3: Apply rules
         self._apply_rules(process_joinery)
+
+        # Step 4: Directly store final trimmed preview geometry
+        self._apply_jack_rafter_cuts_to_trimmed_inner_beam_geometry()
         print("=" * 60)
         print("Model generation complete")
         print("=" * 60)
@@ -525,6 +542,14 @@ class GeometricTimberModelCreator:
 
         return cp1, cp2, s, t
 
+    @staticmethod
+    def _beam_centerline(beam):
+        """Safely get beam centerline."""
+        line = getattr(beam, "centerline", None)
+        if line is not None:
+            return line
+        return None
+
     def _mark_trimmed_inner_beam_candidates(self):
         """Tag inner beams that have a TButt at one end and an open other end.
 
@@ -637,6 +662,407 @@ class GeometricTimberModelCreator:
                 len(self.trimmed_inner_beams)
             )
         )
+
+    @staticmethod
+    def _beam_z_vector(beam):
+        """Get a usable z-axis vector from a beam."""
+
+        # Try common beam frame properties first.
+        frame = getattr(beam, "frame", None)
+        if frame is not None:
+            zaxis = getattr(frame, "zaxis", None)
+            if zaxis is not None and zaxis.length > 0.001:
+                zaxis.unitize()
+                return zaxis
+
+        # Try common local frame / coordinate system names.
+        for attr_name in ("local_frame", "base_frame", "reference_frame"):
+            frame = getattr(beam, attr_name, None)
+            if frame is not None:
+                zaxis = getattr(frame, "zaxis", None)
+                if zaxis is not None and zaxis.length > 0.001:
+                    zaxis.unitize()
+                    return zaxis
+
+        # Fallback: use world Z.
+        return Vector(0, 0, 1)        
+    
+    @staticmethod
+    def _compas_plane_to_rhino_plane(plane):
+        """Convert COMPAS Plane to Rhino.Geometry.Plane for Grasshopper preview."""
+        try:
+            import Rhino.Geometry as rg
+
+            origin = rg.Point3d(
+                plane.point.x,
+                plane.point.y,
+                plane.point.z,
+            )
+
+            normal = rg.Vector3d(
+                plane.normal.x,
+                plane.normal.y,
+                plane.normal.z,
+            )
+
+            if normal.Length < 0.001:
+                return None
+
+            normal.Unitize()
+            return rg.Plane(origin, normal)
+
+        except Exception:
+            return plane    
+        
+    def _open_end_name_for_trimmed_inner_beam(self, beam):
+        """Return 'start' or 'end' for the open end of a trimmed inner beam candidate."""
+
+        if not beam.attributes.get("trimmed_inner_candidate"):
+            return None
+
+        line = self._beam_centerline(beam)
+        if line is None:
+            return None
+
+        end_tol = max(
+            float(self.max_distance_L),
+            float(self.max_distance_T),
+            float(self.max_distance_T_arch_base),
+            float(self.max_distance_X),
+            float(self.beam_radius),
+        )
+
+        start_has_any = False
+        end_has_any = False
+
+        for record in self._topology_records:
+            joint_type = record.get("joint_type")
+            topology = record.get("topology")
+
+            # Ignore XLap for open-end classification.
+            if topology == JointTopology.TOPO_X or joint_type is XLapJoint:
+                continue
+
+            if joint_type is None:
+                continue
+
+            beam_a = record.get("main_beam")
+            beam_b = record.get("cross_beam")
+
+            if beam not in (beam_a, beam_b):
+                continue
+
+            other = beam_b if beam is beam_a else beam_a
+            other_line = self._beam_centerline(other)
+
+            if other_line is None:
+                continue
+
+            joint_self, _, _, _ = self._closest_points_between_segments(line, other_line)
+
+            d_start = distance_point_point(joint_self, line.start)
+            d_end = distance_point_point(joint_self, line.end)
+
+            if d_start <= end_tol and d_start <= d_end:
+                start_has_any = True
+            elif d_end <= end_tol:
+                end_has_any = True
+
+        if not start_has_any:
+            return "start"
+
+        if not end_has_any:
+            return "end"
+
+        return None        
+    
+    def _create_cutting_planes_for_trimmed_inner_beams(self):
+        """Create one cutting plane for each trimmed inner beam candidate.
+
+        Rule:
+        - For each trimmed inner beam, find all XLap joints involving it.
+        - Use the XLap nearest to the open end.
+        - The other inner beam in that XLap is the reference beam.
+        - Cutting plane contains reference beam centerline and reference beam z-axis.
+        """
+
+        self.cutting_planes_inner_beams = []
+
+        for beam in self.trimmed_inner_beams:
+            beam_line = self._beam_centerline(beam)
+            if beam_line is None:
+                continue
+
+            open_end_name = self._open_end_name_for_trimmed_inner_beam(beam)
+            if open_end_name is None:
+                print("Could not find open end for trimmed inner beam.")
+                continue
+
+            open_point = beam_line.start if open_end_name == "start" else beam_line.end
+
+            nearest = None
+
+            for record in self._topology_records:
+                topology = record.get("topology")
+                joint_type = record.get("joint_type")
+
+                if topology != JointTopology.TOPO_X and joint_type is not XLapJoint:
+                    continue
+
+                beam_a = record.get("main_beam")
+                beam_b = record.get("cross_beam")
+
+                if beam not in (beam_a, beam_b):
+                    continue
+
+                reference_beam = beam_b if beam is beam_a else beam_a
+
+                if reference_beam is None:
+                    continue
+
+                if reference_beam.attributes.get("category") != "inner":
+                    continue
+
+                reference_line = self._beam_centerline(reference_beam)
+                if reference_line is None:
+                    continue
+
+                joint_on_beam, joint_on_reference, _, _ = self._closest_points_between_segments(
+                    beam_line,
+                    reference_line
+                )
+
+                distance_to_open = distance_point_point(joint_on_beam, open_point)
+
+                if nearest is None or distance_to_open < nearest["distance"]:
+                    nearest = {
+                        "distance": distance_to_open,
+                        "reference_beam": reference_beam,
+                        "reference_line": reference_line,
+                        "joint_on_reference": joint_on_reference,
+                        "joint_on_beam": joint_on_beam,
+                    }
+
+            if nearest is None:
+                print("No XLap reference beam found for trimmed inner beam.")
+                beam.attributes["inner_cutting_plane"] = None
+                continue
+
+            reference_beam = nearest["reference_beam"]
+            reference_line = nearest["reference_line"]
+            reference_z = self._beam_z_vector(reference_beam)
+
+            reference_axis = Vector.from_start_end(reference_line.start, reference_line.end)
+
+            if reference_axis.length < 0.001:
+                continue
+
+            reference_axis.unitize()
+
+            if reference_z.length < 0.001:
+                reference_z = Vector(0, 0, 1)
+
+            reference_z.unitize()
+
+            # Plane contains:
+            # 1. reference beam centerline
+            # 2. reference beam z-axis
+            # Therefore plane normal = centerline direction x z-axis
+            plane_normal = reference_axis.cross(reference_z)
+
+            if plane_normal.length < 0.001:
+                # Fallback if z-axis is accidentally parallel to centerline.
+                plane_normal = reference_axis.cross(Vector(0, 0, 1))
+
+            if plane_normal.length < 0.001:
+                plane_normal = reference_axis.cross(Vector(1, 0, 0))
+
+            if plane_normal.length < 0.001:
+                print("Could not create cutting plane normal.")
+                continue
+
+            plane_normal.unitize()
+
+            # Use the XLap point on the reference beam as the base plane origin.
+            plane_origin = nearest["joint_on_reference"]
+
+            # Orient the plane normal so positive inset moves toward the open end
+            # of the trimmed inner beam.
+            direction_to_open = Vector.from_start_end(plane_origin, open_point)
+
+            if direction_to_open.length > 0.001:
+                direction_to_open.unitize()
+
+                if plane_normal.dot(direction_to_open) < 0:
+                    plane_normal *= -1
+
+            # Move plane along its oriented normal.
+            # Positive distance = toward open end.
+            # Negative distance = opposite direction.
+            inset = float(self.cutting_plane_inset_distance or 0.0)
+
+            inset_origin = Point(
+                plane_origin.x + plane_normal.x * inset,
+                plane_origin.y + plane_normal.y * inset,
+                plane_origin.z + plane_normal.z * inset,
+            )
+
+            compas_plane = Plane(inset_origin, plane_normal)
+            rhino_plane = self._compas_plane_to_rhino_plane(compas_plane)
+
+            # Rhino plane for GH preview
+            beam.attributes["inner_cutting_plane"] = rhino_plane
+
+            # COMPAS plane for JackRafterCut
+            beam.attributes["inner_cutting_compas_plane"] = compas_plane
+
+            beam.attributes["inner_cutting_plane_base_point"] = plane_origin
+            beam.attributes["inner_cutting_plane_inset_point"] = inset_origin
+            beam.attributes["inner_cutting_plane_normal"] = plane_normal
+            beam.attributes["inner_cutting_reference_beam"] = reference_beam
+            beam.attributes["inner_cutting_open_end"] = open_end_name
+            beam.attributes["inner_cutting_inset_distance"] = inset
+            print(
+                "Cutting plane for trimmed inner beam: open_end={}, inset={:.3f}".format(
+                    open_end_name,
+                    inset,
+                )
+            )
+
+            self.cutting_planes_inner_beams.append(rhino_plane)
+
+        print(
+            "Created {} cutting planes for trimmed inner beams.".format(
+                len(self.cutting_planes_inner_beams)
+            )
+        )    
+
+    def _add_jack_rafter_cuts_to_trimmed_inner_beams(self):
+        """Add JackRafterCut features to trimmed inner beams.
+
+        The cutting plane is the finalized inset COMPAS plane.
+        The feature is added to the beam so the timber model processes it.
+        """
+
+        self.jack_rafter_cut_features_inner_beams = []
+
+        success = 0
+        failed = 0
+
+        for beam in self.trimmed_inner_beams:
+            compas_plane = beam.attributes.get("inner_cutting_compas_plane")
+
+            if compas_plane is None:
+                failed += 1
+                print("No COMPAS cutting plane found for trimmed inner beam.")
+                continue
+
+            feature = None
+            last_error = None
+
+            # Try different reference sides. Depending on beam orientation,
+            # one ref_side_index may be invalid while another works.
+            for ref_side_index in range(4):
+                try:
+                    feature = JackRafterCut.from_plane_and_beam(
+                        compas_plane,
+                        beam,
+                        ref_side_index=ref_side_index
+                    )
+                    break
+                except Exception as e:
+                    last_error = e
+                    feature = None
+
+            if feature is None:
+                failed += 1
+                print(
+                    "Could not create JackRafterCut for trimmed inner beam: {}".format(
+                        last_error
+                    )
+                )
+                continue
+
+            # Add the feature to the beam. Different compas_timber versions
+            # expose this differently, so try the common options.
+            added = False
+
+            for method_name in ("add_features", "add_feature"):
+                method = getattr(beam, method_name, None)
+                if method is None:
+                    continue
+
+                try:
+                    if method_name == "add_features":
+                        method([feature])
+                    else:
+                        method(feature)
+                    added = True
+                    break
+                except Exception as e:
+                    print("Could not use beam.{}: {}".format(method_name, e))
+
+            if not added:
+                # Fallback: append to features list if it exists.
+                try:
+                    features = getattr(beam, "features", None)
+                    if features is not None:
+                        features.append(feature)
+                        added = True
+                except Exception as e:
+                    print("Could not append feature to beam.features: {}".format(e))
+
+            if not added:
+                failed += 1
+                print("Could not add JackRafterCut feature to beam.")
+                continue
+
+            beam.attributes["inner_jack_rafter_cut"] = feature
+            self.jack_rafter_cut_features_inner_beams.append(feature)
+            success += 1
+
+        print(
+            "JackRafterCut features for trimmed inner beams: success={}, failed={}".format(
+                success,
+                failed
+            )
+        )
+
+    def _apply_jack_rafter_cuts_to_trimmed_inner_beam_geometry(self):
+        """Directly apply JackRafterCut features to beam geometry for GH preview."""
+
+        self.trimmed_inner_beam_geometries = []
+
+        success = 0
+        failed = 0
+
+        for beam in self.trimmed_inner_beams:
+            feature = beam.attributes.get("inner_jack_rafter_cut")
+
+            if feature is None:
+                failed += 1
+                print("No JackRafterCut feature stored on trimmed inner beam.")
+                continue
+
+            try:
+                geometry = beam.geometry
+                trimmed_geometry = feature.apply(geometry, beam)
+            except Exception as e:
+                failed += 1
+                print("Could not apply JackRafterCut to beam geometry: {}".format(e))
+                continue
+
+            beam.attributes["trimmed_geometry"] = trimmed_geometry
+            beam.attributes["is_trimmed_inner_geometry"] = True
+            self.trimmed_inner_beam_geometries.append(trimmed_geometry)
+            success += 1
+
+        print(
+            "Direct JackRafterCut geometry application: success={}, failed={}".format(
+                success,
+                failed
+            )
+        )        
 
     def _apply_rules(self, process_joinery: bool) -> None:
         """Apply the direct rules we created."""
