@@ -72,20 +72,21 @@ const drawLocalFrame = (scale = 1) => {
     const o = new THREE.Vector3(0, 0, 0);
 
     const axes = [
-        { dir: x_axis, color: 0xff4444 },
-        { dir: y_axis, color: 0x44ff44 },
-        { dir: z_axis, color: 0x4488ff },
+        { dir: x_axis, color: 0xff4444, lengthMult: 1.6 },
+        { dir: y_axis, color: 0x44ff44, lengthMult: 1.0 },
+        { dir: z_axis, color: 0x4488ff, lengthMult: 1.0 },
     ];
 
-    axes.forEach(({ dir, color }) => {
+    axes.forEach(({ dir, color, lengthMult }) => {
         const direction = new THREE.Vector3(...dir).normalize();
+        const arrowLength = scale * lengthMult;
         const arrow = new THREE.ArrowHelper(
             direction,
             o,
-            scale,
+            arrowLength,
             color,
-            scale * 0.15,
-            scale * 0.08
+            arrowLength * 0.15,
+            arrowLength * 0.08
         );
         arrow.userData.isAxis = true;
         scene.add(arrow);
@@ -132,7 +133,6 @@ const loadSingleBeam = async () => {
     controls.target.set(0, 0, 0);
     controls.update();
 
-    // Draw local frame axes scaled to beam size
     const axisScale = 1.2 * scale * Math.max(size.x, size.y, size.z) * 0.5;
     drawLocalFrame(axisScale);
 };
@@ -357,7 +357,7 @@ onMounted(async () => {
             >Pavilion</button>
         </div>
 
-        <!-- Axis legend (solo in modalità single) -->
+        <!-- Axis legend shown only in single beam mode -->
         <div v-if="viewMode === 'single'" class="axis-legend">
             <div class="axis-item">
                 <span class="axis-dot" style="background: #ff4444"></span>
