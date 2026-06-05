@@ -37,9 +37,8 @@ const loadSTL = (url) =>
 
 const makeMesh = (geometry, color, opacity = 1) => {
     geometry.computeBoundingBox();
-    const mat = new THREE.MeshPhongMaterial({
+    const mat = new THREE.MeshBasicMaterial({
         color,
-        shininess: 10,
         side: THREE.DoubleSide,
         transparent: opacity < 1,
         opacity,
