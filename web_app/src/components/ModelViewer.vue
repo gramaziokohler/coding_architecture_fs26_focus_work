@@ -116,19 +116,21 @@ const loadSingleBeam = async () => {
     const stlUrl = currentBeamData["3d_model"];
     const geo = await loadSTL(stlUrl);
     geo.computeBoundingBox();
-    const center = new THREE.Vector3();
-    geo.boundingBox.getCenter(center);
-    geo.translate(-center.x, -center.y, -center.z);
+    
     const size = new THREE.Vector3();
     geo.boundingBox.getSize(size);
     const maxDim = Math.max(size.x, size.y, size.z);
 
     const mesh = makeMesh(geo, WOOD_COLOR);
     mesh.userData.isBeam = true;
+    
+    // Centra la mesh usando position, non geometry
+    const center = new THREE.Vector3();
+    geo.boundingBox.getCenter(center);
+    mesh.position.copy(center).negate();
+    
     scene.add(mesh);
 
-    // Camera si adatta alla dimensione reale del beam
-    // Aumenta il moltiplicatore se il beam è troppo piccolo
     const dist = maxDim * 3.5;
     camera.position.set(0, -dist, dist * 0.6);
     camera.lookAt(0, 0, 0);
