@@ -52,6 +52,8 @@ class GeometricTimberModelCreator:
         base_mill_depth: float = 0.0,
         preferred_face_vector=None,
         cutting_plane_inset_distance: float = 0.0,
+        arch_A_inner_cross_beam_ref_side_index: int = None,
+        arch_B_inner_cross_beam_ref_side_index: int = None,
     ):
         self.rf_system = rf_system
         self.timber_model = TimberModel()
@@ -89,6 +91,8 @@ class GeometricTimberModelCreator:
         self.base_mill_depth = base_mill_depth
         self.preferred_face_vector = preferred_face_vector
         self.cutting_plane_inset_distance = float(cutting_plane_inset_distance or 0.0)
+        self.arch_A_inner_cross_beam_ref_side_index = arch_A_inner_cross_beam_ref_side_index
+        self.arch_B_inner_cross_beam_ref_side_index = arch_B_inner_cross_beam_ref_side_index
 
 
     def _arch_reference_vector_for_centerline(self, centerline):
@@ -270,7 +274,7 @@ class GeometricTimberModelCreator:
                 w, h = self.base_beam_width, self.base_beam_height
                 normal = self._upright_normal(centerline)
                 boundary_count += 1
-            elif category == "arch":
+            elif self._is_arch(category):
                 w, h = self.arch_beam_width, self.arch_beam_height
 
                 reference_vector = self._arch_reference_vector_for_centerline(centerline)
@@ -309,8 +313,37 @@ class GeometricTimberModelCreator:
             print(f"Skipped {skipped_count} edges with None centerlines")
         print(f"Beam categories: {interior_count} inner, {boundary_count} base/arch")
 
+    @staticmethod
+    def _is_arch(cat: str) -> bool:
+        """Return True for any arch sub-category (arch, arch_A, arch_B)."""
+        return cat in {"arch", "arch_A", "arch_B"}
+
+    @staticmethod
+    def _normalize_category(cat: str) -> str:
+        """Collapse arch_A / arch_B → arch for category-filter set matching."""
+        if cat in {"arch_A", "arch_B"}:
+            return "arch"
+        return cat
+
+    def _arch_subcategory(self, centerline) -> str:
+        """Return arch_A, arch_B, or arch based on which arch plane is closer."""
+        if self.arch_plane_A is None and self.arch_plane_B is None:
+            return "arch"
+
+        midpoint = centerline.midpoint
+        dA = self._distance_point_to_rhino_plane(midpoint, self.arch_plane_A) if self.arch_plane_A else None
+        dB = self._distance_point_to_rhino_plane(midpoint, self.arch_plane_B) if self.arch_plane_B else None
+
+        if dA is not None and dB is not None:
+            return "arch_A" if dA <= dB else "arch_B"
+        if dA is not None:
+            return "arch_A"
+        if dB is not None:
+            return "arch_B"
+        return "arch"
+
     def _edge_category(self, edge) -> str:
-        """Determine beam category: inner, base, or arch."""
+        """Determine beam category: inner, base, arch_A, or arch_B."""
         category = self.rf_system.mesh.edge_attribute(edge, "beam_category")
         if category is not None:
             return category
@@ -325,7 +358,9 @@ class GeometricTimberModelCreator:
                 centerline = self.rf_system.mesh.edge_attribute(edge, "centerline")
                 if centerline is not None:
                     midpoint_z = (centerline.start.z + centerline.end.z) / 2.0
-                    return "base" if midpoint_z < self.z_height_threshold else "arch"
+                    if midpoint_z < self.z_height_threshold:
+                        return "base"
+                    return self._arch_subcategory(centerline)
             return "base"
 
         if self.rf_system.mesh.is_edge_on_boundary(edge):
@@ -373,14 +408,16 @@ class GeometricTimberModelCreator:
                     if category_filter is not None:
                         cat_a = beam_a.attributes.get("category", "inner")
                         cat_b = beam_b.attributes.get("category", "inner")
-                        if {cat_a, cat_b} != category_filter:
+                        norm_a = self._normalize_category(cat_a)
+                        norm_b = self._normalize_category(cat_b)
+                        if {norm_a, norm_b} != category_filter:
                             continue
                         processed_pairs.add(pair)
                         result = solver.find_topology(beam_a, beam_b, max_distance=max_dist)
                         if result.topology != JointTopology.TOPO_UNKNOWN:
                             topo_name = JointTopology.get_name(result.topology)
                             filter_label = "+".join(sorted(category_filter))
-                            print(f"  [{filter_label}] pair({i},{j}) -> {topo_name}  (max_dist={max_dist:.3f})")
+                            print(f"  [{filter_label}] pair({i},{j}) cat=({cat_a},{cat_b}) -> {topo_name}  (max_dist={max_dist:.3f})")
                     else:
                         result = solver.find_topology(beam_a, beam_b, max_distance=max_dist)
 
@@ -418,12 +455,24 @@ class GeometricTimberModelCreator:
                     if joint_type and beam_order:
                         kwargs = {}
                         if joint_type in (TButtJoint, PreferredFaceTButtJoint):
-                            is_base_joint = "base" in (cat_main, cat_cross)
+                            is_base_joint = cat_main == "base" or cat_cross == "base"
+                            is_arch_inner_joint = (
+                                joint_type is PreferredFaceTButtJoint
+                                and not is_base_joint
+                                and (cat_main == "inner" or cat_cross == "inner")
+                                and (self._is_arch(cat_main) or self._is_arch(cat_cross))
+                            )
                             if is_base_joint and self.base_mill_depth:
                                 kwargs["mill_depth"] = self.base_mill_depth
                             elif not is_base_joint and self.tbutt_mill_depth:
                                 kwargs["mill_depth"] = self.tbutt_mill_depth
-                            if joint_type is PreferredFaceTButtJoint:
+                            if is_arch_inner_joint:
+                                arch_cat = cat_main if self._is_arch(cat_main) else cat_cross
+                                if arch_cat == "arch_A" and self.arch_A_inner_cross_beam_ref_side_index is not None:
+                                    kwargs["cross_beam_ref_side_index"] = self.arch_A_inner_cross_beam_ref_side_index
+                                elif arch_cat == "arch_B" and self.arch_B_inner_cross_beam_ref_side_index is not None:
+                                    kwargs["cross_beam_ref_side_index"] = self.arch_B_inner_cross_beam_ref_side_index
+                            elif joint_type is PreferredFaceTButtJoint:
                                 if self.preferred_face_vector is not None:
                                     kwargs["preferred_face_vector"] = self.preferred_face_vector
                         rule = DirectRule(joint_type, beam_order, max_distance=max_dist, **kwargs)
@@ -438,11 +487,12 @@ class GeometricTimberModelCreator:
     def _determine_joint_from_topology(
         self, topology, main_beam, cross_beam, cat_main, cat_cross
     ):
-        outer = {"base", "arch"}
+        is_arch_main  = self._is_arch(cat_main)
+        is_arch_cross = self._is_arch(cat_cross)
 
         if topology == JointTopology.TOPO_L:
-            if cat_main in outer and cat_cross in outer:
-                if {cat_main, cat_cross} == {"arch", "base"}:
+            if (cat_main == "base" or is_arch_main) and (cat_cross == "base" or is_arch_cross):
+                if (is_arch_main and cat_cross == "base") or (is_arch_cross and cat_main == "base"):
                     base_b = main_beam if cat_main == "base" else cross_beam
                     arch_b = cross_beam if cat_main == "base" else main_beam
                     return PreferredFaceTButtJoint, [arch_b, base_b]
@@ -450,24 +500,28 @@ class GeometricTimberModelCreator:
             return None, None
 
         elif topology == JointTopology.TOPO_T:
-            if "base" in (cat_main, cat_cross) and "inner" in (cat_main, cat_cross):
-                base_b  = main_beam  if cat_main == "base" else cross_beam
-                inner_b = cross_beam if cat_main == "base" else main_beam
+            has_base  = cat_main == "base"  or cat_cross == "base"
+            has_inner = cat_main == "inner" or cat_cross == "inner"
+            has_arch  = is_arch_main or is_arch_cross
+
+            if has_base and has_inner:
+                base_b  = main_beam  if cat_main == "base"  else cross_beam
+                inner_b = cross_beam if cat_main == "base"  else main_beam
                 return PreferredFaceTButtJoint, [inner_b, base_b]
-            if "base" in (cat_main, cat_cross) and "arch" in (cat_main, cat_cross):
+            if has_base and has_arch:
                 base_b = main_beam if cat_main == "base" else cross_beam
                 arch_b = cross_beam if cat_main == "base" else main_beam
                 return PreferredFaceTButtJoint, [arch_b, base_b]
-            if "inner" in (cat_main, cat_cross) and "arch" in (cat_main, cat_cross):
-                inner_b = main_beam if cat_main == "inner" else cross_beam
-                arch_b = cross_beam if cat_main == "inner" else main_beam
-                return TButtJoint, [inner_b, arch_b]
+            if has_inner and has_arch:
+                inner_b = main_beam  if cat_main == "inner" else cross_beam
+                arch_b  = cross_beam if cat_main == "inner" else main_beam
+                return PreferredFaceTButtJoint, [inner_b, arch_b]
             return TButtJoint, [main_beam, cross_beam]
 
         elif topology == JointTopology.TOPO_X:
-            if cat_main in outer:
+            if cat_main == "base" or is_arch_main:
                 return XLapJoint, [main_beam, cross_beam]
-            elif cat_cross in outer:
+            elif cat_cross == "base" or is_arch_cross:
                 return XLapJoint, [cross_beam, main_beam]
             return XLapJoint, [main_beam, cross_beam]
 
@@ -1134,9 +1188,11 @@ class GeometricTimberModelCreator:
         solver = JointRuleSolver(self._rules)
 
         inner_beams = [b for b in self.timber_model.beams if b.attributes.get("category") == "inner"]
-        base_beams = [b for b in self.timber_model.beams if b.attributes.get("category") == "base"]
-        arch_beams = [b for b in self.timber_model.beams if b.attributes.get("category") == "arch"]
-        print(f"Before joint solving: {len(inner_beams)} inner, {len(base_beams)} base, {len(arch_beams)} arch beams")
+        base_beams  = [b for b in self.timber_model.beams if b.attributes.get("category") == "base"]
+        arch_beams  = [b for b in self.timber_model.beams if self._is_arch(b.attributes.get("category", ""))]
+        arch_A_beams = [b for b in arch_beams if b.attributes.get("category") == "arch_A"]
+        arch_B_beams = [b for b in arch_beams if b.attributes.get("category") == "arch_B"]
+        print(f"Before joint solving: {len(inner_beams)} inner, {len(base_beams)} base, {len(arch_beams)} arch ({len(arch_A_beams)} arch_A, {len(arch_B_beams)} arch_B)")
 
         self.joining_errors, unjoined_clusters = solver.apply_rules_to_model(
             self.timber_model
