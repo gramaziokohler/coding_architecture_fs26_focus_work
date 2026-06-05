@@ -26,7 +26,6 @@ const isLoading = ref(false);
 const WOOD_COLOR = 0xd4b896;
 const HIGHLIGHT_COLOR = 0xff8fa3;
 
-// ─── STL loader helper ───────────────────────────────────────────────
 const loadSTL = (url) =>
     fetch(url, { mode: "cors" })
         .then((r) => {
@@ -49,19 +48,16 @@ const makeMesh = (geometry, color, opacity = 1) => {
     return mesh;
 };
 
-// ─── Clear all beam meshes ────────────────────────────────────────────
 const clearBeams = () => {
     const toRemove = scene.children.filter((c) => c.userData.isBeam);
     toRemove.forEach((c) => scene.remove(c));
 };
 
-// ─── Clear axis arrows ────────────────────────────────────────────────
 const clearAxes = () => {
     const toRemove = scene.children.filter((c) => c.userData.isAxis);
     toRemove.forEach((c) => scene.remove(c));
 };
 
-// ─── Draw local frame axes ────────────────────────────────────────────
 const drawLocalFrame = (scale = 1) => {
     clearAxes();
     if (!currentBeamData?.local_frame) return;
@@ -94,7 +90,6 @@ const drawLocalFrame = (scale = 1) => {
     });
 };
 
-// ─── Center scene around loaded meshes ───────────────────────────────
 const centerScene = () => {
     const box = new THREE.Box3();
     scene.children
@@ -110,11 +105,11 @@ const centerScene = () => {
     const size = new THREE.Vector3();
     box.getSize(size);
     const maxDim = Math.max(size.x, size.y, size.z);
-    camera.position.set(maxDim * 1.5, maxDim * 1.5, maxDim);
+    camera.position.set(0, -maxDim * 2, maxDim * 0.8);
+    camera.lookAt(0, 0, 0);
     controls.update();
 };
 
-// ─── Load single beam ─────────────────────────────────────────────────
 const loadSingleBeam = async () => {
     clearBeams();
     clearAxes();
@@ -131,6 +126,10 @@ const loadSingleBeam = async () => {
     mesh.scale.multiplyScalar(scale);
     mesh.userData.isBeam = true;
     scene.add(mesh);
+
+    const maxS = Math.max(size.x, size.y, size.z);
+    camera.position.set(0, -maxS * scale * 2, maxS * scale * 0.5);
+    camera.lookAt(0, 0, 0);
     controls.target.set(0, 0, 0);
     controls.update();
 
@@ -138,7 +137,6 @@ const loadSingleBeam = async () => {
     drawLocalFrame(axisScale);
 };
 
-// ─── Load connected beams ─────────────────────────────────────────────
 const loadConnectedBeams = async () => {
     clearBeams();
     clearAxes();
@@ -168,7 +166,6 @@ const loadConnectedBeams = async () => {
     centerScene();
 };
 
-// ─── Load full pavilion ───────────────────────────────────────────────
 const loadPavilion = async () => {
     clearBeams();
     clearAxes();
@@ -204,7 +201,6 @@ const loadPavilion = async () => {
     }
 };
 
-// ─── View mode buttons ────────────────────────────────────────────────
 const setMode = async (mode) => {
     viewMode.value = mode;
     isLoading.value = true;
@@ -218,7 +214,6 @@ const setMode = async (mode) => {
     }
 };
 
-// ─── Gizmo setup ─────────────────────────────────────────────────────
 const initGizmo = () => {
     const canvas = gizmoRef.value;
     gizmoRenderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
@@ -263,7 +258,6 @@ const updateGizmo = () => {
     gizmoRenderer.render(gizmoScene, gizmoCamera);
 };
 
-// ─── Mount ────────────────────────────────────────────────────────────
 onMounted(async () => {
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0xffffff);
@@ -272,8 +266,9 @@ onMounted(async () => {
     const height = containerRef.value.clientHeight;
 
     camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
-    camera.position.set(3, 3, 2);
+    camera.position.set(0, -4, 2);
     camera.up.set(0, 0, 1);
+    camera.lookAt(0, 0, 0);
 
     renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(width, height);
