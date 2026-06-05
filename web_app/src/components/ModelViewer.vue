@@ -127,8 +127,7 @@ const loadSingleBeam = async () => {
     mesh.userData.isBeam = true;
     scene.add(mesh);
 
-    const maxS = Math.max(size.x, size.y, size.z);
-    camera.position.set(0, -maxS * scale * 2, maxS * scale * 2);
+    camera.position.set(0, -2.5, 4.5);
     camera.lookAt(0, 0, 0);
     controls.target.set(0, 0, 0);
     controls.update();
@@ -266,7 +265,7 @@ onMounted(async () => {
     const height = containerRef.value.clientHeight;
 
     camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
-    camera.position.set(0, -4, 4);
+    camera.position.set(0, -2.5, 4.5);
     camera.up.set(0, 0, 1);
     camera.lookAt(0, 0, 0);
 
