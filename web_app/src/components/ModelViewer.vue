@@ -204,137 +204,178 @@ const drawGizmoAxes = () => {
 const loadSingleBeam = async () => {
     clearBeams();
     clearAxes();
-    
-    const stlUrl = currentBeamData["3d_model"];
-    const geo = await loadSTL(stlUrl);
-    geo.computeBoundingBox();
-    
-    const size = new THREE.Vector3();
-    geo.boundingBox.getSize(size);
-    const maxDim = Math.max(size.x, size.y, size.z);
 
-    const mesh = makeMesh(geo, WOOD_COLOR);
-    mesh.userData.isBeam = true;
-    
-    // Centra la mesh usando position
-    const center = new THREE.Vector3();
-    geo.boundingBox.getCenter(center);
-    mesh.position.copy(center).negate();
-    
-    scene.add(mesh);
+    try {
+        const stlUrl = currentBeamData["3d_model"];
+        const geo = await loadSTL(stlUrl);
+        geo.computeBoundingBox();
 
-    // Usa beam.frame per l'origine reale
-    const beamOrigin = currentBeamData.frame 
-        ? new THREE.Vector3(...currentBeamData.frame.origin).sub(center)
-        : new THREE.Vector3().sub(center);
-    
-    const dist = maxDim * 3.5;
-    camera.position.set(0, -dist, dist * 0.6);
-    camera.lookAt(0, 0, 0);
-    controls.target.set(0, 0, 0);
-    controls.update();
+        const size = new THREE.Vector3();
+        geo.boundingBox.getSize(size);
+        const maxDim = Math.max(size.x, size.y, size.z);
 
-    const axisScale = maxDim * 0.6;
-    drawLocalFrame(axisScale, beamOrigin);
+        const mesh = makeMesh(geo, WOOD_COLOR);
+        mesh.userData.isBeam = true;
 
-    drawGizmoAxes();
+        // Centra la mesh usando position
+        const center = new THREE.Vector3();
+        geo.boundingBox.getCenter(center);
+        mesh.position.copy(center).negate();
+
+        scene.add(mesh);
+
+        // Usa beam.frame per l'origine reale
+        const beamOrigin = currentBeamData.frame 
+            ? new THREE.Vector3(...currentBeamData.frame.origin).sub(center)
+            : new THREE.Vector3().sub(center);
+
+        const dist = maxDim * 3.5;
+        camera.position.set(0, -dist, dist * 0.6);
+        camera.lookAt(0, 0, 0);
+        controls.target.set(0, 0, 0);
+        controls.update();
+
+        const axisScale = maxDim * 0.6;
+        drawLocalFrame(axisScale, beamOrigin);
+
+        drawGizmoAxes();
+    } catch (err) {
+        console.error("Error loading single beam:", err);
+    }
 };
 
 const loadConnectedBeams = async () => {
     clearBeams();
     clearAxes();
 
-    const beamIds = currentBeamData.connected_beams || [];
-    const stlUrl = currentBeamData["3d_model"];
-    const geo = await loadSTL(stlUrl);
-    geo.computeBoundingBox();
+    try {
+        const beamIds = currentBeamData.connected_beams || [];
+        const stlUrl = currentBeamData["3d_model"];
+        const geo = await loadSTL(stlUrl);
+        geo.computeBoundingBox();
 
-    const size = new THREE.Vector3();
-    geo.boundingBox.getSize(size);
-    const maxDim = Math.max(size.x, size.y, size.z);
+        const size = new THREE.Vector3();
+        geo.boundingBox.getSize(size);
+        const maxDim = Math.max(size.x, size.y, size.z);
 
-    // Main beam
-    const mainMesh = makeMesh(geo, HIGHLIGHT_COLOR);
-    mainMesh.userData.isBeam = true;
-    const center = new THREE.Vector3();
-    geo.boundingBox.getCenter(center);
-    mainMesh.position.copy(center).negate();
-    scene.add(mainMesh);
+        // Main beam
+        const mainMesh = makeMesh(geo, HIGHLIGHT_COLOR);
+        mainMesh.userData.isBeam = true;
+        const center = new THREE.Vector3();
+        geo.boundingBox.getCenter(center);
+        mainMesh.position.copy(center).negate();
+        scene.add(mainMesh);
 
-    // Connected beams
-    for (const id of beamIds) {
-        try {
-            const connGeo = await loadSTL(`${BASE_URL}/beams/${id}.stl`);
-            const connMesh = makeMesh(connGeo, WOOD_COLOR, 0.7);
-            connMesh.userData.isBeam = true;
-            scene.add(connMesh);
-        } catch (err) {
-            console.warn(`Failed to load beam ${id}:`, err);
+        // Connected beams
+        for (const id of beamIds) {
+            try {
+                const connData = await fetch(`${BASE_URL}/beams/${id}.json`).then(r => r.json());
+                const connGeo = await loadSTL(`${BASE_URL}/beams/${id}.stl`);
+                connGeo.computeBoundingBox();
+
+                const connMesh = makeMesh(connGeo, WOOD_COLOR, 0.7);
+                connMesh.userData.isBeam = true;
+
+                // Posiziona il connected beam usando il suo frame
+                if (connData.frame) {
+                    const connCenter = new THREE.Vector3();
+                    connGeo.boundingBox.getCenter(connCenter);
+                    const connPos = new THREE.Vector3(...connData.frame.origin).sub(connCenter);
+                    connMesh.position.copy(connPos);
+                } else {
+                    const connCenter = new THREE.Vector3();
+                    connGeo.boundingBox.getCenter(connCenter);
+                    connMesh.position.copy(connCenter).negate();
+                }
+
+                scene.add(connMesh);
+            } catch (err) {
+                console.warn(`Failed to load beam ${id}:`, err);
+            }
         }
+
+        const dist = maxDim * 3.5;
+        camera.position.set(0, -dist, dist * 0.6);
+        camera.lookAt(0, 0, 0);
+        controls.target.set(0, 0, 0);
+        controls.update();
+
+        const axisScale = maxDim * 0.6;
+        const beamOrigin = currentBeamData.frame 
+            ? new THREE.Vector3(...currentBeamData.frame.origin).sub(center)
+            : new THREE.Vector3().sub(center);
+        drawLocalFrame(axisScale, beamOrigin);
+
+        drawGizmoAxes();
+    } catch (err) {
+        console.error("Error loading connected beams:", err);
     }
-
-    const dist = maxDim * 3.5;
-    camera.position.set(0, -dist, dist * 0.6);
-    camera.lookAt(0, 0, 0);
-    controls.target.set(0, 0, 0);
-    controls.update();
-
-    const axisScale = maxDim * 0.6;
-    const beamOrigin = currentBeamData.frame 
-        ? new THREE.Vector3(...currentBeamData.frame.origin).sub(center)
-        : new THREE.Vector3().sub(center);
-    drawLocalFrame(axisScale, beamOrigin);
-
-    drawGizmoAxes();
 };
 
 const loadStructure = async () => {
     clearBeams();
     clearAxes();
 
-    const allBeamsUrl = `${BASE_URL}/all_beams.json`;
-    const allBeamsData = await fetch(allBeamsUrl).then((r) => r.json());
+    try {
+        const allBeamsUrl = `${BASE_URL}/all_beams.json`;
+        const allBeamsData = await fetch(allBeamsUrl).then((r) => r.json());
 
-    const currentId = currentBeamData.name;
-    let minBound = new THREE.Vector3(Infinity, Infinity, Infinity);
-    let maxBound = new THREE.Vector3(-Infinity, -Infinity, -Infinity);
+        const currentId = currentBeamData.name;
+        let minBound = new THREE.Vector3(Infinity, Infinity, Infinity);
+        let maxBound = new THREE.Vector3(-Infinity, -Infinity, -Infinity);
 
-    // Load all beams
-    for (const beamData of allBeamsData) {
-        try {
-            const stlUrl = beamData["3d_model"];
-            const geo = await loadSTL(stlUrl);
-            geo.computeBoundingBox();
+        // Load all beams
+        for (const beamData of allBeamsData) {
+            try {
+                const stlUrl = beamData["3d_model"];
+                const geo = await loadSTL(stlUrl);
+                geo.computeBoundingBox();
 
-            const color = beamData.name === currentId ? HIGHLIGHT_COLOR : WOOD_COLOR;
-            const mesh = makeMesh(geo, color, beamData.name === currentId ? 1 : 0.5);
-            mesh.userData.isBeam = true;
-            scene.add(mesh);
+                const color = beamData.name === currentId ? HIGHLIGHT_COLOR : WOOD_COLOR;
+                const mesh = makeMesh(geo, color, beamData.name === currentId ? 1 : 0.5);
+                mesh.userData.isBeam = true;
 
-            minBound.min(geo.boundingBox.min);
-            maxBound.max(geo.boundingBox.max);
-        } catch (err) {
-            console.warn(`Failed to load beam ${beamData.name}:`, err);
+                // Posiziona il beam usando il suo frame
+                if (beamData.frame) {
+                    const bCenter = new THREE.Vector3();
+                    geo.boundingBox.getCenter(bCenter);
+                    const bPos = new THREE.Vector3(...beamData.frame.origin).sub(bCenter);
+                    mesh.position.copy(bPos);
+                } else {
+                    const bCenter = new THREE.Vector3();
+                    geo.boundingBox.getCenter(bCenter);
+                    mesh.position.copy(bCenter).negate();
+                }
+
+                scene.add(mesh);
+
+                minBound.min(geo.boundingBox.min);
+                maxBound.max(geo.boundingBox.max);
+            } catch (err) {
+                console.warn(`Failed to load beam ${beamData.name}:`, err);
+            }
         }
+
+        const center = new THREE.Vector3().addVectors(minBound, maxBound).multiplyScalar(0.5);
+        const size = new THREE.Vector3().subVectors(maxBound, minBound);
+        const maxDim = Math.max(size.x, size.y, size.z);
+
+        const dist = maxDim * 2;
+        camera.position.set(center.x, center.y - dist, center.z + dist * 0.6);
+        camera.lookAt(center);
+        controls.target.copy(center);
+        controls.update();
+
+        const axisScale = maxDim * 0.3;
+        const beamOrigin = currentBeamData.frame 
+            ? new THREE.Vector3(...currentBeamData.frame.origin)
+            : center.clone();
+        drawLocalFrame(axisScale, beamOrigin);
+
+        drawGizmoAxes();
+    } catch (err) {
+        console.error("Error loading structure:", err);
     }
-
-    const center = new THREE.Vector3().addVectors(minBound, maxBound).multiplyScalar(0.5);
-    const size = new THREE.Vector3().subVectors(maxBound, minBound);
-    const maxDim = Math.max(size.x, size.y, size.z);
-
-    const dist = maxDim * 2;
-    camera.position.set(center.x, center.y - dist, center.z + dist * 0.6);
-    camera.lookAt(center);
-    controls.target.copy(center);
-    controls.update();
-
-    const axisScale = maxDim * 0.3;
-    const beamOrigin = currentBeamData.frame 
-        ? new THREE.Vector3(...currentBeamData.frame.origin)
-        : center.clone();
-    drawLocalFrame(axisScale, beamOrigin);
-
-    drawGizmoAxes();
 };
 
 const handleViewChange = async (mode) => {
