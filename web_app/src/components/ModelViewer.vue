@@ -116,24 +116,28 @@ const loadSingleBeam = async () => {
     const stlUrl = currentBeamData["3d_model"];
     const geo = await loadSTL(stlUrl);
     geo.computeBoundingBox();
-    const center = new THREE.Vector3();
-    geo.boundingBox.getCenter(center);
-    geo.translate(-center.x, -center.y, -center.z);
+    
     const size = new THREE.Vector3();
     geo.boundingBox.getSize(size);
-    const scale = 2 / Math.max(size.x, size.y, size.z);
+    const maxDim = Math.max(size.x, size.y, size.z);
+
     const mesh = makeMesh(geo, WOOD_COLOR);
-    mesh.scale.multiplyScalar(scale);
     mesh.userData.isBeam = true;
+    
+    // Centra la mesh usando position, non geometry
+    const center = new THREE.Vector3();
+    geo.boundingBox.getCenter(center);
+    mesh.position.copy(center).negate();
+    
     scene.add(mesh);
 
-    const maxS = Math.max(size.x, size.y, size.z);
-    camera.position.set(0, -maxS * scale * 2, maxS * scale * 0.5);
+    const dist = maxDim * 3.5;
+    camera.position.set(0, -dist, dist * 0.6);
     camera.lookAt(0, 0, 0);
     controls.target.set(0, 0, 0);
     controls.update();
 
-    const axisScale = 1.2 * scale * Math.max(size.x, size.y, size.z) * 0.5;
+    const axisScale = maxDim * 0.6;
     drawLocalFrame(axisScale);
 };
 
@@ -265,8 +269,8 @@ onMounted(async () => {
     const width = containerRef.value.clientWidth;
     const height = containerRef.value.clientHeight;
 
-    camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
-    camera.position.set(0, -4, 2);
+    camera = new THREE.PerspectiveCamera(75, width / height, 0.01, 100000);
+    camera.position.set(0, -5, 3);
     camera.up.set(0, 0, 1);
     camera.lookAt(0, 0, 0);
 

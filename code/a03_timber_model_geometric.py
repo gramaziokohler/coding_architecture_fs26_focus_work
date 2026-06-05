@@ -144,8 +144,11 @@ class GeometricTimberModelCreator:
         # Step 3: Apply rules
         self._apply_rules(process_joinery)
 
-        # Step 4: Directly store final trimmed preview geometry
-        self._apply_jack_rafter_cuts_to_trimmed_inner_beam_geometry()
+        # Step 4: Apply trimmed geometry — only needed when process_joinery=False.
+        # When process_joinery=True, beam.geometry is already cut by process_joinery()
+        # and re-applying the JackRafterCut would produce a double cut.
+        if not process_joinery:
+            self._apply_jack_rafter_cuts_to_trimmed_inner_beam_geometry()
         print("=" * 60)
         print("Model generation complete")
         print("=" * 60)
@@ -371,9 +374,10 @@ class GeometricTimberModelCreator:
                             continue
                         processed_pairs.add(pair)
                         result = solver.find_topology(beam_a, beam_b, max_distance=max_dist)
-                        topo_name = JointTopology.get_name(result.topology) if result.topology != JointTopology.TOPO_UNKNOWN else "UNKNOWN"
-                        filter_label = "+".join(sorted(category_filter))
-                        print(f"  [{filter_label}] pair({i},{j}) -> {topo_name}  (max_dist={max_dist:.3f})")
+                        if result.topology != JointTopology.TOPO_UNKNOWN:
+                            topo_name = JointTopology.get_name(result.topology)
+                            filter_label = "+".join(sorted(category_filter))
+                            print(f"  [{filter_label}] pair({i},{j}) -> {topo_name}  (max_dist={max_dist:.3f})")
                     else:
                         result = solver.find_topology(beam_a, beam_b, max_distance=max_dist)
 
@@ -848,6 +852,48 @@ class GeometricTimberModelCreator:
                 beam.attributes["inner_cutting_plane"] = None
                 continue
 
+            beam_length = distance_point_point(beam_line.start, beam_line.end)
+            joint_to_open_end = nearest["distance"]
+            connected_point = beam_line.end if open_end_name == "start" else beam_line.start
+            joint_to_connected_end = distance_point_point(nearest["joint_on_beam"], connected_point)
+
+            n_xlaps = sum(
+                1 for r in self._topology_records
+                if r.get("topology") == JointTopology.TOPO_X
+                and beam in (r.get("main_beam"), r.get("cross_beam"))
+                and (r.get("main_beam") if beam is r.get("cross_beam") else r.get("cross_beam")) is not None
+                and (r.get("main_beam") if beam is r.get("cross_beam") else r.get("cross_beam")).attributes.get("category") == "inner"
+            )
+
+            end_tol = max(
+                float(self.max_distance_L),
+                float(self.max_distance_T),
+                float(self.max_distance_T_arch_base),
+                float(self.max_distance_T_inner_base),
+                float(self.max_distance_X),
+                float(self.beam_radius),
+            )
+
+            beam_edge = beam.attributes.get("edge", "?")
+            ref_edge = nearest["reference_beam"].attributes.get("edge", "?")
+            print(
+                "TRIM | edge={} | ref_edge={} | open_end={} | beam_len={:.3f} | xlap_dist_to_open={:.3f} | xlap_dist_to_connected={:.3f} | n_xlaps={} | skip={}".format(
+                    beam_edge,
+                    ref_edge,
+                    open_end_name,
+                    beam_length,
+                    joint_to_open_end,
+                    joint_to_connected_end,
+                    n_xlaps,
+                    joint_to_open_end < end_tol,
+                )
+            )
+
+            if joint_to_open_end < end_tol:
+                print("  -> Skipping JackRafterCut: XLap too close to open end, would conflict with TButtJoint.")
+                beam.attributes["inner_cutting_plane"] = None
+                continue
+
             reference_beam = nearest["reference_beam"]
             reference_line = nearest["reference_line"]
             reference_z = self._beam_z_vector(reference_beam)
@@ -883,18 +929,24 @@ class GeometricTimberModelCreator:
 
             plane_normal.unitize()
 
-            # Use the XLap point on the reference beam as the base plane origin.
-            plane_origin = nearest["joint_on_reference"]
+            # Use the XLap point on the trimmed beam as the plane origin.
+            # Using joint_on_reference (reference beam centerline) causes a
+            # 5-10cm offset because the two centerlines are not co-planar.
+            plane_origin = nearest["joint_on_beam"]
 
             # Orient the plane normal so positive inset moves toward the open end
             # of the trimmed inner beam.
             direction_to_open = Vector.from_start_end(plane_origin, open_point)
 
+            dot = 0.0
             if direction_to_open.length > 0.001:
                 direction_to_open.unitize()
-
-                if plane_normal.dot(direction_to_open) < 0:
+                dot = plane_normal.dot(direction_to_open)
+                if dot < 0:
                     plane_normal *= -1
+                    dot = -dot
+
+            print("  -> dot(normal, to_open)={:.3f} | inset={:.3f}".format(dot, float(self.cutting_plane_inset_distance or 0.0)))
 
             # Move plane along its oriented normal.
             # Positive distance = toward open end.
