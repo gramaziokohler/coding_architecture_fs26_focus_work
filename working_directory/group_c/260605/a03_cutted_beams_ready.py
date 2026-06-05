@@ -239,8 +239,8 @@ def run_packing(timber_model, origin, stock_length_beam_6x8, stock_length_beam_1
             arranged_names.append(item["name"])
 
             lbl_x, lbl_y = (new_bbox.Min.X + new_bbox.Max.X) / 2.0, (new_bbox.Min.Y + new_bbox.Max.Y) / 2.0
-            label_curves.extend(create_geometry_text(item["name"], rg.Point3d(lbl_x, lbl_y, new_bbox.Max.Z + l_off), text_height=0.06))
-            max_len_num_txt.extend(create_geometry_text("{:.2f}m".format(item["length_x"]), rg.Point3d(lbl_x, lbl_y - 0.08, new_bbox.Max.Z + l_off), text_height=0.045))
+            label_curves.extend(create_geometry_text(item["name"], rg.Point3d(lbl_x, lbl_y, new_bbox.Max.Z + l_off), text_height=0.04))
+            max_len_num_txt.extend(create_geometry_text("{:.2f}m".format(item["length_x"]), rg.Point3d(lbl_x, lbl_y - 0.08, new_bbox.Max.Z + l_off), text_height=0.04))
 
             dimensions.append("Stock beam n°: {} | {} | Sezione: {:.1f}x{:.1f}cm | L: {:.3f}m".format(bar["id"], item["name"], sec_w*100.0, sec_h*100.0, item["length_x"]))
 
