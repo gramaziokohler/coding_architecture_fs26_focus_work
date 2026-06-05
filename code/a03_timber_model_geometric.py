@@ -251,6 +251,11 @@ class GeometricTimberModelCreator:
         projected.unitize()
         return projected
     
+    @staticmethod
+    def _is_tbutt_like_joint(joint_type):
+        """Return True for normal and preferred-face T-butt joints."""
+        return joint_type in (TButtJoint, PreferredFaceTButtJoint)
+    
     def _create_beams(self) -> None:
         """Convert every RF edge into a Beam."""
         mesh: Mesh = self.rf_system.mesh
@@ -619,7 +624,7 @@ class GeometricTimberModelCreator:
         return None
 
     def _mark_trimmed_inner_beam_candidates(self):
-        """Tag inner beams that have a TButt at one end and an open other end.
+        """Tag inner beams that have a TButt-like joint at one end and an open other end.
 
         XLap joints are ignored for this classification.
         """
@@ -694,7 +699,7 @@ class GeometricTimberModelCreator:
                 if end_name is None:
                     continue
 
-                if joint_type is TButtJoint:
+                if self._is_tbutt_like_joint(joint_type):
                     end_status[id(beam)][end_name]["tbutt"] += 1
                 else:
                     end_status[id(beam)][end_name]["other"] += 1
@@ -724,6 +729,16 @@ class GeometricTimberModelCreator:
 
             if candidate:
                 self.trimmed_inner_beams.append(beam)
+
+                print(
+                    "TRIM CANDIDATE | edge={} | start_tbutt={} | start_any={} | end_tbutt={} | end_any={}".format(
+                        beam.attributes.get("edge"),
+                        start_has_tbutt,
+                        start_has_any,
+                        end_has_tbutt,
+                        end_has_any,
+                    )
+                )
 
         print(
             "Detected {} trimmed inner beam candidates.".format(
