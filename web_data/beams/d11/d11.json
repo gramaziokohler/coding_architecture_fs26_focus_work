@@ -1,12 +1,63 @@
 {
-  "beam ID": "d11",
+  "beam_id": "d11",
   "name": "D11",
   "module": "D",
-  "width": 0.06,
-  "height": 0.08,
-  "length": 1.1323,
-  "volume (m\u00b3)": 0.005435,
-  "weight (kg)": 2.72,
+  "width_m": 0.06,
+  "height_m": 0.08,
+  "length_m": 1.1323,
+  "volume_m3": 0.005435,
+  "weight_kg": 2.72,
+  "local_frame": {
+    "origin": [
+      2.08,
+      2.6293,
+      2.1102
+    ],
+    "x_axis": [
+      -0.4899,
+      0.8693,
+      0.0652
+    ],
+    "y_axis": [
+      0.032,
+      -0.0568,
+      0.9979
+    ],
+    "z_axis": [
+      0.8712,
+      0.4909,
+      -0.0
+    ]
+  },
+  "connected_beams": [
+    "d12",
+    "d15",
+    "d4",
+    "d10",
+    "b30"
+  ],
+  "global_position": {
+    "centerline_start": [
+      2.3574,
+      2.1371,
+      2.0733
+    ],
+    "centerline_end": [
+      1.8027,
+      3.1214,
+      2.1472
+    ],
+    "midpoint": [
+      2.08,
+      2.6293,
+      2.1102
+    ],
+    "midpoint_normalized": [
+      0.4093,
+      0.8649,
+      0.765
+    ]
+  },
   "joints": {
     "all": [
       "190",

@@ -1,12 +1,61 @@
 {
-  "beam ID": "c24",
+  "beam_id": "c24",
   "name": "C24",
   "module": "C",
-  "width": 0.06,
-  "height": 0.08,
-  "length": 0.5851,
-  "volume (m\u00b3)": 0.002808,
-  "weight (kg)": 1.4,
+  "width_m": 0.06,
+  "height_m": 0.08,
+  "length_m": 0.5851,
+  "volume_m3": 0.002808,
+  "weight_kg": 1.4,
+  "local_frame": {
+    "origin": [
+      2.68,
+      -1.5536,
+      2.5849
+    ],
+    "x_axis": [
+      0.9981,
+      -0.0614,
+      0.0082
+    ],
+    "y_axis": [
+      -0.0082,
+      0.0005,
+      1.0
+    ],
+    "z_axis": [
+      -0.0614,
+      -0.9981,
+      0.0
+    ]
+  },
+  "connected_beams": [
+    "c25",
+    "c23",
+    "c27"
+  ],
+  "global_position": {
+    "centerline_start": [
+      2.3881,
+      -1.5356,
+      2.5825
+    ],
+    "centerline_end": [
+      2.972,
+      -1.5716,
+      2.5873
+    ],
+    "midpoint": [
+      2.68,
+      -1.5536,
+      2.5849
+    ],
+    "midpoint_normalized": [
+      0.496,
+      0.0928,
+      0.9371
+    ]
+  },
   "joints": {
     "all": [
       "202",

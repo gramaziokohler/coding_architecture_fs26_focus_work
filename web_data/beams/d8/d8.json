@@ -1,12 +1,64 @@
 {
-  "beam ID": "d8",
+  "beam_id": "d8",
   "name": "D8",
   "module": "D",
-  "width": 0.06,
-  "height": 0.08,
-  "length": 1.124,
-  "volume (m\u00b3)": 0.005395,
-  "weight (kg)": 2.7,
+  "width_m": 0.06,
+  "height_m": 0.08,
+  "length_m": 1.124,
+  "volume_m3": 0.005395,
+  "weight_kg": 2.7,
+  "local_frame": {
+    "origin": [
+      3.7859,
+      1.8546,
+      1.7499
+    ],
+    "x_axis": [
+      -0.9288,
+      0.0079,
+      0.3706
+    ],
+    "y_axis": [
+      0.3706,
+      -0.0031,
+      0.9288
+    ],
+    "z_axis": [
+      0.0085,
+      1.0,
+      -0.0
+    ]
+  },
+  "connected_beams": [
+    "d1",
+    "d3",
+    "d9",
+    "f17",
+    "f24",
+    "f19"
+  ],
+  "global_position": {
+    "centerline_start": [
+      4.3078,
+      1.8502,
+      1.5416
+    ],
+    "centerline_end": [
+      3.2639,
+      1.859,
+      1.9582
+    ],
+    "midpoint": [
+      3.7859,
+      1.8546,
+      1.7499
+    ],
+    "midpoint_normalized": [
+      0.6558,
+      0.7219,
+      0.6344
+    ]
+  },
   "joints": {
     "all": [
       "297",

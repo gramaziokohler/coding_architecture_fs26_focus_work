@@ -1,12 +1,61 @@
 {
-  "beam ID": "b12",
+  "beam_id": "b12",
   "name": "B12",
   "module": "B",
-  "width": 0.06,
-  "height": 0.08,
-  "length": 0.6945,
-  "volume (m\u00b3)": 0.003334,
-  "weight (kg)": 1.67,
+  "width_m": 0.06,
+  "height_m": 0.08,
+  "length_m": 0.6945,
+  "volume_m3": 0.003334,
+  "weight_kg": 1.67,
+  "local_frame": {
+    "origin": [
+      -0.5566,
+      1.6999,
+      0.208
+    ],
+    "x_axis": [
+      -0.2547,
+      -0.7592,
+      -0.599
+    ],
+    "y_axis": [
+      -0.1905,
+      -0.5679,
+      0.8008
+    ],
+    "z_axis": [
+      -0.9481,
+      0.3181,
+      0.0
+    ]
+  },
+  "connected_beams": [
+    "b11",
+    "b10",
+    "b15"
+  ],
+  "global_position": {
+    "centerline_start": [
+      -0.4682,
+      1.9636,
+      0.416
+    ],
+    "centerline_end": [
+      -0.6451,
+      1.4363,
+      0.0
+    ],
+    "midpoint": [
+      -0.5566,
+      1.6999,
+      0.208
+    ],
+    "midpoint_normalized": [
+      0.0284,
+      0.6933,
+      0.0754
+    ]
+  },
   "joints": {
     "all": [
       "429",

@@ -1,12 +1,63 @@
 {
-  "beam ID": "b8",
+  "beam_id": "b8",
   "name": "B8",
   "module": "B",
-  "width": 0.06,
-  "height": 0.08,
-  "length": 1.0979,
-  "volume (m\u00b3)": 0.00527,
-  "weight (kg)": 2.63,
+  "width_m": 0.06,
+  "height_m": 0.08,
+  "length_m": 1.0979,
+  "volume_m3": 0.00527,
+  "weight_kg": 2.63,
+  "local_frame": {
+    "origin": [
+      -0.3694,
+      1.3237,
+      0.4098
+    ],
+    "x_axis": [
+      0.6634,
+      0.2596,
+      0.7018
+    ],
+    "y_axis": [
+      -0.6535,
+      -0.2557,
+      0.7124
+    ],
+    "z_axis": [
+      0.3643,
+      -0.9313,
+      0.0
+    ]
+  },
+  "connected_beams": [
+    "b5",
+    "b6",
+    "b7",
+    "b10",
+    "b9"
+  ],
+  "global_position": {
+    "centerline_start": [
+      -0.7336,
+      1.1812,
+      0.0246
+    ],
+    "centerline_end": [
+      -0.0052,
+      1.4662,
+      0.795
+    ],
+    "midpoint": [
+      -0.3694,
+      1.3237,
+      0.4098
+    ],
+    "midpoint_normalized": [
+      0.0555,
+      0.6239,
+      0.1486
+    ]
+  },
   "joints": {
     "all": [
       "25",
