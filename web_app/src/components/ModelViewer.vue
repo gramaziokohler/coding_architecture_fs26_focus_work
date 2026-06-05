@@ -58,12 +58,11 @@ const clearAxes = () => {
     toRemove.forEach((c) => scene.remove(c));
 };
 
-const drawLocalFrame = (scale = 1) => {
+const drawLocalFrame = (scale = 1, origin = new THREE.Vector3(0, 0, 0)) => {
     clearAxes();
     if (!currentBeamData?.local_frame) return;
 
     const { x_axis, y_axis, z_axis } = currentBeamData.local_frame;
-    const o = new THREE.Vector3(0, 0, 0);
 
     const headLength = scale * 0.15;
     const headWidth = scale * 0.08;
@@ -79,7 +78,7 @@ const drawLocalFrame = (scale = 1) => {
         const arrowLength = scale * lengthMult;
         const arrow = new THREE.ArrowHelper(
             direction,
-            o,
+            origin,
             arrowLength,
             color,
             headLength,
@@ -131,6 +130,12 @@ const loadSingleBeam = async () => {
     
     scene.add(mesh);
 
+    // Calcola l'origine (min point della bounding box)
+    const origin = new THREE.Vector3();
+    geo.boundingBox.getCenter(origin);
+    const min = new THREE.Vector3();
+    geo.boundingBox.min.sub(center).copy(min);
+    
     const dist = maxDim * 3.5;
     camera.position.set(0, -dist, dist * 0.6);
     camera.lookAt(0, 0, 0);
@@ -138,7 +143,7 @@ const loadSingleBeam = async () => {
     controls.update();
 
     const axisScale = maxDim * 0.6;
-    drawLocalFrame(axisScale);
+    drawLocalFrame(axisScale, min);
 };
 
 const loadConnectedBeams = async () => {
