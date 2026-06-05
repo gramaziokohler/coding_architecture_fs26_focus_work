@@ -110,6 +110,7 @@ const centerScene = () => {
     controls.update();
 };
 
+// ← MODIFICA PRINCIPALE: rimuovo la scala fissa e uso centerScene
 const loadSingleBeam = async () => {
     clearBeams();
     clearAxes();
@@ -121,18 +122,20 @@ const loadSingleBeam = async () => {
     geo.translate(-center.x, -center.y, -center.z);
     const size = new THREE.Vector3();
     geo.boundingBox.getSize(size);
-    const scale = 2 / Math.max(size.x, size.y, size.z);
+    const maxDim = Math.max(size.x, size.y, size.z);
+
     const mesh = makeMesh(geo, WOOD_COLOR);
-    mesh.scale.multiplyScalar(scale);
     mesh.userData.isBeam = true;
     scene.add(mesh);
 
-    camera.position.set(0, -2.5, 4.5);
+    // Camera si adatta alla dimensione reale del beam
+    const dist = maxDim * 2.2;
+    camera.position.set(0, -dist, dist * 0.6);
     camera.lookAt(0, 0, 0);
     controls.target.set(0, 0, 0);
     controls.update();
 
-    const axisScale = 1.2 * scale * Math.max(size.x, size.y, size.z) * 0.5;
+    const axisScale = maxDim * 0.6;
     drawLocalFrame(axisScale);
 };
 
@@ -264,8 +267,9 @@ onMounted(async () => {
     const width = containerRef.value.clientWidth;
     const height = containerRef.value.clientHeight;
 
-    camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
-    camera.position.set(0, -2.5, 4.5);
+    // ← far clipping plane aumentato per beam grandi
+    camera = new THREE.PerspectiveCamera(75, width / height, 0.01, 100000);
+    camera.position.set(0, -5, 3);
     camera.up.set(0, 0, 1);
     camera.lookAt(0, 0, 0);
 
