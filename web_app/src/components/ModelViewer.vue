@@ -90,6 +90,26 @@ const drawLocalFrame = (scale = 1) => {
     });
 };
 
+const centerScene = () => {
+    const box = new THREE.Box3();
+    scene.children
+        .filter((c) => c.userData.isBeam)
+        .forEach((c) => box.expandByObject(c));
+    if (box.isEmpty()) return;
+    const center = new THREE.Vector3();
+    box.getCenter(center);
+    scene.children
+        .filter((c) => c.userData.isBeam)
+        .forEach((c) => c.position.sub(center));
+    controls.target.set(0, 0, 0);
+    const size = new THREE.Vector3();
+    box.getSize(size);
+    const maxDim = Math.max(size.x, size.y, size.z);
+    camera.position.set(0, -maxDim * 2, maxDim * 0.8);
+    camera.lookAt(0, 0, 0);
+    controls.update();
+};
+
 const loadSingleBeam = async () => {
     clearBeams();
     clearAxes();
@@ -101,20 +121,13 @@ const loadSingleBeam = async () => {
     geo.boundingBox.getSize(size);
     const maxDim = Math.max(size.x, size.y, size.z);
 
-    // TRASLA LA GEOMETRIA PER ALLINEAMENTO CORRETTO
-    const minPoint = geo.boundingBox.min.clone();
-    const center = geo.boundingBox.getCenter(new THREE.Vector3());
-
-    geo.translate(
-        -minPoint.x,  // Sposta inizio a X=0
-        -center.y,     // Centra sezione in Y
-        -center.z      // Centra sezione in Z
-    );
-    geo.computeBoundingBox();
-
     const mesh = makeMesh(geo, WOOD_COLOR);
     mesh.userData.isBeam = true;
-    mesh.position.set(0, 0, 0);
+
+    // Centra la mesh usando position, non geometry
+    const center = new THREE.Vector3();
+    geo.boundingBox.getCenter(center);
+    mesh.position.copy(center).negate();
 
     scene.add(mesh);
 
@@ -131,406 +144,259 @@ const loadSingleBeam = async () => {
 const loadConnectedBeams = async () => {
     clearBeams();
     clearAxes();
+    const connectedIds = currentBeamData.connected_beams || [];
 
-    const stlUrl = currentBeamData["3d_model"];
-    const geo = await loadSTL(stlUrl);
-    geo.computeBoundingBox();
+    try {
+        const geo = await loadSTL(currentBeamData["3d_model"]);
+        const mesh = makeMesh(geo, HIGHLIGHT_COLOR);
+        mesh.userData.isBeam = true;
+        scene.add(mesh);
+    } catch (e) {
+        console.error("Error loading main beam", e);
+    }
 
-    const size = new THREE.Vector3();
-    geo.boundingBox.getSize(size);
-    const maxDim = Math.max(size.x, size.y, size.z);
-
-    // Trasla anche il beam principale
-    const minPoint = geo.boundingBox.min.clone();
-    const center = geo.boundingBox.getCenter(new THREE.Vector3());
-
-    geo.translate(
-        -minPoint.x,
-        -center.y,
-        -center.z
-    );
-    geo.computeBoundingBox();
-
-    const mesh = makeMesh(geo, WOOD_COLOR);
-    mesh.userData.isBeam = true;
-    mesh.position.set(0, 0, 0);
-    scene.add(mesh);
-
-    const connectedBeams = currentBeamData.connected_beams || [];
-    let maxDimOverall = maxDim;
-
-    for (const beamId of connectedBeams) {
+    for (const id of connectedIds) {
         try {
-            const response = await fetch(`${BASE_URL}/beams/${beamId}.json`);
-            if (!response.ok) continue;
-            const beamData = await response.json();
-
-            const connGeo = await loadSTL(beamData["3d_model"]);
-            connGeo.computeBoundingBox();
-
-            const connSize = new THREE.Vector3();
-            connGeo.boundingBox.getSize(connSize);
-            maxDimOverall = Math.max(maxDimOverall, ...Object.values(connSize));
-
-            // Trasla anche i beam connessi
-            const connMinPoint = connGeo.boundingBox.min.clone();
-            const connCenter = connGeo.boundingBox.getCenter(new THREE.Vector3());
-
-            connGeo.translate(
-                -connMinPoint.x,
-                -connCenter.y,
-                -connCenter.z
-            );
-            connGeo.computeBoundingBox();
-
-            const connMesh = makeMesh(connGeo, HIGHLIGHT_COLOR, 0.7);
-            connMesh.userData.isBeam = true;
-
-            // Posiziona il beam connesso usando il suo global_position
-            if (beamData.global_position) {
-                const pos = beamData.global_position;
-                connMesh.position.set(pos[0], pos[1], pos[2]);
-            }
-
-            scene.add(connMesh);
+            const stlUrl = `${BASE_URL}/beams/${id}/${id}.stl`;
+            const geo = await loadSTL(stlUrl);
+            const mesh = makeMesh(geo, WOOD_COLOR);
+            mesh.userData.isBeam = true;
+            scene.add(mesh);
         } catch (e) {
-            console.error(`Errore caricamento beam ${beamId}:`, e);
+            console.warn(`Could not load beam ${id}`, e);
         }
     }
 
-    const dist = maxDimOverall * 3.5;
-    camera.position.set(0, -dist, dist * 0.6);
-    camera.lookAt(0, 0, 0);
-    controls.target.set(0, 0, 0);
-    controls.update();
-
-    const axisScale = maxDimOverall * 0.6;
-    drawLocalFrame(axisScale);
+    centerScene();
 };
 
-const loadBeamData = async (url) => {
-    if (!url) return;
-    isLoading.value = true;
+const loadPavilion = async () => {
+    clearBeams();
+    clearAxes();
+    const currentId = currentBeamData["beam ID"];
 
     try {
-        let beamUrl = url;
-        if (beamUrl.includes("github.com")) {
-            beamUrl = beamUrl.replace("https://github.com/", "https://raw.githubusercontent.com/");
-            beamUrl = beamUrl.replace("/tree/", "/");
-            beamUrl = beamUrl.replace("/blob/", "/");
-        }
-        if (!beamUrl.endsWith(".json")) {
-            beamUrl += ".json";
-        }
+        const structureUrl = `${BASE_URL}/structure.json`;
+        const res = await fetch(structureUrl);
+        if (!res.ok) throw new Error("No structure.json");
+        const structure = await res.json();
 
-        const response = await fetch(beamUrl);
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const loadPromises = structure.beams.map(async (beam) => {
+            const id = beam.beam_id;
+            const isCurrentBeam = id === currentId;
+            const color = isCurrentBeam ? HIGHLIGHT_COLOR : WOOD_COLOR;
 
-        currentBeamData = await response.json();
+            try {
+                const stlUrl = `${BASE_URL}/beams/${id}/${id}.stl`;
+                const geo = await loadSTL(stlUrl);
+                const mesh = makeMesh(geo, color);
+                mesh.userData.isBeam = true;
+                scene.add(mesh);
+            } catch (e) {
+                console.warn(`Could not load STL for ${id}`, e);
+            }
+        });
 
-        if (viewMode.value === "single") {
-            await loadSingleBeam();
-        } else {
-            await loadConnectedBeams();
-        }
-    } catch (error) {
-        console.error("Errore nel caricamento:", error);
+        await Promise.all(loadPromises);
+        centerScene();
+    } catch (e) {
+        console.warn("structure.json not found:", e);
+        await loadSingleBeam();
+    }
+};
+
+const setMode = async (mode) => {
+    viewMode.value = mode;
+    isLoading.value = true;
+    clearAxes();
+    try {
+        if (mode === "single") await loadSingleBeam();
+        else if (mode === "connected") await loadConnectedBeams();
+        else if (mode === "pavilion") await loadPavilion();
     } finally {
         isLoading.value = false;
     }
 };
 
-const initScene = () => {
+const initGizmo = () => {
+    const canvas = gizmoRef.value;
+    gizmoRenderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+    gizmoRenderer.setSize(80, 80);
+    gizmoRenderer.setPixelRatio(window.devicePixelRatio);
+
+    gizmoScene = new THREE.Scene();
+    gizmoCamera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
+    gizmoCamera.position.set(0, 0, 3);
+
+    const axesHelper = new THREE.AxesHelper(1);
+    gizmoScene.add(axesHelper);
+
+    const makeLabel = (text, pos, color) => {
+        const canvas2 = document.createElement("canvas");
+        canvas2.width = 64;
+        canvas2.height = 64;
+        const ctx = canvas2.getContext("2d");
+        ctx.fillStyle = color;
+        ctx.font = "bold 40px Arial";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(text, 32, 32);
+        const tex = new THREE.CanvasTexture(canvas2);
+        const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex }));
+        sprite.position.copy(pos);
+        sprite.scale.set(0.4, 0.4, 1);
+        gizmoScene.add(sprite);
+    };
+    makeLabel("X", new THREE.Vector3(1.4, 0, 0), "#ff4444");
+    makeLabel("Y", new THREE.Vector3(0, 1.4, 0), "#44ff44");
+    makeLabel("Z", new THREE.Vector3(0, 0, 1.4), "#4488ff");
+
+    gizmoScene.add(new THREE.AmbientLight(0xffffff, 1));
+};
+
+const updateGizmo = () => {
+    if (!gizmoRenderer) return;
+    gizmoCamera.position.copy(camera.position).normalize().multiplyScalar(3);
+    gizmoCamera.lookAt(0, 0, 0);
+    gizmoCamera.up.copy(camera.up);
+    gizmoRenderer.render(gizmoScene, gizmoCamera);
+};
+
+onMounted(async () => {
     scene = new THREE.Scene();
-    scene.background = new THREE.Color(0xfafafa);
+    scene.background = new THREE.Color(0xffffff);
 
-    camera = new THREE.PerspectiveCamera(
-        50,
-        containerRef.value.clientWidth / containerRef.value.clientHeight,
-        0.1,
-        10000
-    );
+    const width = containerRef.value.clientWidth;
+    const height = containerRef.value.clientHeight;
 
-    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    renderer.setSize(containerRef.value.clientWidth, containerRef.value.clientHeight);
+    camera = new THREE.PerspectiveCamera(75, width / height, 0.01, 100000);
+    camera.position.set(0, -5, 3);
+    camera.up.set(0, 0, 1);
+    camera.lookAt(0, 0, 0);
+
+    renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(width, height);
     renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.shadowMap.enabled = true;
     containerRef.value.appendChild(renderer.domElement);
 
     controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
     controls.autoRotate = true;
-    controls.autoRotateSpeed = 2;
+    controls.autoRotateSpeed = 4;
+    controls.enableZoom = true;
+    controls.target.set(0, 0, 0);
+
+    const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+    dirLight.position.set(5, 8, 5);
+    dirLight.castShadow = true;
+    scene.add(dirLight);
+    scene.add(new THREE.AmbientLight(0xffffff, 0.8));
+    const fillLight = new THREE.DirectionalLight(0xffffff, 0.4);
+    fillLight.position.set(-5, 3, -5);
+    scene.add(fillLight);
+
+    try {
+        if (!props.beamUrl) throw new Error("No beam URL");
+        const beamName = props.beamUrl.split("/").pop();
+        const jsonUrl = `${props.beamUrl}/${beamName}.json`;
+        const response = await fetch(jsonUrl);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        currentBeamData = await response.json();
+        isLoading.value = true;
+        await loadSingleBeam();
+        isLoading.value = false;
+    } catch (e) {
+        console.error("Error loading beam:", e);
+        isLoading.value = false;
+    }
+
+    initGizmo();
 
     const animate = () => {
         animationId = requestAnimationFrame(animate);
         controls.update();
         renderer.render(scene, camera);
+        updateGizmo();
     };
     animate();
 
-    window.addEventListener("resize", onWindowResize);
-};
+    const handleResize = () => {
+        const w = containerRef.value.clientWidth;
+        const h = containerRef.value.clientHeight;
+        camera.aspect = w / h;
+        camera.updateProjectionMatrix();
+        renderer.setSize(w, h);
+    };
+    window.addEventListener("resize", handleResize);
 
-const onWindowResize = () => {
-    const width = containerRef.value.clientWidth;
-    const height = containerRef.value.clientHeight;
-    camera.aspect = width / height;
-    camera.updateProjectionMatrix();
-    renderer.setSize(width, height);
-};
-
-const switchViewMode = async (newMode) => {
-    viewMode.value = newMode;
-    if (currentBeamData) {
-        if (newMode === "single") {
-            await loadSingleBeam();
-        } else {
-            await loadConnectedBeams();
-        }
-    }
-};
-
-onMounted(() => {
-    initScene();
-
-    let beamUrl = props.beamUrl;
-    if (beamUrl) {
-        if (beamUrl.includes("github.com")) {
-            beamUrl = beamUrl.replace("https://github.com/", "https://raw.githubusercontent.com/");
-            beamUrl = beamUrl.replace("/tree/", "/");
-            beamUrl = beamUrl.replace("/blob/", "/");
-        }
-        if (beamUrl.endsWith(".json")) {
-            beamUrl = beamUrl.replace(".json", "");
-        }
-    } else {
-        beamUrl = "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data/beams/beam_1";
-    }
-
-    loadBeamData(beamUrl);
+    return () => {
+        window.removeEventListener("resize", handleResize);
+        cancelAnimationFrame(animationId);
+        controls.dispose();
+        renderer.dispose();
+    };
 });
 </script>
 
 <template>
-    <div class="model-viewer-container">
-        <div ref="containerRef" class="viewer"></div>
-
-        <div v-if="isLoading" class="loading-overlay">
-            <div class="loading-spinner"></div>
-            <span>Caricamento modello...</span>
-        </div>
-
+    <div ref="containerRef" class="model-viewer">
         <div class="view-buttons">
             <button
                 :class="{ active: viewMode === 'single' }"
-                @click="switchViewMode('single')"
-            >
-                Singola Trave
-            </button>
+                @click="setMode('single')"
+            >Beam</button>
             <button
                 :class="{ active: viewMode === 'connected' }"
-                @click="switchViewMode('connected')"
-            >
-                Travi Connesse
-            </button>
+                @click="setMode('connected')"
+            >Connected</button>
+            <button
+                :class="{ active: viewMode === 'pavilion' }"
+                @click="setMode('pavilion')"
+            >Pavilion</button>
         </div>
 
-        <div class="axis-legend">
+        <div v-if="viewMode === 'single'" class="axis-legend">
             <div class="axis-item">
-                <div class="axis-dot" style="background-color: #ff4444;"></div>
-                <span>X-Axis</span>
+                <span class="axis-dot" style="background: #ff4444"></span>
+                <span>X</span>
             </div>
             <div class="axis-item">
-                <div class="axis-dot" style="background-color: #44ff44;"></div>
-                <span>Y-Axis</span>
+                <span class="axis-dot" style="background: #44ff44"></span>
+                <span>Y</span>
             </div>
             <div class="axis-item">
-                <div class="axis-dot" style="background-color: #4488ff;"></div>
-                <span>Z-Axis</span>
+                <span class="axis-dot" style="background: #4488ff"></span>
+                <span>Z</span>
             </div>
         </div>
 
-        <div class="beam-info">
-            <h3 v-if="currentBeamData" class="beam-title">
-                {{ currentBeamData.name || "Beam Info" }}
-            </h3>
-            <ul v-if="currentBeamData" class="spec-list">
-                <li class="spec-item">
-                    <div class="regular-item">
-                        <span class="label">ID</span>
-                        <span class="value">{{ currentBeamData.id }}</span>
-                    </div>
-                </li>
-
-                <li class="spec-item">
-                    <div class="regular-item">
-                        <span class="label">Length</span>
-                        <span class="value">{{ currentBeamData.length?.toFixed(2) }} mm</span>
-                    </div>
-                </li>
-
-                <li class="spec-item">
-                    <div class="regular-item">
-                        <span class="label">Volume</span>
-                        <span class="value">{{ currentBeamData.volume?.toFixed(2) }} mm³</span>
-                    </div>
-                </li>
-
-                <li class="spec-item">
-                    <div class="regular-item">
-                        <span class="label">Material</span>
-                        <span class="value">{{ currentBeamData.material || "Unknown" }}</span>
-                    </div>
-                </li>
-
-                <li v-if="currentBeamData.joints && currentBeamData.joints.length > 0" class="spec-item">
-                    <div class="joints-item">
-                        <span class="label">Joints</span>
-                        <div class="joints-container">
-                            <div v-for="(joint, idx) in currentBeamData.joints" :key="idx" class="joint-row">
-                                <span class="joint-type">{{ joint.type }}</span>
-                                <span class="joint-values">
-                                    {{ joint.elements?.join(", ") || "N/A" }}
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-                </li>
-
-                <li v-if="currentBeamData.connected_beams && currentBeamData.connected_beams.length > 0" class="spec-item">
-                    <div class="regular-item">
-                        <span class="label">Connected Beams</span>
-                        <span class="value">{{ currentBeamData.connected_beams.join(", ") }}</span>
-                    </div>
-                </li>
-            </ul>
+        <div v-if="isLoading" class="loading-overlay">
+            <div class="loading-spinner"></div>
+            <span>Loading...</span>
         </div>
+
+        <canvas ref="gizmoRef" class="gizmo-canvas"></canvas>
     </div>
 </template>
 
 <style scoped>
-.model-viewer-container {
-    position: relative;
-    width: 100%;
-    height: 100vh;
-    overflow: hidden;
-    background: #fafafa;
-}
-
-.viewer {
+.model-viewer {
     width: 100%;
     height: 100%;
+    position: relative;
 }
 
-.beam-info {
-    position: absolute;
-    top: 16px;
-    right: 16px;
-    z-index: 10;
-    background: rgba(255, 255, 255, 0.95);
-    border: 1px solid #ddd;
-    border-radius: 6px;
-    padding: 16px;
-    max-width: 300px;
-    max-height: 70vh;
-    overflow-y: auto;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    font-family: "Helvetica Neue", sans-serif;
-}
-
-.beam-title {
-    margin: 0 0 12px 0;
-    font-size: 14px;
-    font-weight: 600;
-    color: #000;
-}
-
-.spec-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-}
-
-.spec-item {
-    padding: 8px 0;
-    border-bottom: 1px solid #e8e8e8;
-}
-
-.spec-item:last-child {
-    border-bottom: none;
-}
-
-.label {
-    color: #666;
-    font-weight: 400;
-    font-size: 12px;
-}
-
-.regular-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 16px;
-}
-
-.value {
-    color: #000;
-    font-family: "Helvetica Neue", sans-serif;
-    font-weight: 500;
-    text-align: right;
-    flex: 1;
-    word-break: break-word;
-    font-size: 12px;
-}
-
-.joints-item {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.joints-container {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    margin-left: 12px;
-    padding-left: 8px;
-    border-left: 2px solid #e0e0e0;
-}
-
-.joint-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 12px;
-    font-size: 11px;
-}
-
-.joint-type {
-    color: #666;
-    font-weight: 500;
-    background: #f5f5f5;
-    padding: 2px 6px;
-    border-radius: 3px;
-    flex: 0 0 auto;
-}
-
-.joint-values {
-    color: #000;
-    font-family: "Helvetica Neue", sans-serif;
-    font-weight: 500;
-    text-align: right;
-    flex: 1;
-    word-break: break-word;
-    font-size: 11px;
+:deep(canvas) {
+    display: block;
+    touch-action: none;
 }
 
 .view-buttons {
     position: absolute;
-    bottom: 16px;
-    left: 50%;
-    transform: translateX(-50%);
+    top: 12px;
+    left: 12px;
     z-index: 10;
     display: flex;
     gap: 8px;
@@ -589,6 +455,17 @@ onMounted(() => {
     flex-shrink: 0;
 }
 
+.gizmo-canvas {
+    position: absolute;
+    bottom: 16px;
+    right: 16px;
+    width: 80px;
+    height: 80px;
+    z-index: 10;
+    pointer-events: none;
+    border-radius: 4px;
+}
+
 .loading-overlay {
     position: absolute;
     top: 50%;
@@ -599,13 +476,12 @@ onMounted(() => {
     flex-direction: column;
     align-items: center;
     gap: 10px;
-    background: rgba(255, 255, 255, 0.95);
+    background: rgba(255, 255, 255, 0.85);
     padding: 20px 30px;
     border-radius: 8px;
     font-family: "Helvetica Neue", sans-serif;
     font-size: 13px;
     color: #333;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .loading-spinner {
@@ -618,8 +494,6 @@ onMounted(() => {
 }
 
 @keyframes spin {
-    to {
-        transform: rotate(360deg);
-    }
+    to { transform: rotate(360deg); }
 }
 </style>
