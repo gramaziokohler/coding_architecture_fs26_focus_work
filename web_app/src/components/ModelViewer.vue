@@ -48,14 +48,15 @@ const OUTLINE_COLOR = 0x171717;
 const CENTERLINE_COLOR = 0x111111;
 const MODULE_COLOR = 0x8fcf9c;
 const MODULE_PALETTE = [
-    0x8fcf9c,
     0x9ec5ff,
-    0xf3c677,
     0xd6a4e8,
     0x88d8d0,
     0xf19a8e,
-    0xb7c47a,
     0xc3a57d,
+    0xff9fc7,
+    0xaeb7ff,
+    0xd0a1c9,
+    0x9fc9d8,
 ];
 const FALLBACK_DENSITY_KG_M3 = 500;
 
@@ -130,7 +131,7 @@ const getBeamDisplayName = (beamId) => {
     return beamId.toUpperCase();
 };
 
-const mobileOverlayScale = () => (containerRef.value?.clientWidth <= 760 ? 0.45 : 1);
+const mobileOverlayScale = () => (containerRef.value?.clientWidth <= 760 ? 0.59 : 1);
 
 const makeModelObject = (object) => {
     object.userData.isModelObject = true;
@@ -1142,7 +1143,7 @@ onMounted(async () => {
     border-color: #000;
 }
 
-.navigation-buttons span {
+.navigation-buttons > .nav-group > span {
     padding: 4px 8px;
     background: rgba(255, 255, 255, 0.75);
     text-align: center;
@@ -1314,7 +1315,7 @@ onMounted(async () => {
         max-width: calc(100% - 158px);
         align-items: flex-end;
         gap: 4px;
-        font-size: 10px;
+        font-size: 10.5px;
     }
 
     .nav-group {
@@ -1328,25 +1329,25 @@ onMounted(async () => {
     }
 
     .view-buttons button {
-        padding: 4px 7px;
-        font-size: 10px;
+        padding: 4.5px 8px;
+        font-size: 10.5px;
         line-height: 1.1;
     }
 
     .rotate-toggle {
         gap: 4px;
-        font-size: 9px;
+        font-size: 9.5px;
         line-height: 1.1;
     }
 
     .rotate-toggle input {
-        width: 11px;
-        height: 11px;
+        width: 12px;
+        height: 12px;
     }
 
-    .navigation-buttons span {
-        min-width: 72px;
-        max-width: 104px;
+    .navigation-buttons > .nav-group > span {
+        min-width: 82px;
+        max-width: 116px;
         padding: 3px 4px;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -1354,8 +1355,8 @@ onMounted(async () => {
     }
 
     .navigation-buttons .nav-arrow {
-        width: 18px;
-        height: 18px;
+        width: 20px;
+        height: 20px;
     }
 
     .nav-arrow-prev span {
@@ -1375,8 +1376,8 @@ onMounted(async () => {
         bottom: 74px;
         left: 8px;
         transform: none;
-        padding: 3px 5px;
-        font-size: 9px;
+        padding: 3.5px 6px;
+        font-size: 10px;
         border: none;
         background: rgba(255, 255, 255, 0.72);
     }
@@ -1384,21 +1385,21 @@ onMounted(async () => {
     .axis-legend {
         bottom: 8px;
         left: 8px;
-        padding: 3px 5px;
+        padding: 4px 6px;
         gap: 2px;
-        font-size: 8px;
+        font-size: 9px;
         border: none;
         background: rgba(255, 255, 255, 0.72);
     }
 
     .axis-dot {
-        width: 7px;
-        height: 7px;
+        width: 8px;
+        height: 8px;
     }
 
     .gizmo-canvas {
-        width: 54px;
-        height: 54px;
+        width: 61px;
+        height: 61px;
         right: 8px;
         bottom: 8px;
     }

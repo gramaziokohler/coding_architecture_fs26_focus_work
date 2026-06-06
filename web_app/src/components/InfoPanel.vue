@@ -274,8 +274,8 @@ h3 {
 
 @media (max-width: 760px) {
     .info-panel {
-        max-height: 25vh;
-        padding: 7px 9px;
+        max-height: 29vh;
+        padding: 8px 11px;
     }
 
     .panel-header {
@@ -284,17 +284,17 @@ h3 {
     }
 
     h2 {
-        font-size: 13px;
+        font-size: 14px;
     }
 
     h3 {
-        font-size: 9px;
+        font-size: 10px;
         margin-bottom: 3px;
     }
 
     .module-tag {
-        padding: 2px 5px;
-        font-size: 9px;
+        padding: 2px 6px;
+        font-size: 10px;
     }
 
     .info-grid {
@@ -304,8 +304,8 @@ h3 {
     .spec-item,
     .joint-row {
         gap: 8px;
-        padding: 3px 0;
-        font-size: 9px;
+        padding: 4px 0;
+        font-size: 10px;
     }
 
     .joint-type {
