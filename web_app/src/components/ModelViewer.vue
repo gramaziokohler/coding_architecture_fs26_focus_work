@@ -40,6 +40,7 @@ const moduleIndex = ref(-1);
 const moduleList = ref([]);
 const currentModuleBeams = ref([]);
 const shownBeamIds = ref([]);
+const beamDataCacheVersion = ref(0);
 const beamDataCache = new Map();
 
 const WOOD_COLOR = 0xd4b896;
@@ -83,6 +84,7 @@ const beamWeightKg = (beamData) => {
 };
 
 const totalShownWeight = computed(() => {
+    beamDataCacheVersion.value;
     const total = shownBeamIds.value.reduce((sum, beamId) => {
         return sum + beamWeightKg(beamDataCache.get(beamId));
     }, 0);
@@ -623,6 +625,7 @@ const loadBeamData = async (beamId) => {
     if (beamDataCache.has(beamId)) return beamDataCache.get(beamId);
     const beamData = await loadJson(`${BASE_URL}/beams/${beamId}/${beamId}.json`);
     beamDataCache.set(beamId, beamData);
+    beamDataCacheVersion.value += 1;
     return beamData;
 };
 
@@ -647,6 +650,7 @@ const loadCurrentBeamFromUrl = async () => {
     const beamName = props.beamUrl.split("/").pop();
     currentBeamData = await loadJson(`${props.beamUrl}/${beamName}.json`);
     beamDataCache.set(getBeamId(currentBeamData), currentBeamData);
+    beamDataCacheVersion.value += 1;
     await syncNavigationState();
 };
 
