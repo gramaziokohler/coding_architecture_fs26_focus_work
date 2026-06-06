@@ -32,6 +32,7 @@ const isLoading = ref(false);
 const isAutoRotating = ref(false);
 const preserveCameraOnViewChange = ref(true);
 const colorCurrentModule = ref(true);
+const colorAllModules = ref(false);
 const currentBeamId = ref("");
 const currentModule = ref("");
 const beamIndex = ref(-1);
@@ -45,6 +46,16 @@ const HIGHLIGHT_COLOR = 0xff8fa3;
 const OUTLINE_COLOR = 0x171717;
 const CENTERLINE_COLOR = 0x111111;
 const MODULE_COLOR = 0x8fcf9c;
+const MODULE_PALETTE = [
+    0x8fcf9c,
+    0x9ec5ff,
+    0xf3c677,
+    0xd6a4e8,
+    0x88d8d0,
+    0xf19a8e,
+    0xb7c47a,
+    0xc3a57d,
+];
 
 const beamCounter = computed(() => {
     if (!currentModuleBeams.value.length || beamIndex.value < 0) return "";
@@ -378,8 +389,8 @@ const drawCameraBeamLabel = (beamData = currentBeamData, scale = 0.08) => {
     const midpoint = vectorFromArray(position?.midpoint || getBeamFrame(beamData)?.origin || [0, 0, 0]);
     const labelPosition = midpoint
         .clone()
-        .add(frame.y_axis.clone().multiplyScalar(width * 1.35))
-        .add(frame.z_axis.clone().multiplyScalar(height * 1.6));
+        .add(frame.y_axis.clone().multiplyScalar(width * 0.65))
+        .add(frame.z_axis.clone().multiplyScalar(height * 0.85));
 
     makeTextSprite(text, labelPosition, "#111111", scale, {
         title: text,
@@ -527,7 +538,7 @@ const drawJointLabels = (scale = 0.13) => {
 
 const addSelectedBeamOverlays = (sizeScale = 1) => {
     drawCenterline(currentBeamData, true);
-    drawBeamFrame(currentBeamData, sizeScale * 0.28, true);
+    drawBeamFrame(currentBeamData, sizeScale * 0.168, true);
     drawEngraving(sizeScale * 0.045);
     drawCameraBeamLabel(currentBeamData, sizeScale * 0.07);
     drawJointLabels(sizeScale * 0.038);
@@ -541,6 +552,17 @@ const shouldEmphasizeModuleBeam = (beamData) => {
 const addModuleBeamLabel = (beamData, scale = 0.055) => {
     if (!shouldEmphasizeModuleBeam(beamData) || getBeamId(beamData) === getBeamId()) return;
     drawCameraBeamLabel(beamData, scale);
+};
+
+const moduleColor = (moduleName) => {
+    const index = moduleList.value.indexOf(moduleName);
+    if (index >= 0) return MODULE_PALETTE[index % MODULE_PALETTE.length];
+
+    let hash = 0;
+    String(moduleName || "").split("").forEach((char) => {
+        hash = (hash * 31 + char.charCodeAt(0)) % MODULE_PALETTE.length;
+    });
+    return MODULE_PALETTE[hash];
 };
 
 const centerScene = ({ preserveCamera = false } = {}) => {
@@ -710,8 +732,8 @@ const loadPavilion = async ({ preserveCamera = false } = {}) => {
                 const id = beam.beam_id;
                 const isCurrentBeam = id === currentId;
                 const isCurrentModule = colorCurrentModule.value && beam.module === currentModule.value;
-                const color = isCurrentBeam ? HIGHLIGHT_COLOR : (isCurrentModule ? MODULE_COLOR : WOOD_COLOR);
-                const opacity = isCurrentBeam ? 0.62 : (isCurrentModule ? 0.36 : 0.18);
+                const color = isCurrentBeam ? HIGHLIGHT_COLOR : (isCurrentModule ? MODULE_COLOR : (colorAllModules.value ? moduleColor(beam.module) : WOOD_COLOR));
+                const opacity = isCurrentBeam ? 0.62 : ((isCurrentModule || colorAllModules.value) ? 0.36 : 0.18);
                 try {
                     const [geometry, beamData] = isCurrentModule
                         ? await Promise.all([
@@ -942,31 +964,43 @@ onMounted(async () => {
 <template>
     <div ref="containerRef" class="model-viewer">
         <div class="view-buttons">
-            <button :class="{ active: viewMode === 'single' }" @click="setMode('single')">Beam</button>
-            <button :class="{ active: viewMode === 'connected' }" @click="setMode('connected')">Connected</button>
-            <button :class="{ active: viewMode === 'module' }" @click="setMode('module')">Module</button>
-            <button :class="{ active: viewMode === 'pavilion' }" @click="setMode('pavilion')">Pavilion</button>
-            <label class="rotate-toggle">
-                <input v-model="isAutoRotating" type="checkbox" @change="setAutoRotate" />
-                Auto rotate
-            </label>
-            <label class="rotate-toggle">
-                <input v-model="preserveCameraOnViewChange" type="checkbox" />
-                Keep camera
-            </label>
-            <label v-if="viewMode !== 'single'" class="rotate-toggle">
-                <input v-model="colorCurrentModule" type="checkbox" @change="setMode(viewMode)" />
-                Color module
-            </label>
+            <div class="mode-buttons">
+                <button :class="{ active: viewMode === 'single' }" @click="setMode('single')">Beam</button>
+                <button :class="{ active: viewMode === 'connected' }" @click="setMode('connected')">Connected</button>
+                <button :class="{ active: viewMode === 'module' }" @click="setMode('module')">Module</button>
+                <button :class="{ active: viewMode === 'pavilion' }" @click="setMode('pavilion')">Pavilion</button>
+            </div>
+            <div class="option-buttons">
+                <label class="rotate-toggle">
+                    <input v-model="isAutoRotating" type="checkbox" @change="setAutoRotate" />
+                    Auto rotate
+                </label>
+                <label class="rotate-toggle">
+                    <input v-model="preserveCameraOnViewChange" type="checkbox" />
+                    Keep camera
+                </label>
+                <label v-if="viewMode !== 'single'" class="rotate-toggle">
+                    <input v-model="colorCurrentModule" type="checkbox" @change="setMode(viewMode)" />
+                    Color module
+                </label>
+                <label v-if="viewMode === 'pavilion'" class="rotate-toggle">
+                    <input v-model="colorAllModules" type="checkbox" @change="setMode('pavilion')" />
+                    Color all
+                </label>
+            </div>
         </div>
 
         <div class="navigation-buttons">
-            <button @click="navigateBeam(-1)">Prev Beam</button>
-            <span>{{ currentBeamId }} <template v-if="beamCounter">({{ beamCounter }})</template></span>
-            <button @click="navigateBeam(1)">Next Beam</button>
-            <button @click="navigateModule(-1)">Prev Module</button>
-            <span>Module {{ currentModule }} <template v-if="moduleCounter">({{ moduleCounter }})</template></span>
-            <button @click="navigateModule(1)">Next Module</button>
+            <div class="nav-group">
+                <button @click="navigateModule(-1)">Prev Module</button>
+                <span>Module {{ currentModule }} <template v-if="moduleCounter">({{ moduleCounter }})</template></span>
+                <button @click="navigateModule(1)">Next Module</button>
+            </div>
+            <div class="nav-group">
+                <button @click="navigateBeam(-1)">Prev Beam</button>
+                <span>{{ currentBeamId }} <template v-if="beamCounter">({{ beamCounter }})</template></span>
+                <button @click="navigateBeam(1)">Next Beam</button>
+            </div>
         </div>
 
         <div class="axis-legend">
@@ -1006,7 +1040,6 @@ onMounted(async () => {
     position: absolute;
     z-index: 10;
     display: flex;
-    align-items: center;
     gap: 8px;
     font-family: "Helvetica Neue", sans-serif;
 }
@@ -1014,16 +1047,29 @@ onMounted(async () => {
 .view-buttons {
     top: 12px;
     left: 12px;
+    align-items: flex-start;
 }
 
 .navigation-buttons {
     top: 12px;
     right: 12px;
-    flex-wrap: wrap;
-    justify-content: flex-end;
-    max-width: min(680px, calc(100% - 180px));
+    flex-direction: column;
+    align-items: flex-end;
+    max-width: min(420px, calc(100% - 220px));
     color: #111;
     font-size: 12px;
+}
+
+.mode-buttons,
+.option-buttons,
+.nav-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.nav-group {
+    align-items: stretch;
 }
 
 .view-buttons button,
@@ -1036,6 +1082,11 @@ onMounted(async () => {
     background: rgba(255, 255, 255, 0.92);
     border: 1px solid #bdbdbd;
     border-radius: 4px;
+}
+
+.rotate-toggle {
+    padding: 4px 8px;
+    font-size: 11px;
 }
 
 .view-buttons button,
@@ -1056,8 +1107,9 @@ onMounted(async () => {
 }
 
 .navigation-buttons span {
-    padding: 4px 6px;
+    padding: 4px 8px;
     background: rgba(255, 255, 255, 0.75);
+    text-align: center;
 }
 
 .rotate-toggle {
@@ -1175,8 +1227,8 @@ onMounted(async () => {
     }
 
     .navigation-buttons {
-        top: 52px;
-        justify-content: flex-start;
+        top: 164px;
+        align-items: flex-start;
     }
 }
 
