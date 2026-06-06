@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 
 const props = defineProps({
     beamUrl: {
@@ -19,7 +19,9 @@ const positionData = computed(() => beamData.value?.global_position || {});
 const engravingText = computed(() => beamData.value?.engraving_text || beamData.value?.name || beamData.value?.["beam ID"]);
 const engravingLocation = computed(() => positionData.value?.midpoint || frameData.value?.origin || null);
 
-onMounted(async () => {
+const loadBeamInfo = async () => {
+    loading.value = true;
+    error.value = null;
     try {
         if (!props.beamUrl) {
             throw new Error("No beam URL provided");
@@ -37,7 +39,10 @@ onMounted(async () => {
     } finally {
         loading.value = false;
     }
-});
+};
+
+onMounted(loadBeamInfo);
+watch(() => props.beamUrl, loadBeamInfo);
 
 const isObject = (value) => typeof value === "object" && value !== null;
 const isArray = (value) => Array.isArray(value);

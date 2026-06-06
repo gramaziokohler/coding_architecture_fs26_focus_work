@@ -10,6 +10,7 @@ const props = defineProps({
         default: "",
     },
 });
+const emit = defineEmits(["beam-selected"]);
 
 const containerRef = ref(null);
 const gizmoRef = ref(null);
@@ -18,30 +19,28 @@ let animationId;
 let currentBeamData = null;
 let structureData = null;
 let gizmoRenderer, gizmoScene, gizmoCamera;
+let pointerDown = null;
+const raycaster = new THREE.Raycaster();
+const pointer = new THREE.Vector2();
 
 const BASE_URL = "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data";
 
 const viewMode = ref("single");
 const isLoading = ref(false);
+const isAutoRotating = ref(true);
+const preserveCameraOnViewChange = ref(true);
 const currentBeamId = ref("");
 const currentModule = ref("");
 const beamIndex = ref(-1);
 const moduleIndex = ref(-1);
+const moduleList = ref([]);
+const currentModuleBeams = ref([]);
+const beamDataCache = new Map();
 
 const WOOD_COLOR = 0xd4b896;
 const HIGHLIGHT_COLOR = 0xff8fa3;
 const OUTLINE_COLOR = 0x171717;
 const CENTERLINE_COLOR = 0x111111;
-
-const moduleList = computed(() => {
-    if (!structureData?.beams) return [];
-    return [...new Set(structureData.beams.map((beam) => beam.module))].sort();
-});
-
-const currentModuleBeams = computed(() => {
-    if (!structureData?.beams || !currentModule.value) return [];
-    return structureData.beams.filter((beam) => beam.module === currentModule.value);
-});
 
 const beamCounter = computed(() => {
     if (!currentModuleBeams.value.length || beamIndex.value < 0) return "";
@@ -83,12 +82,24 @@ const getGlobalPosition = (beamData = currentBeamData) => {
 
 const vectorFromArray = (value) => new THREE.Vector3(value[0], value[1], value[2]);
 
+const getCenterlineStart = (beamData = currentBeamData) => {
+    const position = getGlobalPosition(beamData);
+    return position?.centerline_start || getBeamFrame(beamData)?.origin || null;
+};
+
+const getBeamDisplayName = (beamId) => {
+    if (!beamId) return "";
+    const cached = beamDataCache.get(beamId);
+    if (cached?.name) return cached.name;
+    return beamId.toUpperCase();
+};
+
 const makeModelObject = (object) => {
     object.userData.isModelObject = true;
     return object;
 };
 
-const makeMesh = (geometry, color, opacity = 0.45) => {
+const makeMesh = (geometry, color, opacity = 0.45, beamId = "") => {
     geometry.computeBoundingBox();
     const material = new THREE.MeshBasicMaterial({
         color,
@@ -99,6 +110,7 @@ const makeMesh = (geometry, color, opacity = 0.45) => {
     });
     const mesh = new THREE.Mesh(geometry, material);
     mesh.userData.isBeam = true;
+    mesh.userData.beamId = beamId;
     makeModelObject(mesh);
     return mesh;
 };
@@ -150,13 +162,9 @@ const makeTextSprite = (text, position, color = "#111111", scale = 0.12) => {
     canvas.height = 160;
     const ctx = canvas.getContext("2d");
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.font = "600 42px Helvetica Neue, Arial, sans-serif";
+    ctx.font = "700 42px Helvetica Neue, Arial, sans-serif";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillStyle = "rgba(255,255,255,0.88)";
-    ctx.fillRect(12, 38, 488, 84);
-    ctx.strokeStyle = "rgba(17,17,17,0.25)";
-    ctx.strokeRect(12, 38, 488, 84);
     ctx.fillStyle = color;
     ctx.fillText(text, 256, 82);
 
@@ -170,11 +178,45 @@ const makeTextSprite = (text, position, color = "#111111", scale = 0.12) => {
     return sprite;
 };
 
-const drawBeamFrame = (scale = 0.25) => {
-    const frame = getBeamFrame();
+const makeTextPlane = (text, position, xAxis, yAxis, color = "#111111", scale = 0.16) => {
+    const canvas = document.createElement("canvas");
+    canvas.width = 512;
+    canvas.height = 192;
+    const ctx = canvas.getContext("2d");
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.font = "700 64px Helvetica Neue, Arial, sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillStyle = color;
+    ctx.fillText(text, 256, 96);
+
+    const texture = new THREE.CanvasTexture(canvas);
+    const material = new THREE.MeshBasicMaterial({
+        map: texture,
+        transparent: true,
+        side: THREE.DoubleSide,
+        depthWrite: false,
+    });
+    const geometry = new THREE.PlaneGeometry(scale * 4.2, scale * 1.55);
+    const plane = new THREE.Mesh(geometry, material);
+
+    const x = xAxis.clone().normalize();
+    const y = yAxis.clone().normalize();
+    const z = new THREE.Vector3().crossVectors(x, y).normalize();
+    const matrix = new THREE.Matrix4().makeBasis(x, y, z);
+    plane.quaternion.setFromRotationMatrix(matrix);
+    plane.position.copy(position);
+    plane.userData.isOverlay = true;
+    makeModelObject(plane);
+    scene.add(plane);
+    return plane;
+};
+
+const drawBeamFrame = (beamData = currentBeamData, scale = 0.25, showAxisLabels = true) => {
+    const frame = getBeamFrame(beamData);
     if (!frame?.origin || !frame?.x_axis || !frame?.y_axis || !frame?.z_axis) return;
 
-    const origin = vectorFromArray(frame.origin);
+    const origin = vectorFromArray(getCenterlineStart(beamData) || frame.origin);
     const headLength = scale * 0.18;
     const headWidth = scale * 0.08;
     const axes = [
@@ -190,7 +232,9 @@ const drawBeamFrame = (scale = 0.25) => {
         arrow.userData.isOverlay = true;
         makeModelObject(arrow);
         scene.add(arrow);
-        makeTextSprite(label, origin.clone().add(direction.multiplyScalar(length * 1.15)), `#${color.toString(16).padStart(6, "0")}`, scale * 0.26);
+        if (showAxisLabels) {
+            makeTextSprite(label, origin.clone().add(direction.multiplyScalar(length * 1.15)), `#${color.toString(16).padStart(6, "0")}`, scale * 0.26);
+        }
     });
 };
 
@@ -205,36 +249,149 @@ const drawCenterline = (beamData = currentBeamData, isCurrent = true) => {
 const drawEngraving = (scale = 0.18) => {
     const position = getGlobalPosition();
     const frame = getBeamFrame();
-    const labelPosition = vectorFromArray(position?.midpoint || frame?.origin || [0, 0, 0]);
-    const text = currentBeamData?.engraving_text || currentBeamData?.name || getBeamId();
-    if (text) makeTextSprite(text, labelPosition, "#111111", scale);
+    const text = currentBeamData?.engraving_text || currentBeamData?.label_text || currentBeamData?.name || getBeamId();
+    if (!text || !frame) return;
+
+    const engraving = currentBeamData?.engraving || currentBeamData?.label || currentBeamData?.beam_label || {};
+    const origin = vectorFromArray(
+        engraving.position ||
+        engraving.location ||
+        engraving.origin ||
+        position?.midpoint ||
+        frame.origin ||
+        [0, 0, 0]
+    );
+    const xAxis = vectorFromArray(engraving.x_axis || frame.x_axis);
+    const yAxis = vectorFromArray(engraving.y_axis || frame.y_axis);
+    const normal = vectorFromArray(engraving.normal || frame.z_axis).normalize();
+    const faceOffset = Number.isFinite(engraving.offset) ? engraving.offset : 0.004;
+    makeTextPlane(text, origin.add(normal.multiplyScalar(faceOffset)), xAxis, yAxis, "#111111", scale);
 };
 
-const drawJointLabels = (scale = 0.13) => {
+const closestPointsOnSegments = (p1, q1, p2, q2) => {
+    const d1 = q1.clone().sub(p1);
+    const d2 = q2.clone().sub(p2);
+    const r = p1.clone().sub(p2);
+    const a = d1.dot(d1);
+    const e = d2.dot(d2);
+    const f = d2.dot(r);
+    const epsilon = 1e-9;
+    let s = 0;
+    let t = 0;
+
+    if (a <= epsilon && e <= epsilon) {
+        return [p1.clone(), p2.clone()];
+    }
+    if (a <= epsilon) {
+        t = THREE.MathUtils.clamp(f / e, 0, 1);
+    } else {
+        const c = d1.dot(r);
+        if (e <= epsilon) {
+            s = THREE.MathUtils.clamp(-c / a, 0, 1);
+        } else {
+            const b = d1.dot(d2);
+            const denom = a * e - b * b;
+            if (denom !== 0) {
+                s = THREE.MathUtils.clamp((b * f - c * e) / denom, 0, 1);
+            }
+            t = (b * s + f) / e;
+            if (t < 0) {
+                t = 0;
+                s = THREE.MathUtils.clamp(-c / a, 0, 1);
+            } else if (t > 1) {
+                t = 1;
+                s = THREE.MathUtils.clamp((b - c) / a, 0, 1);
+            }
+        }
+    }
+
+    return [
+        p1.clone().add(d1.multiplyScalar(s)),
+        p2.clone().add(d2.multiplyScalar(t)),
+    ];
+};
+
+const jointTypeById = (jointId) => {
+    const groups = currentBeamData?.joints || {};
+    return Object.entries(groups).find(([key, ids]) => key !== "all" && Array.isArray(ids) && ids.includes(jointId))?.[0] || "";
+};
+
+const exportedJointRecords = () => {
+    const records =
+        currentBeamData?.joint_details ||
+        currentBeamData?.joint_info ||
+        currentBeamData?.joint_locations ||
+        currentBeamData?.joints?.details ||
+        [];
+    return Array.isArray(records) ? records : [];
+};
+
+const buildJointRecords = () => {
+    const exported = exportedJointRecords().map((joint) => {
+        const connectedBeamId = joint.connected_beam || joint.connected_beam_id || joint.other_beam || joint.other_beam_id || joint.beam_b;
+        return {
+            id: String(joint.id || joint.joint_id || joint.name || ""),
+            connectedBeamId,
+            label: joint.label || `${getBeamDisplayName(getBeamId())} to ${getBeamDisplayName(connectedBeamId)}`,
+            location: joint.location || joint.position || joint.point,
+            type: joint.type || joint.joint_type,
+        };
+    });
+    if (exported.length) return exported;
+
     const joints = currentBeamData?.joints?.all || [];
+    const connectedIds = currentBeamData?.connected_beams || [];
+    return joints.map((jointId, index) => ({
+        id: String(jointId),
+        connectedBeamId: connectedIds[index],
+        label: `${getBeamDisplayName(getBeamId())} to ${getBeamDisplayName(connectedIds[index])}`,
+        type: jointTypeById(jointId),
+    }));
+};
+
+const fallbackJointLocation = (connectedBeamId, index, count) => {
     const position = getGlobalPosition();
-    if (!joints.length || !position?.centerline_start || !position?.centerline_end) return;
+    if (!position?.centerline_start || !position?.centerline_end) return null;
 
     const start = vectorFromArray(position.centerline_start);
     const end = vectorFromArray(position.centerline_end);
-    const direction = end.clone().sub(start);
+    const connectedBeam = beamDataCache.get(connectedBeamId) || structureData?.beams?.find((beam) => beam.beam_id === connectedBeamId);
+    const connectedPosition = connectedBeam ? getGlobalPosition(connectedBeam) : null;
+
+    if (connectedPosition?.centerline_start && connectedPosition?.centerline_end) {
+        const connectedStart = vectorFromArray(connectedPosition.centerline_start);
+        const connectedEnd = vectorFromArray(connectedPosition.centerline_end);
+        const [pointA, pointB] = closestPointsOnSegments(start, end, connectedStart, connectedEnd);
+        return pointA.add(pointB).multiplyScalar(0.5);
+    }
+
+    const t = (index + 1) / (count + 1);
+    return start.clone().lerp(end, t);
+};
+
+const drawJointLabels = (scale = 0.13) => {
+    const records = buildJointRecords();
+    if (!records.length) return;
+
     const normal = getBeamFrame()?.z_axis ? vectorFromArray(getBeamFrame().z_axis).normalize() : new THREE.Vector3(0, 0, 1);
 
-    joints.forEach((jointId, index) => {
-        const t = (index + 1) / (joints.length + 1);
-        const point = start.clone().add(direction.clone().multiplyScalar(t)).add(normal.clone().multiplyScalar(scale * 1.5));
-        makeTextSprite(`J${jointId}`, point, "#111111", scale);
+    records.forEach((joint, index) => {
+        const location = joint.location ? vectorFromArray(joint.location) : fallbackJointLocation(joint.connectedBeamId, index, records.length);
+        if (!location) return;
+        const label = joint.label || `${getBeamDisplayName(getBeamId())} to ${getBeamDisplayName(joint.connectedBeamId)}`;
+        const point = location.add(normal.clone().multiplyScalar(scale * 0.9));
+        makeTextSprite(label, point, "#111111", scale);
     });
 };
 
 const addSelectedBeamOverlays = (sizeScale = 1) => {
     drawCenterline(currentBeamData, true);
-    drawBeamFrame(sizeScale * 0.28);
+    drawBeamFrame(currentBeamData, sizeScale * 0.28, true);
     drawEngraving(sizeScale * 0.18);
     drawJointLabels(sizeScale * 0.13);
 };
 
-const centerScene = () => {
+const centerScene = ({ preserveCamera = false } = {}) => {
     const box = new THREE.Box3();
     scene.children
         .filter((child) => child.userData.isBeam)
@@ -250,6 +407,11 @@ const centerScene = () => {
         .filter((child) => child.userData.isModelObject)
         .forEach((child) => child.position.sub(center));
 
+    if (preserveCamera) {
+        controls.update();
+        return;
+    }
+
     const maxDim = Math.max(size.x, size.y, size.z);
     const dist = maxDim * 2.2;
     camera.position.set(0, -dist, dist * 0.65);
@@ -264,7 +426,12 @@ const loadStructure = async () => {
     return structureData;
 };
 
-const loadBeamData = async (beamId) => loadJson(`${BASE_URL}/beams/${beamId}/${beamId}.json`);
+const loadBeamData = async (beamId) => {
+    if (beamDataCache.has(beamId)) return beamDataCache.get(beamId);
+    const beamData = await loadJson(`${BASE_URL}/beams/${beamId}/${beamId}.json`);
+    beamDataCache.set(beamId, beamData);
+    return beamData;
+};
 
 const syncNavigationState = async () => {
     try {
@@ -273,6 +440,8 @@ const syncNavigationState = async () => {
         const entry = structure.beams.find((beam) => beam.beam_id === id);
         currentBeamId.value = id;
         currentModule.value = currentBeamData?.module || entry?.module || "";
+        moduleList.value = [...new Set(structure.beams.map((beam) => beam.module))].sort();
+        currentModuleBeams.value = structure.beams.filter((beam) => beam.module === currentModule.value);
         moduleIndex.value = moduleList.value.indexOf(currentModule.value);
         beamIndex.value = currentModuleBeams.value.findIndex((beam) => beam.beam_id === id);
     } catch (e) {
@@ -284,10 +453,11 @@ const loadCurrentBeamFromUrl = async () => {
     if (!props.beamUrl) throw new Error("No beam URL");
     const beamName = props.beamUrl.split("/").pop();
     currentBeamData = await loadJson(`${props.beamUrl}/${beamName}.json`);
+    beamDataCache.set(getBeamId(currentBeamData), currentBeamData);
     await syncNavigationState();
 };
 
-const loadSingleBeam = async () => {
+const loadSingleBeam = async ({ preserveCamera = false } = {}) => {
     clearModelObjects();
     const geometry = await loadSTL(currentBeamData["3d_model"]);
     geometry.computeBoundingBox();
@@ -295,13 +465,13 @@ const loadSingleBeam = async () => {
     geometry.boundingBox.getSize(size);
     const maxDim = Math.max(size.x, size.y, size.z);
 
-    scene.add(makeMesh(geometry, WOOD_COLOR, 0.55));
+    scene.add(makeMesh(geometry, WOOD_COLOR, 0.55, getBeamId()));
     addOutline(geometry);
     addSelectedBeamOverlays(maxDim);
-    centerScene();
+    centerScene({ preserveCamera });
 };
 
-const loadConnectedBeams = async () => {
+const loadConnectedBeams = async ({ preserveCamera = false } = {}) => {
     clearModelObjects();
     const connectedIds = currentBeamData.connected_beams || [];
     const currentId = getBeamId();
@@ -310,10 +480,16 @@ const loadConnectedBeams = async () => {
     await Promise.all(
         beamIds.map(async (id) => {
             try {
-                const geometry = await loadSTL(`${BASE_URL}/beams/${id}/${id}.stl`);
+                const [geometry, beamData] = await Promise.all([
+                    loadSTL(`${BASE_URL}/beams/${id}/${id}.stl`),
+                    loadBeamData(id),
+                ]);
                 const isCurrent = id === currentId;
-                scene.add(makeMesh(geometry, isCurrent ? HIGHLIGHT_COLOR : WOOD_COLOR, isCurrent ? 0.6 : 0.32));
+                scene.add(makeMesh(geometry, isCurrent ? HIGHLIGHT_COLOR : WOOD_COLOR, isCurrent ? 0.6 : 0.32, id));
                 addOutline(geometry);
+                if (!isCurrent) {
+                    drawBeamFrame(beamData, 0.08, false);
+                }
             } catch (e) {
                 console.warn(`Could not load beam ${id}`, e);
             }
@@ -325,10 +501,10 @@ const loadConnectedBeams = async () => {
         if (beam) drawCenterline(beam, false);
     });
     addSelectedBeamOverlays(1);
-    centerScene();
+    centerScene({ preserveCamera });
 };
 
-const loadPavilion = async () => {
+const loadPavilion = async ({ preserveCamera = false } = {}) => {
     clearModelObjects();
     const currentId = getBeamId();
 
@@ -340,7 +516,7 @@ const loadPavilion = async () => {
                 const isCurrentBeam = id === currentId;
                 try {
                     const geometry = await loadSTL(`${BASE_URL}/beams/${id}/${id}.stl`);
-                    scene.add(makeMesh(geometry, isCurrentBeam ? HIGHLIGHT_COLOR : WOOD_COLOR, isCurrentBeam ? 0.62 : 0.2));
+                    scene.add(makeMesh(geometry, isCurrentBeam ? HIGHLIGHT_COLOR : WOOD_COLOR, isCurrentBeam ? 0.62 : 0.2, id));
                     addOutline(geometry);
                     if (isCurrentBeam) drawCenterline(currentBeamData, true);
                 } catch (e) {
@@ -349,28 +525,52 @@ const loadPavilion = async () => {
             })
         );
         addSelectedBeamOverlays(1);
-        centerScene();
+        centerScene({ preserveCamera });
     } catch (e) {
         console.warn("structure.json not found:", e);
-        await loadSingleBeam();
+        await loadSingleBeam({ preserveCamera });
     }
 };
 
-const setMode = async (mode) => {
+const setMode = async (mode, { preserveCamera = preserveCameraOnViewChange.value } = {}) => {
     viewMode.value = mode;
     isLoading.value = true;
     try {
-        if (mode === "single") await loadSingleBeam();
-        else if (mode === "connected") await loadConnectedBeams();
-        else if (mode === "pavilion") await loadPavilion();
+        if (mode === "single") await loadSingleBeam({ preserveCamera });
+        else if (mode === "connected") await loadConnectedBeams({ preserveCamera });
+        else if (mode === "pavilion") await loadPavilion({ preserveCamera });
+    } finally {
+        isLoading.value = false;
+    }
+};
+
+const setAutoRotate = () => {
+    if (controls) {
+        controls.autoRotate = isAutoRotating.value;
+    }
+};
+
+const selectBeam = async (beamId) => {
+    if (!beamId || beamId === getBeamId()) return;
+    isLoading.value = true;
+    try {
+        currentBeamData = await loadBeamData(beamId);
+        await syncNavigationState();
+        const nextBeamUrl = `${BASE_URL}/beams/${beamId}`;
+        const query = new URLSearchParams(window.location.search);
+        query.set("beam", nextBeamUrl);
+        window.history.pushState({}, "", `${window.location.pathname}?${query.toString()}`);
+        emit("beam-selected", nextBeamUrl);
+        await setMode(viewMode.value, { preserveCamera: preserveCameraOnViewChange.value });
+    } catch (e) {
+        console.error(`Could not select beam ${beamId}:`, e);
     } finally {
         isLoading.value = false;
     }
 };
 
 const navigateToBeam = (beamId) => {
-    if (!beamId) return;
-    window.location.href = `${window.location.pathname}?beam=${encodeURIComponent(`${BASE_URL}/beams/${beamId}`)}`;
+    selectBeam(beamId);
 };
 
 const navigateBeam = (step) => {
@@ -409,6 +609,37 @@ const updateGizmo = () => {
     gizmoRenderer.render(gizmoScene, gizmoCamera);
 };
 
+const beamFromPointerEvent = (event) => {
+    const rect = renderer.domElement.getBoundingClientRect();
+    pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+    pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+    raycaster.setFromCamera(pointer, camera);
+    const beamMeshes = scene.children.filter((child) => child.userData.isBeam);
+    const hits = raycaster.intersectObjects(beamMeshes, false);
+    return hits[0]?.object?.userData?.beamId || "";
+};
+
+const handlePointerDown = (event) => {
+    pointerDown = {
+        x: event.clientX,
+        y: event.clientY,
+        time: performance.now(),
+    };
+};
+
+const handlePointerUp = (event) => {
+    if (!pointerDown) return;
+    const dx = event.clientX - pointerDown.x;
+    const dy = event.clientY - pointerDown.y;
+    const distance = Math.hypot(dx, dy);
+    const duration = performance.now() - pointerDown.time;
+    pointerDown = null;
+
+    if (distance > 6 || duration > 500) return;
+    const beamId = beamFromPointerEvent(event);
+    if (beamId) selectBeam(beamId);
+};
+
 onMounted(async () => {
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0xffffff);
@@ -425,11 +656,13 @@ onMounted(async () => {
     renderer.setSize(width, height);
     renderer.setPixelRatio(window.devicePixelRatio);
     containerRef.value.appendChild(renderer.domElement);
+    renderer.domElement.addEventListener("pointerdown", handlePointerDown);
+    renderer.domElement.addEventListener("pointerup", handlePointerUp);
 
     controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
-    controls.autoRotate = true;
+    controls.autoRotate = isAutoRotating.value;
     controls.autoRotateSpeed = 4;
     controls.enableZoom = true;
     controls.target.set(0, 0, 0);
@@ -476,6 +709,14 @@ onMounted(async () => {
             <button :class="{ active: viewMode === 'single' }" @click="setMode('single')">Beam</button>
             <button :class="{ active: viewMode === 'connected' }" @click="setMode('connected')">Connected</button>
             <button :class="{ active: viewMode === 'pavilion' }" @click="setMode('pavilion')">Pavilion</button>
+            <label class="rotate-toggle">
+                <input v-model="isAutoRotating" type="checkbox" @change="setAutoRotate" />
+                Auto rotate
+            </label>
+            <label class="rotate-toggle">
+                <input v-model="preserveCameraOnViewChange" type="checkbox" />
+                Keep camera
+            </label>
         </div>
 
         <div class="navigation-buttons">
@@ -540,7 +781,8 @@ onMounted(async () => {
 }
 
 .view-buttons button,
-.navigation-buttons button {
+.navigation-buttons button,
+.rotate-toggle {
     padding: 6px 12px;
     font-size: 12px;
     font-family: "Helvetica Neue", sans-serif;
@@ -548,11 +790,16 @@ onMounted(async () => {
     background: rgba(255, 255, 255, 0.92);
     border: 1px solid #bdbdbd;
     border-radius: 4px;
+}
+
+.view-buttons button,
+.navigation-buttons button {
     cursor: pointer;
 }
 
 .view-buttons button:hover,
-.navigation-buttons button:hover {
+.navigation-buttons button:hover,
+.rotate-toggle:hover {
     background: #f0f0f0;
 }
 
@@ -565,6 +812,19 @@ onMounted(async () => {
 .navigation-buttons span {
     padding: 4px 6px;
     background: rgba(255, 255, 255, 0.75);
+}
+
+.rotate-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #111;
+    cursor: pointer;
+    user-select: none;
+}
+
+.rotate-toggle input {
+    margin: 0;
 }
 
 .axis-legend {
