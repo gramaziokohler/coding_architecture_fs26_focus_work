@@ -10,9 +10,9 @@ from __future__ import annotations
 import argparse
 import json
 import math
-import os
 import re
 import shutil
+import sys
 from collections import defaultdict
 from pathlib import Path
 
@@ -171,6 +171,30 @@ def facet_normal(a, b, c):
     return vector_normalize(vector_cross(vector_sub(b, a), vector_sub(c, a)))
 
 
+def triangulate_face(face):
+    if len(face) < 3:
+        return []
+    if len(face) == 3:
+        return [face]
+    return [(face[0], face[index], face[index + 1]) for index in range(1, len(face) - 1)]
+
+
+def write_mesh_ascii_stl(path, name, vertices, faces):
+    with open(path, "w") as fp:
+        fp.write("solid {}\n".format(name))
+        for face in faces:
+            for tri in triangulate_face(face):
+                a, b, c = ([float(coord) for coord in vertices[i]] for i in tri)
+                normal = facet_normal(a, b, c)
+                fp.write("  facet normal {:.9g} {:.9g} {:.9g}\n".format(*normal))
+                fp.write("    outer loop\n")
+                for vertex in (a, b, c):
+                    fp.write("      vertex {:.9g} {:.9g} {:.9g}\n".format(*vertex))
+                fp.write("    endloop\n")
+                fp.write("  endfacet\n")
+        fp.write("endsolid {}\n".format(name))
+
+
 def write_ascii_stl(path, name, vertices):
     # Vertex index from nested loops: x, y, z signs in that order.
     faces = [
@@ -195,6 +219,121 @@ def write_ascii_stl(path, name, vertices):
                 fp.write("    endloop\n")
                 fp.write("  endfacet\n")
         fp.write("endsolid {}\n".format(name))
+
+
+def geometry_to_vertices_and_faces(geometry):
+    """Best-effort conversion of COMPAS geometry/datastructures to mesh data."""
+
+    if geometry is None:
+        return None
+
+    candidates = [geometry]
+    if isinstance(geometry, (list, tuple)):
+        candidates = list(geometry)
+
+    combined_vertices = []
+    combined_faces = []
+    for candidate in candidates:
+        if candidate is None:
+            continue
+
+        mesh = candidate
+        if hasattr(candidate, "to_mesh"):
+            mesh = candidate.to_mesh()
+
+        if hasattr(mesh, "to_vertices_and_faces"):
+            vertices, faces = mesh.to_vertices_and_faces()
+        elif hasattr(mesh, "vertices") and hasattr(mesh, "faces"):
+            vertices = mesh.vertices
+            faces = mesh.faces
+        else:
+            continue
+
+        offset = len(combined_vertices)
+        combined_vertices.extend([[float(coord) for coord in vertex] for vertex in vertices])
+        combined_faces.extend([[int(index) + offset for index in face] for face in faces])
+
+    if not combined_vertices or not combined_faces:
+        return None
+    return combined_vertices, combined_faces
+
+
+def iter_model_beams(model):
+    beams = getattr(model, "beams", None)
+    if beams is not None:
+        for beam in beams:
+            yield beam
+        return
+
+    elements = getattr(model, "elements", None)
+    if elements is not None:
+        for element in elements:
+            if hasattr(element, "frame") and hasattr(element, "geometry"):
+                yield element
+
+
+def load_processed_compas_meshes(model_path, process_joinery=True):
+    """Load TimberModel with COMPAS Timber and return beam mesh data.
+
+    This is optional by design. The script also runs in plain Python without
+    COMPAS Timber and then falls back to rectangular box STLs.
+    """
+
+    repo_code_dir = Path(__file__).resolve().parent
+    if str(repo_code_dir) not in sys.path:
+        sys.path.insert(0, str(repo_code_dir))
+
+    from compas.data import json_load
+
+    try:
+        import compas_timber  # noqa: F401
+    except ImportError as error:
+        raise RuntimeError("compas_timber is not installed in this Python environment") from error
+
+    try:
+        from compas.geometry import Frame  # noqa: F401
+        from compas.geometry import Point  # noqa: F401
+        from compas.geometry import Vector  # noqa: F401
+        from compas_timber.elements import Beam  # noqa: F401
+        from compas_timber.model import TimberModel  # noqa: F401
+        from compas_timber.connections import LMiterJoint  # noqa: F401
+        from compas_timber.connections import TButtJoint  # noqa: F401
+        from compas_timber.connections import XLapJoint  # noqa: F401
+    except Exception:
+        pass
+
+    # Register local custom classes used by exported TimberModels when present.
+    try:
+        import a03_preferred_face_tbutt_joint  # noqa: F401
+        import a03_cutoff_l_lap_joint  # noqa: F401
+        import base_lap  # noqa: F401
+        import b_metal_plate_pocket  # noqa: F401
+        import metal_plate_lap  # noqa: F401
+    except Exception:
+        pass
+
+    model = json_load(str(model_path))
+    if process_joinery and hasattr(model, "process_joinery"):
+        model.process_joinery()
+
+    by_guid = {}
+    by_index = {}
+    errors = []
+
+    for index, beam in enumerate(iter_model_beams(model)):
+        try:
+            mesh_data = geometry_to_vertices_and_faces(beam.geometry)
+            if not mesh_data:
+                errors.append("Beam {} geometry did not convert to mesh".format(index))
+                continue
+            guid = str(getattr(beam, "guid", ""))
+            if guid:
+                by_guid[guid] = mesh_data
+            by_index[index] = mesh_data
+        except Exception as error:
+            errors.append("Beam {} geometry: {!r}".format(index, error))
+
+    return by_guid, by_index, errors
 
 
 def point_data(value):
@@ -262,7 +401,7 @@ def make_structure_entry(beam):
     }
 
 
-def export_web_data(model_path, output_dir, base_url, density, module_sizes, clean=False):
+def export_web_data(model_path, output_dir, base_url, density, module_sizes, clean=False, geometry_source="auto", process_joinery=True):
     with open(model_path, "r") as fp:
         model = json.load(fp)
 
@@ -277,6 +416,20 @@ def export_web_data(model_path, output_dir, base_url, density, module_sizes, cle
         shutil.rmtree(output_dir)
     beams_dir = output_dir / "beams"
     beams_dir.mkdir(parents=True, exist_ok=True)
+
+    compas_meshes_by_guid = {}
+    compas_meshes_by_index = {}
+    compas_geometry_errors = []
+    if geometry_source in ("auto", "compas"):
+        try:
+            compas_meshes_by_guid, compas_meshes_by_index, compas_geometry_errors = load_processed_compas_meshes(
+                model_path,
+                process_joinery=process_joinery,
+            )
+        except Exception as error:
+            compas_geometry_errors = ["Could not load COMPAS Timber geometry: {!r}".format(error)]
+            if geometry_source == "compas":
+                raise
 
     beam_records = []
     guid_to_beam_id = {}
@@ -315,6 +468,7 @@ def export_web_data(model_path, output_dir, base_url, density, module_sizes, cle
                 and isinstance(value, dict)
                 and "fabrication/" in str(value.get("dtype", ""))
             ],
+            "mesh_data": compas_meshes_by_guid.get(guid) or compas_meshes_by_index.get(index),
         })
 
     all_points = []
@@ -340,8 +494,12 @@ def export_web_data(model_path, output_dir, base_url, density, module_sizes, cle
         stl_path = beam_dir / "{}.stl".format(beam_id)
         json_path = beam_dir / "{}.json".format(beam_id)
 
-        vertices = beam_box_vertices(beam["frame"], beam["length"], beam["width"], beam["height"])
-        write_ascii_stl(stl_path, beam_id, vertices)
+        if beam["mesh_data"]:
+            vertices, faces = beam["mesh_data"]
+            write_mesh_ascii_stl(stl_path, beam_id, vertices, faces)
+        else:
+            vertices = beam_box_vertices(beam["frame"], beam["length"], beam["width"], beam["height"])
+            write_ascii_stl(stl_path, beam_id, vertices)
 
         joint_details = joints_by_beam.get(beam_id, [])
         joint_groups = {
@@ -401,7 +559,14 @@ def export_web_data(model_path, output_dir, base_url, density, module_sizes, cle
     with open(output_dir / "structure.json", "w") as fp:
         json.dump(structure, fp, indent=2)
 
-    return len(beam_records), sum(len(joints) for joints in joints_by_beam.values())
+    compas_mesh_count = sum(1 for beam in beam_records if beam["mesh_data"])
+    return {
+        "beam_count": len(beam_records),
+        "joint_ref_count": sum(len(joints) for joints in joints_by_beam.values()),
+        "compas_mesh_count": compas_mesh_count,
+        "box_mesh_count": len(beam_records) - compas_mesh_count,
+        "compas_geometry_errors": compas_geometry_errors,
+    }
 
 
 def main():
@@ -411,20 +576,31 @@ def main():
     parser.add_argument("--base-url", default=DEFAULT_BASE_URL, help="Public base URL used in beam JSON 3d_model fields")
     parser.add_argument("--density", type=float, default=DEFAULT_DENSITY_KG_M3, help="Wood density in kg/m3")
     parser.add_argument("--module-sizes", default=DEFAULT_MODULE_SIZES, help="Fallback naming, for example A:36,B:31,C:30")
+    parser.add_argument("--geometry-source", choices=("auto", "compas", "box"), default="auto", help="STL source. auto tries COMPAS Timber processed beam.geometry, then boxes.")
+    parser.add_argument("--skip-process-joinery", action="store_true", help="Do not call model.process_joinery() before reading beam.geometry")
     parser.add_argument("--clean", action="store_true", help="Delete output folder before exporting")
     args = parser.parse_args()
 
-    beam_count, joint_ref_count = export_web_data(
+    result = export_web_data(
         model_path=args.model,
         output_dir=args.output,
         base_url=args.base_url,
         density=args.density,
         module_sizes=parse_module_sizes(args.module_sizes),
         clean=args.clean,
+        geometry_source=args.geometry_source,
+        process_joinery=not args.skip_process_joinery,
     )
-    print("Exported {} beams to {}".format(beam_count, args.output))
-    print("Wrote {} beam-joint references".format(joint_ref_count))
-    print("STL geometry: rectangular beam boxes from frame/length/width/height")
+    print("Exported {} beams to {}".format(result["beam_count"], args.output))
+    print("Wrote {} beam-joint references".format(result["joint_ref_count"]))
+    print("STL geometry: {} processed COMPAS meshes, {} rectangular box fallbacks".format(
+        result["compas_mesh_count"],
+        result["box_mesh_count"],
+    ))
+    for error in result["compas_geometry_errors"][:8]:
+        print("Geometry note: {}".format(error))
+    if len(result["compas_geometry_errors"]) > 8:
+        print("Geometry note: {} more geometry messages omitted".format(len(result["compas_geometry_errors"]) - 8))
 
 
 if __name__ == "__main__":
