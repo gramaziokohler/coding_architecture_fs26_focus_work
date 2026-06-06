@@ -31,6 +31,7 @@ const viewMode = ref("single");
 const isLoading = ref(false);
 const isAutoRotating = ref(true);
 const preserveCameraOnViewChange = ref(true);
+const colorCurrentModule = ref(true);
 const currentBeamId = ref("");
 const currentModule = ref("");
 const beamIndex = ref(-1);
@@ -43,6 +44,7 @@ const WOOD_COLOR = 0xd4b896;
 const HIGHLIGHT_COLOR = 0xff8fa3;
 const OUTLINE_COLOR = 0x171717;
 const CENTERLINE_COLOR = 0x111111;
+const MODULE_COLOR = 0x8fcf9c;
 
 const beamCounter = computed(() => {
     if (!currentModuleBeams.value.length || beamIndex.value < 0) return "";
@@ -163,15 +165,16 @@ const makeLine = (start, end, color, linewidth = 1) => {
     return line;
 };
 
-const makeTextCanvas = (text, fontSize = 42, color = "#111111") => {
+const makeTextCanvas = (text, fontSize = 42, color = "#111111", fontWeight = 700, lineHeight = 1.25) => {
     const canvas = document.createElement("canvas");
     const ctx = canvas.getContext("2d");
-    const font = `700 ${fontSize}px Helvetica Neue, Arial, sans-serif`;
+    const lines = String(text).split("\n");
+    const font = `${fontWeight} ${fontSize}px Helvetica Neue, Arial, sans-serif`;
     ctx.font = font;
-    const metrics = ctx.measureText(text);
+    const maxWidth = Math.max(...lines.map((line) => ctx.measureText(line).width));
     const padding = 2;
-    const width = Math.ceil(metrics.width + padding * 2);
-    const height = Math.ceil(fontSize * 1.35 + padding * 2);
+    const width = Math.ceil(maxWidth + padding * 2);
+    const height = Math.ceil(fontSize * lineHeight * lines.length + padding * 2);
     canvas.width = Math.max(2, width);
     canvas.height = Math.max(2, height);
 
@@ -180,13 +183,16 @@ const makeTextCanvas = (text, fontSize = 42, color = "#111111") => {
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillStyle = color;
-    ctx.fillText(text, canvas.width / 2, canvas.height / 2);
+    lines.forEach((line, index) => {
+        const y = padding + fontSize * lineHeight * (index + 0.5);
+        ctx.fillText(line, canvas.width / 2, y);
+    });
 
     return canvas;
 };
 
-const makeTextSprite = (text, position, color = "#111111", scale = 0.08, hoverInfoData = null) => {
-    const canvas = makeTextCanvas(text, 42, color);
+const makeTextSprite = (text, position, color = "#111111", scale = 0.08, hoverInfoData = null, options = {}) => {
+    const canvas = makeTextCanvas(text, options.fontSize || 42, color, options.fontWeight ?? 700, options.lineHeight || 1.25);
 
     const texture = new THREE.CanvasTexture(canvas);
     texture.needsUpdate = true;
@@ -207,8 +213,8 @@ const makeTextSprite = (text, position, color = "#111111", scale = 0.08, hoverIn
     return sprite;
 };
 
-const makeTextPlane = (text, position, xAxis, yAxis, color = "#111111", scale = 0.16) => {
-    const canvas = makeTextCanvas(text, 64, color);
+const makeTextPlane = (text, position, xAxis, yAxis, color = "#111111", scale = 0.16, options = {}) => {
+    const canvas = makeTextCanvas(text, options.fontSize || 64, color, options.fontWeight ?? 700, options.lineHeight || 1.25);
 
     const texture = new THREE.CanvasTexture(canvas);
     texture.needsUpdate = true;
@@ -257,31 +263,12 @@ const makeProcessingMarker = (record) => {
 
 const getDisplayFrame = (beamData = currentBeamData) => {
     const frame = getBeamFrame(beamData);
-    const position = getGlobalPosition(beamData);
     if (!frame?.x_axis || !frame?.y_axis || !frame?.z_axis) return null;
 
     const origin = vectorFromArray(getCenterlineStart(beamData) || frame.origin);
-    let xAxis = vectorFromArray(frame.x_axis).normalize();
-
-    if (position?.centerline_start && position?.centerline_end) {
-        const start = vectorFromArray(position.centerline_start);
-        const end = vectorFromArray(position.centerline_end);
-        const centerlineDirection = end.clone().sub(start);
-        if (centerlineDirection.lengthSq() > 1e-10) {
-            xAxis = centerlineDirection.normalize();
-        }
-    }
-
-    let yAxis = vectorFromArray(frame.y_axis);
-    yAxis.sub(xAxis.clone().multiplyScalar(yAxis.dot(xAxis)));
-    if (yAxis.lengthSq() < 1e-10) {
-        yAxis = vectorFromArray(frame.z_axis);
-        yAxis.sub(xAxis.clone().multiplyScalar(yAxis.dot(xAxis)));
-    }
-    yAxis.normalize();
-
-    const zAxis = new THREE.Vector3().crossVectors(xAxis, yAxis).normalize();
-    yAxis = new THREE.Vector3().crossVectors(zAxis, xAxis).normalize();
+    const xAxis = vectorFromArray(frame.x_axis).normalize();
+    const yAxis = vectorFromArray(frame.y_axis).normalize();
+    const zAxis = vectorFromArray(frame.z_axis).normalize();
 
     return { origin, x_axis: xAxis, y_axis: yAxis, z_axis: zAxis };
 };
@@ -332,26 +319,75 @@ const drawCenterline = (beamData = currentBeamData, isCurrent = true) => {
     makeLine(start, end, isCurrent ? CENTERLINE_COLOR : 0x777777);
 };
 
-const drawEngraving = (scale = 0.09) => {
+const numericBeamValue = (beamData, key, fallback = 0) => {
+    const value = beamData?.[key];
+    return Number.isFinite(value) ? value : fallback;
+};
+
+const getEngravingPlacement = () => {
     const position = getGlobalPosition();
     const frame = getDisplayFrame();
-    const text = currentBeamData?.engraving_text || currentBeamData?.label_text || currentBeamData?.name || getBeamId();
-    if (!text || !frame) return;
+    if (!frame) return null;
 
     const engraving = currentBeamData?.engraving || currentBeamData?.label || currentBeamData?.beam_label || {};
-    const origin = vectorFromArray(
-        engraving.position ||
-        engraving.location ||
-        engraving.origin ||
-        position?.midpoint ||
-        getBeamFrame()?.origin ||
-        [0, 0, 0]
-    );
-    const xAxis = engraving.x_axis ? vectorFromArray(engraving.x_axis) : frame.x_axis;
-    const yAxis = engraving.y_axis ? vectorFromArray(engraving.y_axis) : frame.y_axis;
-    const normal = engraving.normal ? vectorFromArray(engraving.normal).normalize() : frame.z_axis;
-    const faceOffset = Number.isFinite(engraving.offset) ? engraving.offset : 0.004;
-    makeTextPlane(text, origin.add(normal.multiplyScalar(faceOffset)), xAxis, yAxis, "#111111", scale);
+    if (engraving.position || engraving.location || engraving.origin) {
+        const origin = vectorFromArray(engraving.position || engraving.location || engraving.origin);
+        const xAxis = engraving.x_axis ? vectorFromArray(engraving.x_axis) : frame.x_axis;
+        const yAxis = engraving.y_axis ? vectorFromArray(engraving.y_axis) : frame.y_axis;
+        const normal = engraving.normal ? vectorFromArray(engraving.normal).normalize() : frame.z_axis;
+        const offset = Number.isFinite(engraving.offset) ? engraving.offset : 0.003;
+        return { origin: origin.add(normal.multiplyScalar(offset)), xAxis, yAxis, normal };
+    }
+
+    const midpoint = vectorFromArray(position?.midpoint || getBeamFrame()?.origin || [0, 0, 0]);
+    const width = numericBeamValue(currentBeamData, "width (m)", 0.06);
+    const height = numericBeamValue(currentBeamData, "height (m)", 0.08);
+    const normal = frame.y_axis.clone().normalize();
+    const origin = midpoint
+        .clone()
+        .add(normal.clone().multiplyScalar(width * 0.5 + 0.003))
+        .add(frame.z_axis.clone().multiplyScalar(height * 0.18));
+
+    return {
+        origin,
+        xAxis: frame.x_axis,
+        yAxis: frame.z_axis,
+        normal,
+    };
+};
+
+const drawEngraving = (scale = 0.045) => {
+    const text = currentBeamData?.engraving_text || currentBeamData?.label_text || currentBeamData?.name || getBeamId();
+    const placement = getEngravingPlacement();
+    if (!text || !placement) return;
+
+    makeTextPlane(text, placement.origin, placement.xAxis, placement.yAxis, "#111111", scale, {
+        fontSize: 42,
+        fontWeight: 300,
+    });
+};
+
+const drawCameraBeamLabel = (scale = 0.08) => {
+    const position = getGlobalPosition();
+    const frame = getDisplayFrame();
+    const text = currentBeamData?.name || getBeamId();
+    if (!text || !frame) return;
+
+    const width = numericBeamValue(currentBeamData, "width (m)", 0.06);
+    const height = numericBeamValue(currentBeamData, "height (m)", 0.08);
+    const midpoint = vectorFromArray(position?.midpoint || getBeamFrame()?.origin || [0, 0, 0]);
+    const labelPosition = midpoint
+        .clone()
+        .add(frame.y_axis.clone().multiplyScalar(width * 1.35))
+        .add(frame.z_axis.clone().multiplyScalar(height * 1.6));
+
+    makeTextSprite(text, labelPosition, "#111111", scale, {
+        title: text,
+        lines: ["Beam label"],
+    }, {
+        fontSize: 42,
+        fontWeight: 500,
+    });
 };
 
 const closestPointsOnSegments = (p1, q1, p2, q2) => {
@@ -402,6 +438,16 @@ const jointTypeById = (jointId) => {
     return Object.entries(groups).find(([key, ids]) => key !== "all" && Array.isArray(ids) && ids.includes(jointId))?.[0] || "";
 };
 
+const formatJointType = (type) => {
+    const normalized = (type || "joint").toLowerCase();
+    const names = {
+        tbutt: "TButtJoint",
+        xlap: "XLapJoint",
+        lmiter: "LMiterJoint",
+    };
+    return names[normalized] || type || "Joint";
+};
+
 const exportedJointRecords = () => {
     const records =
         currentBeamData?.joint_details ||
@@ -418,7 +464,7 @@ const buildJointRecords = () => {
         return {
             id: String(joint.id || joint.joint_id || joint.name || ""),
             connectedBeamId,
-            label: joint.label || `${getBeamDisplayName(getBeamId())} to ${getBeamDisplayName(connectedBeamId)}`,
+            label: joint.label || `${getBeamDisplayName(getBeamId())} - ${getBeamDisplayName(connectedBeamId)}`,
             location: joint.location || joint.position || joint.point,
             type: joint.type || joint.joint_type,
         };
@@ -430,7 +476,7 @@ const buildJointRecords = () => {
     return joints.map((jointId, index) => ({
         id: String(jointId),
         connectedBeamId: connectedIds[index],
-        label: `${getBeamDisplayName(getBeamId())} to ${getBeamDisplayName(connectedIds[index])}`,
+        label: `${getBeamDisplayName(getBeamId())} - ${getBeamDisplayName(connectedIds[index])}`,
         type: jointTypeById(jointId),
     }));
 };
@@ -464,13 +510,17 @@ const drawJointLabels = (scale = 0.13) => {
     records.forEach((joint, index) => {
         const location = joint.location ? vectorFromArray(joint.location) : fallbackJointLocation(joint.connectedBeamId, index, records.length);
         if (!location) return;
-        const label = joint.label || `${getBeamDisplayName(getBeamId())} to ${getBeamDisplayName(joint.connectedBeamId)}`;
-        const type = joint.type || "joint";
-        const displayLabel = `${label} ${type}`;
+        const label = joint.label || `${getBeamDisplayName(getBeamId())} - ${getBeamDisplayName(joint.connectedBeamId)}`;
+        const type = formatJointType(joint.type);
+        const displayLabel = `${label}\n${type}`;
         const point = location.add(normal.clone().multiplyScalar(scale * 0.9));
         makeTextSprite(displayLabel, point, "#111111", scale, {
             title: label,
             lines: [type, joint.id ? `Joint ${joint.id}` : ""].filter(Boolean),
+        }, {
+            fontSize: 34,
+            fontWeight: 400,
+            lineHeight: 1.05,
         });
     });
 };
@@ -478,8 +528,9 @@ const drawJointLabels = (scale = 0.13) => {
 const addSelectedBeamOverlays = (sizeScale = 1) => {
     drawCenterline(currentBeamData, true);
     drawBeamFrame(currentBeamData, sizeScale * 0.28, true);
-    drawEngraving(sizeScale * 0.09);
-    drawJointLabels(sizeScale * 0.055);
+    drawEngraving(sizeScale * 0.045);
+    drawCameraBeamLabel(sizeScale * 0.07);
+    drawJointLabels(sizeScale * 0.038);
     drawProcessing();
 };
 
@@ -606,9 +657,12 @@ const loadPavilion = async ({ preserveCamera = false } = {}) => {
             structure.beams.map(async (beam) => {
                 const id = beam.beam_id;
                 const isCurrentBeam = id === currentId;
+                const isCurrentModule = colorCurrentModule.value && beam.module === currentModule.value;
+                const color = isCurrentBeam ? HIGHLIGHT_COLOR : (isCurrentModule ? MODULE_COLOR : WOOD_COLOR);
+                const opacity = isCurrentBeam ? 0.62 : (isCurrentModule ? 0.36 : 0.18);
                 try {
                     const geometry = await loadSTL(`${BASE_URL}/beams/${id}/${id}.stl`);
-                    scene.add(makeMesh(geometry, isCurrentBeam ? HIGHLIGHT_COLOR : WOOD_COLOR, isCurrentBeam ? 0.62 : 0.2, id));
+                    scene.add(makeMesh(geometry, color, opacity, id));
                     addOutline(geometry);
                     if (isCurrentBeam) drawCenterline(currentBeamData, true);
                 } catch (e) {
@@ -839,6 +893,10 @@ onMounted(async () => {
             <label class="rotate-toggle">
                 <input v-model="preserveCameraOnViewChange" type="checkbox" />
                 Keep camera
+            </label>
+            <label v-if="viewMode === 'pavilion'" class="rotate-toggle">
+                <input v-model="colorCurrentModule" type="checkbox" @change="setMode('pavilion')" />
+                Color module
             </label>
         </div>
 
