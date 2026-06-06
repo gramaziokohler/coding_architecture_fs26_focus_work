@@ -42,6 +42,7 @@ DEFAULT_MODULE_SIZES = "A:36,B:31,C:30,D:27,E:27,F:31"
 NAME_KEYS = ("beam_id", "beam ID", "beam_name", "name", "label", "mark")
 MODULE_KEYS = ("module", "module_id", "module_name", "fabrication_module", "assembly_module", "group")
 NUMBER_KEYS = ("beam_number", "number", "sequence", "fabrication_number", "element_number", "index")
+GENERIC_BEAM_NAMES = ("beam", "beams", "timberbeam", "element")
 
 
 def normalize_output_path(value):
@@ -168,6 +169,10 @@ def first_value(mapping, keys):
     return None
 
 
+def is_generic_beam_name(value):
+    return clean_id(value).lower() in GENERIC_BEAM_NAMES
+
+
 def beam_mapping(beam):
     mapping = {}
 
@@ -194,7 +199,7 @@ def get_beam_identity(index, beam, module_sizes):
     module = first_value(lookup, MODULE_KEYS)
     number = first_value(lookup, NUMBER_KEYS)
 
-    if explicit_name:
+    if explicit_name and not is_generic_beam_name(explicit_name):
         beam_id = clean_id(explicit_name)
         display_name = str(explicit_name).strip().upper()
         module = str(module or display_name[:1] or "X").upper()
@@ -206,6 +211,25 @@ def get_beam_identity(index, beam, module_sizes):
         return clean_id(display_name), module, display_name
 
     return sequential_identity(index, module_sizes)
+
+
+def get_unique_beam_identity(index, beam, module_sizes, used_beam_ids):
+    beam_id, module, display_name = get_beam_identity(index, beam, module_sizes)
+
+    if beam_id and beam_id not in used_beam_ids:
+        used_beam_ids.add(beam_id)
+        return beam_id, module, display_name
+
+    beam_id, module, display_name = sequential_identity(index, module_sizes)
+    original_beam_id = beam_id
+    suffix = 2
+    while beam_id in used_beam_ids:
+        beam_id = "{}_{}".format(original_beam_id, suffix)
+        display_name = "{} {}".format(display_name, suffix)
+        suffix += 1
+
+    used_beam_ids.add(beam_id)
+    return beam_id, module, display_name
 
 
 def vector_to_list(vector):
@@ -603,9 +627,10 @@ def export_model_to_web_data(model, output_dir, base_url, density, module_sizes,
     beam_records = []
     guid_to_beam_id = {}
     errors = []
+    used_beam_ids = set()
 
     for index, beam in enumerate(beams):
-        beam_id, module, display_name = get_beam_identity(index, beam, module_sizes)
+        beam_id, module, display_name = get_unique_beam_identity(index, beam, module_sizes, used_beam_ids)
         guid_to_beam_id[str(getattr(beam, "guid", index))] = beam_id
 
         frame = frame_data(beam)
