@@ -30,7 +30,7 @@ const BASE_URL = "https://raw.githubusercontent.com/gramaziokohler/coding_archit
 const viewMode = ref("single");
 const isLoading = ref(false);
 const isAutoRotating = ref(false);
-const autoOrientSingleBeam = ref(false);
+const autoOrientBeamFrame = ref(false);
 const preserveCameraOnViewChange = ref(true);
 const colorCurrentModule = ref(true);
 const colorAllModules = ref(false);
@@ -695,8 +695,8 @@ const loadSingleBeam = async ({ preserveCamera = false } = {}) => {
     scene.add(makeMesh(geometry, WOOD_COLOR, 0.55, getBeamId()));
     addOutline(geometry);
     addSelectedBeamOverlays(maxDim);
-    centerScene({ preserveCamera: preserveCamera && !autoOrientSingleBeam.value });
-    if (autoOrientSingleBeam.value) orientCameraToBeamFrame(maxDim);
+    centerScene({ preserveCamera: preserveCamera && !autoOrientBeamFrame.value });
+    if (autoOrientBeamFrame.value) orientCameraToBeamFrame(maxDim);
 };
 
 const loadConnectedBeams = async ({ preserveCamera = false } = {}) => {
@@ -734,7 +734,8 @@ const loadConnectedBeams = async ({ preserveCamera = false } = {}) => {
         if (beam) drawCenterline(beam, false);
     });
     addSelectedBeamOverlays(1);
-    centerScene({ preserveCamera });
+    centerScene({ preserveCamera: preserveCamera && !autoOrientBeamFrame.value });
+    if (autoOrientBeamFrame.value) orientCameraToBeamFrame();
 };
 
 const loadModuleBeams = async ({ preserveCamera = false } = {}) => {
@@ -770,7 +771,8 @@ const loadModuleBeams = async ({ preserveCamera = false } = {}) => {
             })
         );
         addSelectedBeamOverlays(1);
-        centerScene({ preserveCamera });
+        centerScene({ preserveCamera: preserveCamera && !autoOrientBeamFrame.value });
+        if (autoOrientBeamFrame.value) orientCameraToBeamFrame();
     } catch (e) {
         console.warn("Could not load module beams:", e);
         await loadConnectedBeams({ preserveCamera });
@@ -806,7 +808,8 @@ const loadPavilion = async ({ preserveCamera = false } = {}) => {
             })
         );
         addSelectedBeamOverlays(1);
-        centerScene({ preserveCamera });
+        centerScene({ preserveCamera: preserveCamera && !autoOrientBeamFrame.value });
+        if (autoOrientBeamFrame.value) orientCameraToBeamFrame();
     } catch (e) {
         console.warn("structure.json not found:", e);
         await loadSingleBeam({ preserveCamera });
@@ -1034,8 +1037,8 @@ onMounted(async () => {
                     <input v-model="preserveCameraOnViewChange" type="checkbox" />
                     Keep camera
                 </label>
-                <label v-if="viewMode === 'single'" class="rotate-toggle">
-                    <input v-model="autoOrientSingleBeam" type="checkbox" @change="setMode('single', { preserveCamera: false })" />
+                <label class="rotate-toggle">
+                    <input v-model="autoOrientBeamFrame" type="checkbox" @change="setMode(viewMode, { preserveCamera: false })" />
                     Flat beam view
                 </label>
                 <label v-if="viewMode !== 'single'" class="rotate-toggle">
