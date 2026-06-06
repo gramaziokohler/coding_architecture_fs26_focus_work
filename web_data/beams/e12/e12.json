@@ -1,0 +1,104 @@
+{
+  "beam ID": "e12",
+  "name": "E12",
+  "module": "E",
+  "width (m)": 0.06,
+  "height (m)": 0.08,
+  "length (m)": 0.8881,
+  "volume (cm3)": 4262.65,
+  "weight (kg)": 2.13,
+  "local_frame": {
+    "origin": [
+      3.7046,
+      2.9766,
+      1.9912
+    ],
+    "x_axis": [
+      0.437,
+      -0.818,
+      -0.374
+    ],
+    "y_axis": [
+      -0.7954,
+      -0.5456,
+      0.264
+    ],
+    "z_axis": [
+      -0.42,
+      0.1821,
+      -0.8891
+    ]
+  },
+  "connected_beams": [
+    "e13",
+    "f31"
+  ],
+  "global_position": {
+    "centerline_start": [
+      3.7046,
+      2.9766,
+      1.9912
+    ],
+    "centerline_end": [
+      4.0927,
+      2.2501,
+      1.6591
+    ],
+    "midpoint": [
+      3.7046,
+      2.9766,
+      1.9912
+    ],
+    "midpoint_normalized": [
+      0.6927,
+      0.9238,
+      0.721
+    ]
+  },
+  "joints": {
+    "all": [
+      "196",
+      "301"
+    ],
+    "xlap": [],
+    "tbutt": [
+      "196",
+      "301"
+    ],
+    "lmiter": [],
+    "details": [
+      {
+        "id": "196",
+        "guid": "4e2e6c1b-5948-463e-8663-fc159475ce5d",
+        "type": "TButtJoint",
+        "kind": "tbutt",
+        "connected_beams": [
+          "e12",
+          "e13"
+        ],
+        "location": [
+          4.0884,
+          2.2581,
+          1.6628
+        ]
+      },
+      {
+        "id": "301",
+        "guid": "049ce6e8-5e30-4d53-b2a1-41d8d4822d4a",
+        "type": "TButtJoint",
+        "kind": "tbutt",
+        "connected_beams": [
+          "e12",
+          "f31"
+        ],
+        "location": [
+          3.7022,
+          2.976,
+          1.9778
+        ]
+      }
+    ]
+  },
+  "processing": [],
+  "3d_model": "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data/beams/e12/e12.stl"
+}

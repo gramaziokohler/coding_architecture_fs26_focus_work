@@ -1,0 +1,104 @@
+{
+  "beam ID": "f4",
+  "name": "F4",
+  "module": "F",
+  "width (m)": 0.06,
+  "height (m)": 0.08,
+  "length (m)": 0.5314,
+  "volume (cm3)": 2550.61,
+  "weight (kg)": 1.28,
+  "local_frame": {
+    "origin": [
+      2.8962,
+      3.2409,
+      2.2962
+    ],
+    "x_axis": [
+      -0.2102,
+      -0.9537,
+      -0.2152
+    ],
+    "y_axis": [
+      -0.9686,
+      0.1733,
+      0.1781
+    ],
+    "z_axis": [
+      -0.1326,
+      0.2459,
+      -0.9602
+    ]
+  },
+  "connected_beams": [
+    "f30",
+    "f5"
+  ],
+  "global_position": {
+    "centerline_start": [
+      2.8962,
+      3.2409,
+      2.2962
+    ],
+    "centerline_end": [
+      2.7845,
+      2.7341,
+      2.1818
+    ],
+    "midpoint": [
+      2.8962,
+      3.2409,
+      2.2962
+    ],
+    "midpoint_normalized": [
+      0.582,
+      0.9718,
+      0.8309
+    ]
+  },
+  "joints": {
+    "all": [
+      "130",
+      "232"
+    ],
+    "xlap": [],
+    "tbutt": [
+      "130",
+      "232"
+    ],
+    "lmiter": [],
+    "details": [
+      {
+        "id": "130",
+        "guid": "1bea8d92-e971-4aac-bcdd-f16b2861b369",
+        "type": "TButtJoint",
+        "kind": "tbutt",
+        "connected_beams": [
+          "f4",
+          "f5"
+        ],
+        "location": [
+          2.7838,
+          2.7258,
+          2.1789
+        ]
+      },
+      {
+        "id": "232",
+        "guid": "f21b4f7b-9a52-453c-b82b-c0fce90cb866",
+        "type": "TButtJoint",
+        "kind": "tbutt",
+        "connected_beams": [
+          "f4",
+          "f30"
+        ],
+        "location": [
+          2.8954,
+          3.2385,
+          2.2838
+        ]
+      }
+    ]
+  },
+  "processing": [],
+  "3d_model": "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data/beams/f4/f4.stl"
+}

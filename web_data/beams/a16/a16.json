@@ -1,0 +1,104 @@
+{
+  "beam ID": "a16",
+  "name": "A16",
+  "module": "A",
+  "width (m)": 0.06,
+  "height (m)": 0.08,
+  "length (m)": 0.7672,
+  "volume (cm3)": 3682.65,
+  "weight (kg)": 1.84,
+  "local_frame": {
+    "origin": [
+      1.607,
+      -2.076,
+      2.7009
+    ],
+    "x_axis": [
+      0.6869,
+      0.678,
+      -0.2615
+    ],
+    "y_axis": [
+      0.7144,
+      -0.5641,
+      0.4141
+    ],
+    "z_axis": [
+      0.1332,
+      -0.4713,
+      -0.8719
+    ]
+  },
+  "connected_beams": [
+    "a15",
+    "f14"
+  ],
+  "global_position": {
+    "centerline_start": [
+      1.607,
+      -2.076,
+      2.7009
+    ],
+    "centerline_end": [
+      2.1341,
+      -1.5557,
+      2.5003
+    ],
+    "midpoint": [
+      1.607,
+      -2.076,
+      2.7009
+    ],
+    "midpoint_normalized": [
+      0.4054,
+      0.0051,
+      0.9768
+    ]
+  },
+  "joints": {
+    "all": [
+      "117",
+      "285"
+    ],
+    "xlap": [],
+    "tbutt": [
+      "117",
+      "285"
+    ],
+    "lmiter": [],
+    "details": [
+      {
+        "id": "117",
+        "guid": "61824fa9-be59-45dd-9d49-e1e4dd737c89",
+        "type": "TButtJoint",
+        "kind": "tbutt",
+        "connected_beams": [
+          "a16",
+          "a15"
+        ],
+        "location": [
+          2.1341,
+          -1.5557,
+          2.5003
+        ]
+      },
+      {
+        "id": "285",
+        "guid": "de8643c8-cbd4-48c7-ba5d-5646d428f191",
+        "type": "TButtJoint",
+        "kind": "tbutt",
+        "connected_beams": [
+          "a16",
+          "f14"
+        ],
+        "location": [
+          1.6194,
+          -2.0726,
+          2.69
+        ]
+      }
+    ]
+  },
+  "processing": [],
+  "3d_model": "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data/beams/a16/a16.stl"
+}

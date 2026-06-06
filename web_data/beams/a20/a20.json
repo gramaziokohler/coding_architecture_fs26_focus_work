@@ -1,0 +1,104 @@
+{
+  "beam ID": "a20",
+  "name": "A20",
+  "module": "A",
+  "width (m)": 0.06,
+  "height (m)": 0.08,
+  "length (m)": 0.6608,
+  "volume (cm3)": 3171.72,
+  "weight (kg)": 1.59,
+  "local_frame": {
+    "origin": [
+      3.3227,
+      -1.8985,
+      2.5879
+    ],
+    "x_axis": [
+      -0.5737,
+      0.8035,
+      -0.1589
+    ],
+    "y_axis": [
+      0.781,
+      0.4782,
+      -0.4016
+    ],
+    "z_axis": [
+      -0.2467,
+      -0.3545,
+      -0.9019
+    ]
+  },
+  "connected_beams": [
+    "a21",
+    "f17"
+  ],
+  "global_position": {
+    "centerline_start": [
+      3.3227,
+      -1.8985,
+      2.5879
+    ],
+    "centerline_end": [
+      2.9436,
+      -1.3675,
+      2.4829
+    ],
+    "midpoint": [
+      3.3227,
+      -1.8985,
+      2.5879
+    ],
+    "midpoint_normalized": [
+      0.6404,
+      0.0373,
+      0.9361
+    ]
+  },
+  "joints": {
+    "all": [
+      "143",
+      "300"
+    ],
+    "xlap": [],
+    "tbutt": [
+      "143",
+      "300"
+    ],
+    "lmiter": [],
+    "details": [
+      {
+        "id": "143",
+        "guid": "14b77a58-614f-4bb8-958a-3c864202aa10",
+        "type": "TButtJoint",
+        "kind": "tbutt",
+        "connected_beams": [
+          "a20",
+          "a21"
+        ],
+        "location": [
+          2.949,
+          -1.375,
+          2.4845
+        ]
+      },
+      {
+        "id": "300",
+        "guid": "4d392ad9-5a6d-4ef7-8139-e826a222b48f",
+        "type": "TButtJoint",
+        "kind": "tbutt",
+        "connected_beams": [
+          "a20",
+          "f17"
+        ],
+        "location": [
+          3.3116,
+          -1.8951,
+          2.5745
+        ]
+      }
+    ]
+  },
+  "processing": [],
+  "3d_model": "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data/beams/a20/a20.stl"
+}

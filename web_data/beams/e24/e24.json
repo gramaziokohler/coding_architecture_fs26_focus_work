@@ -1,0 +1,122 @@
+{
+  "beam ID": "e24",
+  "name": "E24",
+  "module": "E",
+  "width (m)": 0.06,
+  "height (m)": 0.08,
+  "length (m)": 0.4428,
+  "volume (cm3)": 2125.57,
+  "weight (kg)": 1.06,
+  "local_frame": {
+    "origin": [
+      5.9225,
+      1.5188,
+      0.0
+    ],
+    "x_axis": [
+      -0.6733,
+      -0.3848,
+      0.6314
+    ],
+    "y_axis": [
+      -0.1911,
+      0.9154,
+      0.3542
+    ],
+    "z_axis": [
+      -0.7143,
+      0.1179,
+      -0.6899
+    ]
+  },
+  "connected_beams": [
+    "e23",
+    "e25",
+    "f24"
+  ],
+  "global_position": {
+    "centerline_start": [
+      5.9225,
+      1.5188,
+      0.0
+    ],
+    "centerline_end": [
+      5.6244,
+      1.3484,
+      0.2796
+    ],
+    "midpoint": [
+      5.9225,
+      1.5188,
+      0.0
+    ],
+    "midpoint_normalized": [
+      0.9966,
+      0.6587,
+      0.0033
+    ]
+  },
+  "joints": {
+    "all": [
+      "236",
+      "328",
+      "340"
+    ],
+    "xlap": [],
+    "tbutt": [
+      "236",
+      "328",
+      "340"
+    ],
+    "lmiter": [],
+    "details": [
+      {
+        "id": "236",
+        "guid": "a2159cef-424a-4f64-95b4-da7445a70f30",
+        "type": "TButtJoint",
+        "kind": "tbutt",
+        "connected_beams": [
+          "e23",
+          "e24"
+        ],
+        "location": [
+          5.7596,
+          1.4447,
+          0.1374
+        ]
+      },
+      {
+        "id": "328",
+        "guid": "8b8dcdfd-7923-41e1-8237-2a6601ab5476",
+        "type": "TButtJoint",
+        "kind": "tbutt",
+        "connected_beams": [
+          "e24",
+          "e25"
+        ],
+        "location": [
+          5.6235,
+          1.3482,
+          0.2787
+        ]
+      },
+      {
+        "id": "340",
+        "guid": "4256ff72-f9fc-4233-806f-c14eef2a3c7e",
+        "type": "TButtJoint",
+        "kind": "tbutt",
+        "connected_beams": [
+          "e24",
+          "f24"
+        ],
+        "location": [
+          5.8834,
+          1.5052,
+          0.0125
+        ]
+      }
+    ]
+  },
+  "processing": [],
+  "3d_model": "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data/beams/e24/e24.stl"
+}

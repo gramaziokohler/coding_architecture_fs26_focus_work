@@ -1,0 +1,123 @@
+{
+  "beam ID": "f23",
+  "name": "F23",
+  "module": "F",
+  "width (m)": 0.12,
+  "height (m)": 0.14,
+  "length (m)": 1.3296,
+  "volume (cm3)": 22337.68,
+  "weight (kg)": 11.17,
+  "local_frame": {
+    "origin": [
+      -0.8103,
+      1.7316,
+      0.0
+    ],
+    "x_axis": [
+      -0.3629,
+      0.9318,
+      0.0
+    ],
+    "y_axis": [
+      -0.9318,
+      -0.3629,
+      0.0
+    ],
+    "z_axis": [
+      0.0,
+      0.0,
+      1.0
+    ]
+  },
+  "connected_beams": [
+    "d21",
+    "f15",
+    "f25"
+  ],
+  "global_position": {
+    "centerline_start": [
+      -0.8103,
+      1.7316,
+      0.0
+    ],
+    "centerline_end": [
+      -1.2928,
+      2.9706,
+      0.0
+    ],
+    "midpoint": [
+      -0.8103,
+      1.7316,
+      0.0
+    ],
+    "midpoint_normalized": [
+      0.0742,
+      0.6974,
+      0.0033
+    ]
+  },
+  "joints": {
+    "all": [
+      "237",
+      "238",
+      "246"
+    ],
+    "xlap": [],
+    "tbutt": [
+      "237",
+      "238"
+    ],
+    "lmiter": [
+      "246"
+    ],
+    "details": [
+      {
+        "id": "237",
+        "guid": "ef1c5a6d-fb62-4ed6-89b5-2c7b523f4892",
+        "type": "TButtJoint",
+        "kind": "tbutt",
+        "connected_beams": [
+          "f25",
+          "f23"
+        ],
+        "location": [
+          -1.2313,
+          2.7818,
+          0.0116
+        ]
+      },
+      {
+        "id": "238",
+        "guid": "c37b95da-1a59-4ef8-b3a7-c59ddc582d4e",
+        "type": "TButtJoint",
+        "kind": "tbutt",
+        "connected_beams": [
+          "d21",
+          "f23"
+        ],
+        "location": [
+          -0.9845,
+          2.1419,
+          0.013
+        ]
+      },
+      {
+        "id": "246",
+        "guid": "41ad7355-00b5-45c5-9ac2-4dd0dcc2f8d2",
+        "type": "LMiterJoint",
+        "kind": "lmiter",
+        "connected_beams": [
+          "f15",
+          "f23"
+        ],
+        "location": [
+          -0.8103,
+          1.7316,
+          0.0
+        ]
+      }
+    ]
+  },
+  "processing": [],
+  "3d_model": "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data/beams/f23/f23.stl"
+}

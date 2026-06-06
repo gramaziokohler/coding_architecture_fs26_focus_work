@@ -1,0 +1,141 @@
+{
+  "beam ID": "c11",
+  "name": "C11",
+  "module": "C",
+  "width (m)": 0.06,
+  "height (m)": 0.08,
+  "length (m)": 1.1295,
+  "volume (cm3)": 5421.79,
+  "weight (kg)": 2.71,
+  "local_frame": {
+    "origin": [
+      0.6512,
+      1.6144,
+      1.3078
+    ],
+    "x_axis": [
+      0.4106,
+      -0.8669,
+      0.2827
+    ],
+    "y_axis": [
+      -0.7291,
+      -0.4983,
+      -0.4691
+    ],
+    "z_axis": [
+      0.5475,
+      -0.0135,
+      -0.8367
+    ]
+  },
+  "connected_beams": [
+    "c12",
+    "c13",
+    "c22",
+    "d25"
+  ],
+  "global_position": {
+    "centerline_start": [
+      0.6512,
+      1.6144,
+      1.3078
+    ],
+    "centerline_end": [
+      1.1151,
+      0.6353,
+      1.6271
+    ],
+    "midpoint": [
+      0.6512,
+      1.6144,
+      1.3078
+    ],
+    "midpoint_normalized": [
+      0.2744,
+      0.6761,
+      0.4747
+    ]
+  },
+  "joints": {
+    "all": [
+      "61",
+      "67",
+      "68",
+      "80"
+    ],
+    "xlap": [
+      "61",
+      "68"
+    ],
+    "tbutt": [
+      "67",
+      "80"
+    ],
+    "lmiter": [],
+    "details": [
+      {
+        "id": "61",
+        "guid": "9443b299-36fa-4947-b8f9-cfb074fe3edc",
+        "type": "XLapJoint",
+        "kind": "xlap",
+        "connected_beams": [
+          "c11",
+          "d25"
+        ],
+        "location": [
+          0.7364,
+          1.4317,
+          1.3692
+        ]
+      },
+      {
+        "id": "67",
+        "guid": "66e3e70d-db9f-47f6-acda-49b4a43fedfb",
+        "type": "TButtJoint",
+        "kind": "tbutt",
+        "connected_beams": [
+          "c12",
+          "c11"
+        ],
+        "location": [
+          0.8596,
+          1.1745,
+          1.4512
+        ]
+      },
+      {
+        "id": "68",
+        "guid": "7079f4f5-b644-48f3-8781-65815ea60680",
+        "type": "XLapJoint",
+        "kind": "xlap",
+        "connected_beams": [
+          "c11",
+          "c22"
+        ],
+        "location": [
+          0.9278,
+          1.0368,
+          1.4919
+        ]
+      },
+      {
+        "id": "80",
+        "guid": "91877180-d8e0-4fdb-bbbd-e2d155594b51",
+        "type": "TButtJoint",
+        "kind": "tbutt",
+        "connected_beams": [
+          "c11",
+          "c13"
+        ],
+        "location": [
+          1.1111,
+          0.6436,
+          1.6244
+        ]
+      }
+    ]
+  },
+  "processing": [],
+  "3d_model": "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data/beams/c11/c11.stl"
+}

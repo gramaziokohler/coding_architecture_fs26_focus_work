@@ -1,0 +1,104 @@
+{
+  "beam ID": "a28",
+  "name": "A28",
+  "module": "A",
+  "width (m)": 0.06,
+  "height (m)": 0.08,
+  "length (m)": 0.432,
+  "volume (cm3)": 2073.62,
+  "weight (kg)": 1.04,
+  "local_frame": {
+    "origin": [
+      5.2182,
+      -1.0523,
+      0.9987
+    ],
+    "x_axis": [
+      -0.6548,
+      0.6593,
+      0.3696
+    ],
+    "y_axis": [
+      0.3739,
+      0.7076,
+      -0.5997
+    ],
+    "z_axis": [
+      -0.6569,
+      -0.2544,
+      -0.7098
+    ]
+  },
+  "connected_beams": [
+    "a29",
+    "f19"
+  ],
+  "global_position": {
+    "centerline_start": [
+      5.2182,
+      -1.0523,
+      0.9987
+    ],
+    "centerline_end": [
+      4.9353,
+      -0.7675,
+      1.1584
+    ],
+    "midpoint": [
+      5.2182,
+      -1.0523,
+      0.9987
+    ],
+    "midpoint_normalized": [
+      0.9001,
+      0.1912,
+      0.3633
+    ]
+  },
+  "joints": {
+    "all": [
+      "227",
+      "316"
+    ],
+    "xlap": [],
+    "tbutt": [
+      "227",
+      "316"
+    ],
+    "lmiter": [],
+    "details": [
+      {
+        "id": "227",
+        "guid": "89b307e8-c888-4689-9083-e2442852a6b4",
+        "type": "TButtJoint",
+        "kind": "tbutt",
+        "connected_beams": [
+          "a28",
+          "a29"
+        ],
+        "location": [
+          4.952,
+          -0.7866,
+          1.146
+        ]
+      },
+      {
+        "id": "316",
+        "guid": "f255d7d7-722d-498f-85a1-ab0ea91b134b",
+        "type": "TButtJoint",
+        "kind": "tbutt",
+        "connected_beams": [
+          "a28",
+          "f19"
+        ],
+        "location": [
+          5.2119,
+          -1.0564,
+          0.9919
+        ]
+      }
+    ]
+  },
+  "processing": [],
+  "3d_model": "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data/beams/a28/a28.stl"
+}

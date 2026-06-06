@@ -1,0 +1,141 @@
+{
+  "beam ID": "e9",
+  "name": "E9",
+  "module": "E",
+  "width (m)": 0.06,
+  "height (m)": 0.08,
+  "length (m)": 1.0492,
+  "volume (cm3)": 5036.35,
+  "weight (kg)": 2.52,
+  "local_frame": {
+    "origin": [
+      3.3233,
+      1.3495,
+      2.0143
+    ],
+    "x_axis": [
+      -0.9975,
+      0.0712,
+      0.0018
+    ],
+    "y_axis": [
+      0.0712,
+      0.9973,
+      0.0161
+    ],
+    "z_axis": [
+      -0.0006,
+      0.0162,
+      -0.9999
+    ]
+  },
+  "connected_beams": [
+    "c23",
+    "d4",
+    "e10",
+    "e8"
+  ],
+  "global_position": {
+    "centerline_start": [
+      3.3233,
+      1.3495,
+      2.0143
+    ],
+    "centerline_end": [
+      2.2767,
+      1.4242,
+      2.0162
+    ],
+    "midpoint": [
+      3.3233,
+      1.3495,
+      2.0143
+    ],
+    "midpoint_normalized": [
+      0.6405,
+      0.6279,
+      0.7294
+    ]
+  },
+  "joints": {
+    "all": [
+      "122",
+      "133",
+      "134",
+      "154"
+    ],
+    "xlap": [
+      "133",
+      "154"
+    ],
+    "tbutt": [
+      "122",
+      "134"
+    ],
+    "lmiter": [],
+    "details": [
+      {
+        "id": "122",
+        "guid": "ffd3e89d-3733-4084-a68b-d57891d5ac93",
+        "type": "TButtJoint",
+        "kind": "tbutt",
+        "connected_beams": [
+          "e9",
+          "e10"
+        ],
+        "location": [
+          2.2867,
+          1.4235,
+          2.0162
+        ]
+      },
+      {
+        "id": "133",
+        "guid": "78c0bffb-c112-418a-a96d-6786123d5b9b",
+        "type": "XLapJoint",
+        "kind": "xlap",
+        "connected_beams": [
+          "c23",
+          "e9"
+        ],
+        "location": [
+          2.691,
+          1.3945,
+          2.0193
+        ]
+      },
+      {
+        "id": "134",
+        "guid": "d6b14f36-cce3-4deb-a753-3f18c1421e3b",
+        "type": "TButtJoint",
+        "kind": "tbutt",
+        "connected_beams": [
+          "e8",
+          "e9"
+        ],
+        "location": [
+          2.8245,
+          1.3851,
+          2.0152
+        ]
+      },
+      {
+        "id": "154",
+        "guid": "7957e432-b350-474b-bc2d-17cb1615d725",
+        "type": "XLapJoint",
+        "kind": "xlap",
+        "connected_beams": [
+          "d4",
+          "e9"
+        ],
+        "location": [
+          3.0953,
+          1.3637,
+          1.9919
+        ]
+      }
+    ]
+  },
+  "processing": [],
+  "3d_model": "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data/beams/e9/e9.stl"
+}

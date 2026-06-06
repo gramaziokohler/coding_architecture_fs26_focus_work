@@ -1,0 +1,123 @@
+{
+  "beam ID": "d11",
+  "name": "D11",
+  "module": "D",
+  "width (m)": 0.06,
+  "height (m)": 0.08,
+  "length (m)": 0.9986,
+  "volume (cm3)": 4793.42,
+  "weight (kg)": 2.4,
+  "local_frame": {
+    "origin": [
+      5.3099,
+      1.5856,
+      0.6273
+    ],
+    "x_axis": [
+      0.401,
+      -0.7774,
+      -0.4846
+    ],
+    "y_axis": [
+      -0.551,
+      -0.6273,
+      0.5504
+    ],
+    "z_axis": [
+      -0.7319,
+      0.0463,
+      -0.6799
+    ]
+  },
+  "connected_beams": [
+    "d12",
+    "d13",
+    "e25"
+  ],
+  "global_position": {
+    "centerline_start": [
+      5.3099,
+      1.5856,
+      0.6273
+    ],
+    "centerline_end": [
+      5.7104,
+      0.8093,
+      0.1433
+    ],
+    "midpoint": [
+      5.3099,
+      1.5856,
+      0.6273
+    ],
+    "midpoint_normalized": [
+      0.9127,
+      0.6708,
+      0.2294
+    ]
+  },
+  "joints": {
+    "all": [
+      "235",
+      "320",
+      "321"
+    ],
+    "xlap": [
+      "320"
+    ],
+    "tbutt": [
+      "235",
+      "321"
+    ],
+    "lmiter": [],
+    "details": [
+      {
+        "id": "235",
+        "guid": "0d913a2b-21b5-4d4c-a62b-56e4afb87061",
+        "type": "TButtJoint",
+        "kind": "tbutt",
+        "connected_beams": [
+          "d11",
+          "d13"
+        ],
+        "location": [
+          5.7201,
+          0.8017,
+          0.145
+        ]
+      },
+      {
+        "id": "320",
+        "guid": "3cfb95d7-4043-414e-9288-a08e3c141534",
+        "type": "XLapJoint",
+        "kind": "xlap",
+        "connected_beams": [
+          "d11",
+          "e25"
+        ],
+        "location": [
+          5.404,
+          1.3978,
+          0.5069
+        ]
+      },
+      {
+        "id": "321",
+        "guid": "45afd495-84cf-4ab7-b520-ce52e079cbd6",
+        "type": "TButtJoint",
+        "kind": "tbutt",
+        "connected_beams": [
+          "d12",
+          "d11"
+        ],
+        "location": [
+          5.5247,
+          1.1611,
+          0.3579
+        ]
+      }
+    ]
+  },
+  "processing": [],
+  "3d_model": "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data/beams/d11/d11.stl"
+}
