@@ -30,6 +30,7 @@ const BASE_URL = "https://raw.githubusercontent.com/gramaziokohler/coding_archit
 const viewMode = ref("single");
 const isLoading = ref(false);
 const isAutoRotating = ref(false);
+const autoOrientSingleBeam = ref(false);
 const preserveCameraOnViewChange = ref(true);
 const colorCurrentModule = ref(true);
 const colorAllModules = ref(false);
@@ -609,9 +610,37 @@ const centerScene = ({ preserveCamera = false } = {}) => {
 
     const maxDim = Math.max(size.x, size.y, size.z);
     const dist = maxDim * 2.2;
+    camera.up.set(0, 0, 1);
     camera.position.set(0, -dist, dist * 0.65);
     camera.lookAt(0, 0, 0);
     controls.target.set(0, 0, 0);
+    controls.update();
+};
+
+const orientCameraToBeamFrame = (distanceHint = 1) => {
+    const frame = getDisplayFrame();
+    if (!frame || !controls) return;
+
+    const target = controls.target.clone();
+    const up = frame.z_axis.clone().normalize();
+    let viewDirection = frame.y_axis.clone().normalize();
+
+    viewDirection.sub(up.clone().multiplyScalar(viewDirection.dot(up)));
+    if (viewDirection.lengthSq() < 1e-8) {
+        viewDirection = new THREE.Vector3().crossVectors(frame.x_axis, up).normalize();
+    } else {
+        viewDirection.normalize();
+    }
+
+    const currentDirection = camera.position.clone().sub(target).normalize();
+    if (viewDirection.dot(currentDirection) < 0) {
+        viewDirection.negate();
+    }
+
+    const distance = Math.max(camera.position.distanceTo(target), distanceHint * 2.2, 0.1);
+    camera.up.copy(up);
+    camera.position.copy(target).add(viewDirection.multiplyScalar(distance));
+    camera.lookAt(target);
     controls.update();
 };
 
@@ -666,7 +695,8 @@ const loadSingleBeam = async ({ preserveCamera = false } = {}) => {
     scene.add(makeMesh(geometry, WOOD_COLOR, 0.55, getBeamId()));
     addOutline(geometry);
     addSelectedBeamOverlays(maxDim);
-    centerScene({ preserveCamera });
+    centerScene({ preserveCamera: preserveCamera && !autoOrientSingleBeam.value });
+    if (autoOrientSingleBeam.value) orientCameraToBeamFrame(maxDim);
 };
 
 const loadConnectedBeams = async ({ preserveCamera = false } = {}) => {
@@ -1003,6 +1033,10 @@ onMounted(async () => {
                 <label class="rotate-toggle">
                     <input v-model="preserveCameraOnViewChange" type="checkbox" />
                     Keep camera
+                </label>
+                <label v-if="viewMode === 'single'" class="rotate-toggle">
+                    <input v-model="autoOrientSingleBeam" type="checkbox" @change="setMode('single', { preserveCamera: false })" />
+                    Flat beam view
                 </label>
                 <label v-if="viewMode !== 'single'" class="rotate-toggle">
                     <input v-model="colorCurrentModule" type="checkbox" @change="setMode(viewMode)" />
