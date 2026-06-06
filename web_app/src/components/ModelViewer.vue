@@ -130,6 +130,8 @@ const getBeamDisplayName = (beamId) => {
     return beamId.toUpperCase();
 };
 
+const mobileOverlayScale = () => (containerRef.value?.clientWidth <= 760 ? 0.45 : 1);
+
 const makeModelObject = (object) => {
     object.userData.isModelObject = true;
     return object;
@@ -552,11 +554,12 @@ const drawJointLabels = (scale = 0.13) => {
 };
 
 const addSelectedBeamOverlays = (sizeScale = 1) => {
+    const responsiveScale = sizeScale * mobileOverlayScale();
     drawCenterline(currentBeamData, true);
-    drawBeamFrame(currentBeamData, sizeScale * 0.168, true);
-    drawEngraving(sizeScale * 0.045);
-    drawCameraBeamLabel(currentBeamData, sizeScale * 0.07);
-    drawJointLabels(sizeScale * 0.038);
+    drawBeamFrame(currentBeamData, responsiveScale * 0.168, true);
+    drawEngraving(responsiveScale * 0.045);
+    drawCameraBeamLabel(currentBeamData, responsiveScale * 0.07);
+    drawJointLabels(responsiveScale * 0.038);
     drawProcessing();
 };
 
@@ -1009,14 +1012,22 @@ onMounted(async () => {
 
         <div class="navigation-buttons">
             <div class="nav-group">
-                <button @click="navigateModule(-1)">Prev Module</button>
+                <button class="nav-arrow nav-arrow-prev" title="Prev module" aria-label="Prev module" @click="navigateModule(-1)">
+                    <span></span>
+                </button>
                 <span>Module {{ currentModule }} <template v-if="moduleCounter">({{ moduleCounter }})</template></span>
-                <button @click="navigateModule(1)">Next Module</button>
+                <button class="nav-arrow nav-arrow-next" title="Next module" aria-label="Next module" @click="navigateModule(1)">
+                    <span></span>
+                </button>
             </div>
             <div class="nav-group">
-                <button @click="navigateBeam(-1)">Prev Beam</button>
+                <button class="nav-arrow nav-arrow-prev" title="Prev beam" aria-label="Prev beam" @click="navigateBeam(-1)">
+                    <span></span>
+                </button>
                 <span>{{ currentBeamId }} <template v-if="beamCounter">({{ beamCounter }})</template></span>
-                <button @click="navigateBeam(1)">Next Beam</button>
+                <button class="nav-arrow nav-arrow-next" title="Next beam" aria-label="Next beam" @click="navigateBeam(1)">
+                    <span></span>
+                </button>
             </div>
         </div>
 
@@ -1091,7 +1102,7 @@ onMounted(async () => {
 
 .nav-group {
     flex-direction: row;
-    align-items: stretch;
+    align-items: center;
 }
 
 .view-buttons button,
@@ -1135,6 +1146,36 @@ onMounted(async () => {
     padding: 4px 8px;
     background: rgba(255, 255, 255, 0.75);
     text-align: center;
+    min-width: 112px;
+}
+
+.navigation-buttons .nav-arrow {
+    width: 25px;
+    height: 25px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.nav-arrow span {
+    width: 0;
+    height: 0;
+    min-width: 0;
+    padding: 0;
+    background: transparent;
+}
+
+.nav-arrow-prev span {
+    border-top: 5px solid transparent;
+    border-bottom: 5px solid transparent;
+    border-right: 8px solid #111;
+}
+
+.nav-arrow-next span {
+    border-top: 5px solid transparent;
+    border-bottom: 5px solid transparent;
+    border-left: 8px solid #111;
 }
 
 .rotate-toggle {
@@ -1259,27 +1300,107 @@ onMounted(async () => {
 }
 
 @media (max-width: 760px) {
-    .view-buttons,
-    .navigation-buttons {
-        left: 10px;
-        right: 10px;
-        max-width: none;
+    .view-buttons {
+        top: 8px;
+        left: 8px;
+        gap: 6px;
+        max-width: 140px;
     }
 
     .navigation-buttons {
-        top: 164px;
-        align-items: flex-start;
+        top: 8px;
+        right: 8px;
+        left: auto;
+        max-width: calc(100% - 158px);
+        align-items: flex-end;
+        gap: 4px;
+        font-size: 10px;
     }
 
     .nav-group {
-        flex-wrap: wrap;
+        gap: 3px;
+        justify-content: flex-end;
+    }
+
+    .mode-buttons,
+    .option-buttons {
+        gap: 4px;
+    }
+
+    .view-buttons button {
+        padding: 4px 7px;
+        font-size: 10px;
+        line-height: 1.1;
+    }
+
+    .rotate-toggle {
+        gap: 4px;
+        font-size: 9px;
+        line-height: 1.1;
+    }
+
+    .rotate-toggle input {
+        width: 11px;
+        height: 11px;
+    }
+
+    .navigation-buttons span {
+        min-width: 72px;
+        max-width: 104px;
+        padding: 3px 4px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .navigation-buttons .nav-arrow {
+        width: 18px;
+        height: 18px;
+    }
+
+    .nav-arrow-prev span {
+        border-top-width: 4px;
+        border-bottom-width: 4px;
+        border-right-width: 6px;
+    }
+
+    .nav-arrow-next span {
+        border-top-width: 4px;
+        border-bottom-width: 4px;
+        border-left-width: 6px;
     }
 
     .weight-readout {
         top: auto;
-        bottom: 102px;
-        left: 10px;
+        bottom: 74px;
+        left: 8px;
         transform: none;
+        padding: 3px 5px;
+        font-size: 9px;
+        border: none;
+        background: rgba(255, 255, 255, 0.72);
+    }
+
+    .axis-legend {
+        bottom: 8px;
+        left: 8px;
+        padding: 3px 5px;
+        gap: 2px;
+        font-size: 8px;
+        border: none;
+        background: rgba(255, 255, 255, 0.72);
+    }
+
+    .axis-dot {
+        width: 7px;
+        height: 7px;
+    }
+
+    .gizmo-canvas {
+        width: 54px;
+        height: 54px;
+        right: 8px;
+        bottom: 8px;
     }
 }
 

@@ -271,4 +271,50 @@ h3 {
         gap: 12px;
     }
 }
+
+@media (max-width: 760px) {
+    .info-panel {
+        max-height: 25vh;
+        padding: 7px 9px;
+    }
+
+    .panel-header {
+        gap: 8px;
+        margin-bottom: 6px;
+    }
+
+    h2 {
+        font-size: 13px;
+    }
+
+    h3 {
+        font-size: 9px;
+        margin-bottom: 3px;
+    }
+
+    .module-tag {
+        padding: 2px 5px;
+        font-size: 9px;
+    }
+
+    .info-grid {
+        gap: 7px;
+    }
+
+    .spec-item,
+    .joint-row {
+        gap: 8px;
+        padding: 3px 0;
+        font-size: 9px;
+    }
+
+    .joint-type {
+        padding: 1px 4px;
+    }
+
+    .joints-container {
+        gap: 3px;
+        margin-top: 4px;
+    }
+}
 </style>
