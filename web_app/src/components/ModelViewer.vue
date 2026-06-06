@@ -29,7 +29,7 @@ const BASE_URL = "https://raw.githubusercontent.com/gramaziokohler/coding_archit
 
 const viewMode = ref("single");
 const isLoading = ref(false);
-const isAutoRotating = ref(true);
+const isAutoRotating = ref(false);
 const preserveCameraOnViewChange = ref(true);
 const colorCurrentModule = ref(true);
 const currentBeamId = ref("");
@@ -367,15 +367,15 @@ const drawEngraving = (scale = 0.045) => {
     });
 };
 
-const drawCameraBeamLabel = (scale = 0.08) => {
-    const position = getGlobalPosition();
-    const frame = getDisplayFrame();
-    const text = currentBeamData?.name || getBeamId();
+const drawCameraBeamLabel = (beamData = currentBeamData, scale = 0.08) => {
+    const position = getGlobalPosition(beamData);
+    const frame = getDisplayFrame(beamData);
+    const text = beamData?.name || getBeamId(beamData);
     if (!text || !frame) return;
 
-    const width = numericBeamValue(currentBeamData, "width (m)", 0.06);
-    const height = numericBeamValue(currentBeamData, "height (m)", 0.08);
-    const midpoint = vectorFromArray(position?.midpoint || getBeamFrame()?.origin || [0, 0, 0]);
+    const width = numericBeamValue(beamData, "width (m)", 0.06);
+    const height = numericBeamValue(beamData, "height (m)", 0.08);
+    const midpoint = vectorFromArray(position?.midpoint || getBeamFrame(beamData)?.origin || [0, 0, 0]);
     const labelPosition = midpoint
         .clone()
         .add(frame.y_axis.clone().multiplyScalar(width * 1.35))
@@ -529,9 +529,18 @@ const addSelectedBeamOverlays = (sizeScale = 1) => {
     drawCenterline(currentBeamData, true);
     drawBeamFrame(currentBeamData, sizeScale * 0.28, true);
     drawEngraving(sizeScale * 0.045);
-    drawCameraBeamLabel(sizeScale * 0.07);
+    drawCameraBeamLabel(currentBeamData, sizeScale * 0.07);
     drawJointLabels(sizeScale * 0.038);
     drawProcessing();
+};
+
+const shouldEmphasizeModuleBeam = (beamData) => {
+    return colorCurrentModule.value && beamData?.module === currentModule.value;
+};
+
+const addModuleBeamLabel = (beamData, scale = 0.055) => {
+    if (!shouldEmphasizeModuleBeam(beamData) || getBeamId(beamData) === getBeamId()) return;
+    drawCameraBeamLabel(beamData, scale);
 };
 
 const centerScene = ({ preserveCamera = false } = {}) => {
@@ -628,10 +637,14 @@ const loadConnectedBeams = async ({ preserveCamera = false } = {}) => {
                     loadBeamData(id),
                 ]);
                 const isCurrent = id === currentId;
-                scene.add(makeMesh(geometry, isCurrent ? HIGHLIGHT_COLOR : WOOD_COLOR, isCurrent ? 0.6 : 0.32, id));
+                const isCurrentModule = shouldEmphasizeModuleBeam(beamData);
+                const color = isCurrent ? HIGHLIGHT_COLOR : (isCurrentModule ? MODULE_COLOR : WOOD_COLOR);
+                const opacity = isCurrent ? 0.6 : (isCurrentModule ? 0.42 : 0.32);
+                scene.add(makeMesh(geometry, color, opacity, id));
                 addOutline(geometry);
                 if (!isCurrent) {
                     drawBeamFrame(beamData, 0.08, false);
+                    addModuleBeamLabel(beamData, 0.05);
                 }
             } catch (e) {
                 console.warn(`Could not load beam ${id}`, e);
@@ -645,6 +658,45 @@ const loadConnectedBeams = async ({ preserveCamera = false } = {}) => {
     });
     addSelectedBeamOverlays(1);
     centerScene({ preserveCamera });
+};
+
+const loadModuleBeams = async ({ preserveCamera = false } = {}) => {
+    clearModelObjects();
+    const currentId = getBeamId();
+
+    try {
+        const structure = await loadStructure();
+        const moduleBeams = structure.beams.filter((beam) => beam.module === currentModule.value);
+
+        await Promise.all(
+            moduleBeams.map(async (beam) => {
+                const id = beam.beam_id;
+                const isCurrentBeam = id === currentId;
+                try {
+                    const [geometry, beamData] = await Promise.all([
+                        loadSTL(`${BASE_URL}/beams/${id}/${id}.stl`),
+                        loadBeamData(id),
+                    ]);
+                    const color = isCurrentBeam ? HIGHLIGHT_COLOR : (colorCurrentModule.value ? MODULE_COLOR : WOOD_COLOR);
+                    const opacity = isCurrentBeam ? 0.62 : (colorCurrentModule.value ? 0.42 : 0.28);
+                    scene.add(makeMesh(geometry, color, opacity, id));
+                    addOutline(geometry);
+                    drawCenterline(beamData, isCurrentBeam);
+                    if (!isCurrentBeam) {
+                        drawBeamFrame(beamData, 0.08, false);
+                        addModuleBeamLabel(beamData, 0.052);
+                    }
+                } catch (e) {
+                    console.warn(`Could not load module beam ${id}`, e);
+                }
+            })
+        );
+        addSelectedBeamOverlays(1);
+        centerScene({ preserveCamera });
+    } catch (e) {
+        console.warn("Could not load module beams:", e);
+        await loadConnectedBeams({ preserveCamera });
+    }
 };
 
 const loadPavilion = async ({ preserveCamera = false } = {}) => {
@@ -661,10 +713,16 @@ const loadPavilion = async ({ preserveCamera = false } = {}) => {
                 const color = isCurrentBeam ? HIGHLIGHT_COLOR : (isCurrentModule ? MODULE_COLOR : WOOD_COLOR);
                 const opacity = isCurrentBeam ? 0.62 : (isCurrentModule ? 0.36 : 0.18);
                 try {
-                    const geometry = await loadSTL(`${BASE_URL}/beams/${id}/${id}.stl`);
+                    const [geometry, beamData] = isCurrentModule
+                        ? await Promise.all([
+                            loadSTL(`${BASE_URL}/beams/${id}/${id}.stl`),
+                            loadBeamData(id),
+                        ])
+                        : [await loadSTL(`${BASE_URL}/beams/${id}/${id}.stl`), null];
                     scene.add(makeMesh(geometry, color, opacity, id));
                     addOutline(geometry);
                     if (isCurrentBeam) drawCenterline(currentBeamData, true);
+                    else if (beamData) addModuleBeamLabel(beamData, 0.045);
                 } catch (e) {
                     console.warn(`Could not load STL for ${id}`, e);
                 }
@@ -684,6 +742,7 @@ const setMode = async (mode, { preserveCamera = preserveCameraOnViewChange.value
     try {
         if (mode === "single") await loadSingleBeam({ preserveCamera });
         else if (mode === "connected") await loadConnectedBeams({ preserveCamera });
+        else if (mode === "module") await loadModuleBeams({ preserveCamera });
         else if (mode === "pavilion") await loadPavilion({ preserveCamera });
     } finally {
         isLoading.value = false;
@@ -885,6 +944,7 @@ onMounted(async () => {
         <div class="view-buttons">
             <button :class="{ active: viewMode === 'single' }" @click="setMode('single')">Beam</button>
             <button :class="{ active: viewMode === 'connected' }" @click="setMode('connected')">Connected</button>
+            <button :class="{ active: viewMode === 'module' }" @click="setMode('module')">Module</button>
             <button :class="{ active: viewMode === 'pavilion' }" @click="setMode('pavilion')">Pavilion</button>
             <label class="rotate-toggle">
                 <input v-model="isAutoRotating" type="checkbox" @change="setAutoRotate" />
@@ -894,8 +954,8 @@ onMounted(async () => {
                 <input v-model="preserveCameraOnViewChange" type="checkbox" />
                 Keep camera
             </label>
-            <label v-if="viewMode === 'pavilion'" class="rotate-toggle">
-                <input v-model="colorCurrentModule" type="checkbox" @change="setMode('pavilion')" />
+            <label v-if="viewMode !== 'single'" class="rotate-toggle">
+                <input v-model="colorCurrentModule" type="checkbox" @change="setMode(viewMode)" />
                 Color module
             </label>
         </div>
