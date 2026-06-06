@@ -14,6 +14,8 @@ const emit = defineEmits(["beam-selected"]);
 
 const containerRef = ref(null);
 const gizmoRef = ref(null);
+const hoverInfo = ref(null);
+const hoverStyle = ref({});
 let scene, camera, renderer, controls;
 let animationId;
 let currentBeamData = null;
@@ -111,6 +113,10 @@ const makeMesh = (geometry, color, opacity = 0.45, beamId = "") => {
     const mesh = new THREE.Mesh(geometry, material);
     mesh.userData.isBeam = true;
     mesh.userData.beamId = beamId;
+    mesh.userData.hoverInfo = {
+        title: getBeamDisplayName(beamId),
+        lines: ["Beam", beamId ? `ID ${beamId}` : ""].filter(Boolean),
+    };
     makeModelObject(mesh);
     return mesh;
 };
@@ -131,6 +137,7 @@ const addOutline = (geometry) => {
 };
 
 const clearModelObjects = () => {
+    hoverInfo.value = null;
     const toRemove = scene.children.filter((child) => child.userData.isModelObject);
     toRemove.forEach((child) => {
         scene.remove(child);
@@ -156,48 +163,63 @@ const makeLine = (start, end, color, linewidth = 1) => {
     return line;
 };
 
-const makeTextSprite = (text, position, color = "#111111", scale = 0.12) => {
+const makeTextCanvas = (text, fontSize = 42, color = "#111111") => {
     const canvas = document.createElement("canvas");
-    canvas.width = 512;
-    canvas.height = 160;
     const ctx = canvas.getContext("2d");
+    const font = `700 ${fontSize}px Helvetica Neue, Arial, sans-serif`;
+    ctx.font = font;
+    const metrics = ctx.measureText(text);
+    const padding = 2;
+    const width = Math.ceil(metrics.width + padding * 2);
+    const height = Math.ceil(fontSize * 1.35 + padding * 2);
+    canvas.width = Math.max(2, width);
+    canvas.height = Math.max(2, height);
+
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.font = "700 42px Helvetica Neue, Arial, sans-serif";
+    ctx.font = font;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillStyle = color;
-    ctx.fillText(text, 256, 82);
+    ctx.fillText(text, canvas.width / 2, canvas.height / 2);
+
+    return canvas;
+};
+
+const makeTextSprite = (text, position, color = "#111111", scale = 0.08, hoverInfoData = null) => {
+    const canvas = makeTextCanvas(text, 42, color);
 
     const texture = new THREE.CanvasTexture(canvas);
-    const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, transparent: true }));
+    texture.needsUpdate = true;
+    const material = new THREE.SpriteMaterial({
+        map: texture,
+        transparent: true,
+        alphaTest: 0.05,
+        depthWrite: false,
+    });
+    const sprite = new THREE.Sprite(material);
+    const aspect = canvas.width / canvas.height;
     sprite.position.copy(position);
-    sprite.scale.set(scale * 3.2, scale, 1);
+    sprite.scale.set(scale * aspect, scale, 1);
     sprite.userData.isOverlay = true;
+    if (hoverInfoData) sprite.userData.hoverInfo = hoverInfoData;
     makeModelObject(sprite);
     scene.add(sprite);
     return sprite;
 };
 
 const makeTextPlane = (text, position, xAxis, yAxis, color = "#111111", scale = 0.16) => {
-    const canvas = document.createElement("canvas");
-    canvas.width = 512;
-    canvas.height = 192;
-    const ctx = canvas.getContext("2d");
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.font = "700 64px Helvetica Neue, Arial, sans-serif";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillStyle = color;
-    ctx.fillText(text, 256, 96);
+    const canvas = makeTextCanvas(text, 64, color);
 
     const texture = new THREE.CanvasTexture(canvas);
+    texture.needsUpdate = true;
     const material = new THREE.MeshBasicMaterial({
         map: texture,
         transparent: true,
+        alphaTest: 0.05,
         side: THREE.DoubleSide,
         depthWrite: false,
     });
-    const geometry = new THREE.PlaneGeometry(scale * 4.2, scale * 1.55);
+    const geometry = new THREE.PlaneGeometry(scale * (canvas.width / canvas.height), scale);
     const plane = new THREE.Mesh(geometry, material);
 
     const x = xAxis.clone().normalize();
@@ -207,16 +229,80 @@ const makeTextPlane = (text, position, xAxis, yAxis, color = "#111111", scale = 
     plane.quaternion.setFromRotationMatrix(matrix);
     plane.position.copy(position);
     plane.userData.isOverlay = true;
+    plane.userData.hoverInfo = {
+        title: text,
+        lines: ["Beam label"],
+    };
     makeModelObject(plane);
     scene.add(plane);
     return plane;
 };
 
-const drawBeamFrame = (beamData = currentBeamData, scale = 0.25, showAxisLabels = true) => {
+const makeProcessingMarker = (record) => {
+    const location = record.location || record.position || record.point || record.origin;
+    if (!location) return;
+
+    const geometry = new THREE.SphereGeometry(0.025, 12, 8);
+    const material = new THREE.MeshBasicMaterial({ color: 0x111111 });
+    const marker = new THREE.Mesh(geometry, material);
+    marker.position.copy(vectorFromArray(location));
+    marker.userData.isOverlay = true;
+    marker.userData.hoverInfo = {
+        title: record.label || record.name || record.type || "Processing",
+        lines: [record.type || "Processing", record.id ? `ID ${record.id}` : ""].filter(Boolean),
+    };
+    makeModelObject(marker);
+    scene.add(marker);
+};
+
+const getDisplayFrame = (beamData = currentBeamData) => {
     const frame = getBeamFrame(beamData);
-    if (!frame?.origin || !frame?.x_axis || !frame?.y_axis || !frame?.z_axis) return;
+    const position = getGlobalPosition(beamData);
+    if (!frame?.x_axis || !frame?.y_axis || !frame?.z_axis) return null;
 
     const origin = vectorFromArray(getCenterlineStart(beamData) || frame.origin);
+    let xAxis = vectorFromArray(frame.x_axis).normalize();
+
+    if (position?.centerline_start && position?.centerline_end) {
+        const start = vectorFromArray(position.centerline_start);
+        const end = vectorFromArray(position.centerline_end);
+        const centerlineDirection = end.clone().sub(start);
+        if (centerlineDirection.lengthSq() > 1e-10) {
+            xAxis = centerlineDirection.normalize();
+        }
+    }
+
+    let yAxis = vectorFromArray(frame.y_axis);
+    yAxis.sub(xAxis.clone().multiplyScalar(yAxis.dot(xAxis)));
+    if (yAxis.lengthSq() < 1e-10) {
+        yAxis = vectorFromArray(frame.z_axis);
+        yAxis.sub(xAxis.clone().multiplyScalar(yAxis.dot(xAxis)));
+    }
+    yAxis.normalize();
+
+    const zAxis = new THREE.Vector3().crossVectors(xAxis, yAxis).normalize();
+    yAxis = new THREE.Vector3().crossVectors(zAxis, xAxis).normalize();
+
+    return { origin, x_axis: xAxis, y_axis: yAxis, z_axis: zAxis };
+};
+
+const drawProcessing = () => {
+    const records =
+        currentBeamData?.processing ||
+        currentBeamData?.processings ||
+        currentBeamData?.features ||
+        currentBeamData?.machining ||
+        [];
+
+    if (!Array.isArray(records)) return;
+    records.forEach(makeProcessingMarker);
+};
+
+const drawBeamFrame = (beamData = currentBeamData, scale = 0.25, showAxisLabels = true) => {
+    const frame = getDisplayFrame(beamData);
+    if (!frame) return;
+
+    const origin = frame.origin;
     const headLength = scale * 0.18;
     const headWidth = scale * 0.08;
     const axes = [
@@ -226,14 +312,14 @@ const drawBeamFrame = (beamData = currentBeamData, scale = 0.25, showAxisLabels 
     ];
 
     axes.forEach(({ dir, color, lengthMult, label }) => {
-        const direction = vectorFromArray(dir).normalize();
+        const direction = dir.clone().normalize();
         const length = scale * lengthMult;
         const arrow = new THREE.ArrowHelper(direction, origin, length, color, headLength, headWidth);
         arrow.userData.isOverlay = true;
         makeModelObject(arrow);
         scene.add(arrow);
         if (showAxisLabels) {
-            makeTextSprite(label, origin.clone().add(direction.multiplyScalar(length * 1.15)), `#${color.toString(16).padStart(6, "0")}`, scale * 0.26);
+            makeTextSprite(label, origin.clone().add(direction.multiplyScalar(length * 1.15)), `#${color.toString(16).padStart(6, "0")}`, scale * 0.16);
         }
     });
 };
@@ -246,9 +332,9 @@ const drawCenterline = (beamData = currentBeamData, isCurrent = true) => {
     makeLine(start, end, isCurrent ? CENTERLINE_COLOR : 0x777777);
 };
 
-const drawEngraving = (scale = 0.18) => {
+const drawEngraving = (scale = 0.09) => {
     const position = getGlobalPosition();
-    const frame = getBeamFrame();
+    const frame = getDisplayFrame();
     const text = currentBeamData?.engraving_text || currentBeamData?.label_text || currentBeamData?.name || getBeamId();
     if (!text || !frame) return;
 
@@ -258,12 +344,12 @@ const drawEngraving = (scale = 0.18) => {
         engraving.location ||
         engraving.origin ||
         position?.midpoint ||
-        frame.origin ||
+        getBeamFrame()?.origin ||
         [0, 0, 0]
     );
-    const xAxis = vectorFromArray(engraving.x_axis || frame.x_axis);
-    const yAxis = vectorFromArray(engraving.y_axis || frame.y_axis);
-    const normal = vectorFromArray(engraving.normal || frame.z_axis).normalize();
+    const xAxis = engraving.x_axis ? vectorFromArray(engraving.x_axis) : frame.x_axis;
+    const yAxis = engraving.y_axis ? vectorFromArray(engraving.y_axis) : frame.y_axis;
+    const normal = engraving.normal ? vectorFromArray(engraving.normal).normalize() : frame.z_axis;
     const faceOffset = Number.isFinite(engraving.offset) ? engraving.offset : 0.004;
     makeTextPlane(text, origin.add(normal.multiplyScalar(faceOffset)), xAxis, yAxis, "#111111", scale);
 };
@@ -379,16 +465,22 @@ const drawJointLabels = (scale = 0.13) => {
         const location = joint.location ? vectorFromArray(joint.location) : fallbackJointLocation(joint.connectedBeamId, index, records.length);
         if (!location) return;
         const label = joint.label || `${getBeamDisplayName(getBeamId())} to ${getBeamDisplayName(joint.connectedBeamId)}`;
+        const type = joint.type || "joint";
+        const displayLabel = `${label} ${type}`;
         const point = location.add(normal.clone().multiplyScalar(scale * 0.9));
-        makeTextSprite(label, point, "#111111", scale);
+        makeTextSprite(displayLabel, point, "#111111", scale, {
+            title: label,
+            lines: [type, joint.id ? `Joint ${joint.id}` : ""].filter(Boolean),
+        });
     });
 };
 
 const addSelectedBeamOverlays = (sizeScale = 1) => {
     drawCenterline(currentBeamData, true);
     drawBeamFrame(currentBeamData, sizeScale * 0.28, true);
-    drawEngraving(sizeScale * 0.18);
-    drawJointLabels(sizeScale * 0.13);
+    drawEngraving(sizeScale * 0.09);
+    drawJointLabels(sizeScale * 0.055);
+    drawProcessing();
 };
 
 const centerScene = ({ preserveCamera = false } = {}) => {
@@ -619,6 +711,27 @@ const beamFromPointerEvent = (event) => {
     return hits[0]?.object?.userData?.beamId || "";
 };
 
+const hoverFromPointerEvent = (event) => {
+    const rect = renderer.domElement.getBoundingClientRect();
+    pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+    pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+    raycaster.setFromCamera(pointer, camera);
+
+    const hoverables = scene.children.filter((child) => child.userData.hoverInfo);
+    const hits = raycaster.intersectObjects(hoverables, false);
+    const hit = hits[0]?.object;
+    if (!hit) {
+        hoverInfo.value = null;
+        return;
+    }
+
+    hoverInfo.value = hit.userData.hoverInfo;
+    hoverStyle.value = {
+        left: `${event.clientX + 12}px`,
+        top: `${event.clientY + 12}px`,
+    };
+};
+
 const handlePointerDown = (event) => {
     pointerDown = {
         x: event.clientX,
@@ -640,6 +753,14 @@ const handlePointerUp = (event) => {
     if (beamId) selectBeam(beamId);
 };
 
+const handlePointerMove = (event) => {
+    hoverFromPointerEvent(event);
+};
+
+const handlePointerLeave = () => {
+    hoverInfo.value = null;
+};
+
 onMounted(async () => {
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0xffffff);
@@ -658,6 +779,8 @@ onMounted(async () => {
     containerRef.value.appendChild(renderer.domElement);
     renderer.domElement.addEventListener("pointerdown", handlePointerDown);
     renderer.domElement.addEventListener("pointerup", handlePointerUp);
+    renderer.domElement.addEventListener("pointermove", handlePointerMove);
+    renderer.domElement.addEventListener("pointerleave", handlePointerLeave);
 
     controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
@@ -737,6 +860,11 @@ onMounted(async () => {
         <div v-if="isLoading" class="loading-overlay">
             <div class="loading-spinner"></div>
             <span>Loading...</span>
+        </div>
+
+        <div v-if="hoverInfo" class="hover-tooltip" :style="hoverStyle">
+            <strong>{{ hoverInfo.title }}</strong>
+            <span v-for="line in hoverInfo.lines" :key="line">{{ line }}</span>
         </div>
 
         <canvas ref="gizmoRef" class="gizmo-canvas"></canvas>
@@ -894,6 +1022,30 @@ onMounted(async () => {
     border-top-color: #e8643a;
     border-radius: 50%;
     animation: spin 0.8s linear infinite;
+}
+
+.hover-tooltip {
+    position: fixed;
+    z-index: 30;
+    pointer-events: none;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    max-width: 220px;
+    padding: 6px 8px;
+    background: rgba(255, 255, 255, 0.92);
+    border: 1px solid #cfcfcf;
+    color: #111;
+    font-family: "Helvetica Neue", sans-serif;
+    font-size: 11px;
+    line-height: 1.25;
+    text-align: left;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.hover-tooltip strong {
+    font-size: 12px;
+    line-height: 1.2;
 }
 
 @media (max-width: 760px) {
