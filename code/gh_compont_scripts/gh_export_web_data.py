@@ -14,6 +14,7 @@ Optional inputs:
     process_joinery  Boolean, default True
     clean            Boolean, default True
     module_sizes     Fallback naming, e.g. "A:36,B:31,C:30,D:27,E:27,F:31"
+    repo_path        Optional repository folder, used to resolve relative paths
 
 Outputs you may add:
     export_message
@@ -41,6 +42,88 @@ DEFAULT_MODULE_SIZES = "A:36,B:31,C:30,D:27,E:27,F:31"
 NAME_KEYS = ("beam_id", "beam ID", "beam_name", "name", "label", "mark")
 MODULE_KEYS = ("module", "module_id", "module_name", "fabrication_module", "assembly_module", "group")
 NUMBER_KEYS = ("beam_number", "number", "sequence", "fabrication_number", "element_number", "index")
+
+
+def normalize_output_path(value):
+    value = str(value).strip().strip("\"'")
+    if value.lower() == "webdata":
+        return "web_data"
+    return value
+
+
+def parent_dirs(path):
+    path = os.path.abspath(path)
+    if os.path.isfile(path):
+        path = os.path.dirname(path)
+
+    while path:
+        yield path
+        parent = os.path.dirname(path)
+        if parent == path:
+            break
+        path = parent
+
+
+def is_repo_root(path):
+    return os.path.isdir(os.path.join(path, "web_app")) and (
+        os.path.isdir(os.path.join(path, "web_data")) or os.path.isdir(os.path.join(path, ".git"))
+    )
+
+
+def find_repo_root_from(path):
+    if not path:
+        return None
+    for candidate in parent_dirs(path):
+        if is_repo_root(candidate):
+            return candidate
+    return None
+
+
+def rhino_document_folder():
+    try:
+        import Rhino
+
+        doc_path = Rhino.RhinoDoc.ActiveDoc.Path
+        if doc_path:
+            return os.path.dirname(doc_path)
+    except Exception:
+        pass
+    return None
+
+
+def script_folder():
+    filename = globals().get("__file__")
+    if filename:
+        return os.path.dirname(os.path.abspath(filename))
+    return None
+
+
+def resolve_output_dir(path_value, repo_path_value=None):
+    """Resolve GH-friendly output paths.
+
+    In Grasshopper, ``os.path.abspath("web_data")`` can resolve to ``/web_data``
+    if Rhino's working directory is root. Prefer the explicit repo path, then
+    the Rhino document location, then the script location/current folder.
+    """
+
+    requested = normalize_output_path(path_value)
+
+    if os.path.isabs(requested):
+        return os.path.abspath(requested)
+
+    repo_candidates = [
+        repo_path_value,
+        rhino_document_folder(),
+        script_folder(),
+        os.getcwd(),
+    ]
+
+    for candidate in repo_candidates:
+        repo_root = find_repo_root_from(candidate)
+        if repo_root:
+            return os.path.abspath(os.path.join(repo_root, requested))
+
+    return os.path.abspath(requested)
 
 
 def rounded(value, digits=4):
@@ -250,6 +333,107 @@ def write_box_ascii_stl(path, name, frame, length, width, height):
     write_mesh_ascii_stl(path, name, vertices, faces)
 
 
+def object_to_xyz(value):
+    """Return XYZ coordinates from lists, COMPAS points, Rhino points/vertices."""
+
+    if value is None:
+        return None
+
+    if hasattr(value, "Location"):
+        return object_to_xyz(value.Location)
+
+    if hasattr(value, "Point"):
+        return object_to_xyz(value.Point)
+
+    if hasattr(value, "point"):
+        point = value.point
+        if callable(point):
+            point = point()
+        return object_to_xyz(point)
+
+    if all(hasattr(value, attr) for attr in ("X", "Y", "Z")):
+        return [float(value.X), float(value.Y), float(value.Z)]
+
+    if all(hasattr(value, attr) for attr in ("x", "y", "z")):
+        return [float(value.x), float(value.y), float(value.z)]
+
+    try:
+        return [float(value[0]), float(value[1]), float(value[2])]
+    except Exception:
+        pass
+
+    try:
+        coords = list(value)
+        if len(coords) >= 3:
+            return [float(coords[0]), float(coords[1]), float(coords[2])]
+    except Exception:
+        pass
+
+    return None
+
+
+def face_to_indices(face):
+    if isinstance(face, (list, tuple)):
+        return [int(index) for index in face]
+
+    if all(hasattr(face, attr) for attr in ("A", "B", "C", "D")):
+        indices = [int(face.A), int(face.B), int(face.C)]
+        if int(face.D) != int(face.C):
+            indices.append(int(face.D))
+        return indices
+
+    if all(hasattr(face, attr) for attr in ("a", "b", "c")):
+        indices = [int(face.a), int(face.b), int(face.c)]
+        if hasattr(face, "d") and int(face.d) != int(face.c):
+            indices.append(int(face.d))
+        return indices
+
+    try:
+        return [int(index) for index in list(face)]
+    except Exception:
+        return None
+
+
+def rhino_geometry_to_vertices_and_faces(geometry):
+    """Mesh native Rhino Breps/Meshes when the component runs inside Rhino."""
+
+    try:
+        import Rhino
+    except Exception:
+        return None
+
+    native = getattr(geometry, "native_brep", None) or getattr(geometry, "native", None) or geometry
+
+    meshes = []
+    if isinstance(native, Rhino.Geometry.Mesh):
+        meshes = [native]
+    elif isinstance(native, Rhino.Geometry.Brep):
+        meshing_parameters = Rhino.Geometry.MeshingParameters.Default
+        meshes = list(Rhino.Geometry.Mesh.CreateFromBrep(native, meshing_parameters) or [])
+    else:
+        return None
+
+    combined_vertices = []
+    combined_faces = []
+
+    for mesh in meshes:
+        mesh.Faces.ConvertQuadsToTriangles()
+        mesh.Normals.ComputeNormals()
+        mesh.Compact()
+
+        offset = len(combined_vertices)
+        for vertex in mesh.Vertices:
+            combined_vertices.append([float(vertex.X), float(vertex.Y), float(vertex.Z)])
+
+        for face in mesh.Faces:
+            combined_faces.append([offset + int(face.A), offset + int(face.B), offset + int(face.C)])
+
+    if not combined_vertices or not combined_faces:
+        return None
+
+    return combined_vertices, combined_faces
+
+
 def geometry_to_vertices_and_faces(geometry):
     if geometry is None:
         return None
@@ -260,6 +444,14 @@ def geometry_to_vertices_and_faces(geometry):
 
     for candidate in candidates:
         if candidate is None:
+            continue
+
+        rhino_mesh_data = rhino_geometry_to_vertices_and_faces(candidate)
+        if rhino_mesh_data:
+            vertices, faces = rhino_mesh_data
+            offset = len(combined_vertices)
+            combined_vertices.extend(vertices)
+            combined_faces.extend([[index + offset for index in face] for face in faces])
             continue
 
         mesh = candidate
@@ -275,8 +467,14 @@ def geometry_to_vertices_and_faces(geometry):
             continue
 
         offset = len(combined_vertices)
-        combined_vertices.extend([[float(coord) for coord in vertex] for vertex in vertices])
-        combined_faces.extend([[int(index) + offset for index in face] for face in faces])
+        clean_vertices = [object_to_xyz(vertex) for vertex in vertices]
+        clean_faces = [face_to_indices(face) for face in faces]
+
+        if not all(clean_vertices) or not all(clean_faces):
+            continue
+
+        combined_vertices.extend(clean_vertices)
+        combined_faces.extend([[int(index) + offset for index in face] for face in clean_faces])
 
     if not combined_vertices or not combined_faces:
         return None
@@ -542,16 +740,18 @@ density = float(vars().get("density") or DEFAULT_DENSITY_KG_M3)
 process_joinery = True if vars().get("process_joinery") is None else bool(vars().get("process_joinery"))
 clean = True if vars().get("clean") is None else bool(vars().get("clean"))
 module_sizes = parse_module_sizes(vars().get("module_sizes") or DEFAULT_MODULE_SIZES)
+repo_path = vars().get("repo_path")
 
 export_message = "Set run=True and provide model + output folder path."
 exported_count = 0
 stl_count = 0
 box_fallback_count = 0
 errors = []
+output_dir = ""
 
 if run and model and path:
     try:
-        output_dir = os.path.abspath(path)
+        output_dir = resolve_output_dir(path, repo_path)
         exported_count, stl_count, box_fallback_count, errors = export_model_to_web_data(
             model=model,
             output_dir=output_dir,
@@ -563,7 +763,7 @@ if run and model and path:
         )
         export_message = "Exported {} beams to {}".format(exported_count, output_dir)
     except Exception as error:
-        export_message = "Web data export failed: {!r}".format(error)
+        export_message = "Web data export failed for {}: {!r}".format(output_dir or path, error)
         errors = [export_message]
 
 print(export_message)
