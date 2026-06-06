@@ -39,6 +39,7 @@ const beamIndex = ref(-1);
 const moduleIndex = ref(-1);
 const moduleList = ref([]);
 const currentModuleBeams = ref([]);
+const shownBeamIds = ref([]);
 const beamDataCache = new Map();
 
 const WOOD_COLOR = 0xd4b896;
@@ -56,6 +57,7 @@ const MODULE_PALETTE = [
     0xb7c47a,
     0xc3a57d,
 ];
+const FALLBACK_DENSITY_KG_M3 = 500;
 
 const beamCounter = computed(() => {
     if (!currentModuleBeams.value.length || beamIndex.value < 0) return "";
@@ -65,6 +67,25 @@ const beamCounter = computed(() => {
 const moduleCounter = computed(() => {
     if (!moduleList.value.length || moduleIndex.value < 0) return "";
     return `${moduleIndex.value + 1} / ${moduleList.value.length}`;
+});
+
+const beamWeightKg = (beamData) => {
+    if (!beamData) return 0;
+    if (Number.isFinite(beamData["weight (kg)"])) return beamData["weight (kg)"];
+    if (Number.isFinite(beamData["volume (cm³)"])) {
+        return beamData["volume (cm³)"] / 1000000 * FALLBACK_DENSITY_KG_M3;
+    }
+    if (Number.isFinite(beamData["volume (cm3)"])) {
+        return beamData["volume (cm3)"] / 1000000 * FALLBACK_DENSITY_KG_M3;
+    }
+    return 0;
+};
+
+const totalShownWeight = computed(() => {
+    const total = shownBeamIds.value.reduce((sum, beamId) => {
+        return sum + beamWeightKg(beamDataCache.get(beamId));
+    }, 0);
+    return total.toFixed(2);
 });
 
 const loadSTL = (url) =>
@@ -384,13 +405,7 @@ const drawCameraBeamLabel = (beamData = currentBeamData, scale = 0.08) => {
     const text = beamData?.name || getBeamId(beamData);
     if (!text || !frame) return;
 
-    const width = numericBeamValue(beamData, "width (m)", 0.06);
-    const height = numericBeamValue(beamData, "height (m)", 0.08);
-    const midpoint = vectorFromArray(position?.midpoint || getBeamFrame(beamData)?.origin || [0, 0, 0]);
-    const labelPosition = midpoint
-        .clone()
-        .add(frame.y_axis.clone().multiplyScalar(width * 0.65))
-        .add(frame.z_axis.clone().multiplyScalar(height * 0.85));
+    const labelPosition = vectorFromArray(position?.midpoint || getBeamFrame(beamData)?.origin || [0, 0, 0]);
 
     makeTextSprite(text, labelPosition, "#111111", scale, {
         title: text,
@@ -633,6 +648,7 @@ const loadCurrentBeamFromUrl = async () => {
 
 const loadSingleBeam = async ({ preserveCamera = false } = {}) => {
     clearModelObjects();
+    shownBeamIds.value = [getBeamId()];
     const geometry = await loadSTL(currentBeamData["3d_model"]);
     geometry.computeBoundingBox();
     const size = new THREE.Vector3();
@@ -650,6 +666,7 @@ const loadConnectedBeams = async ({ preserveCamera = false } = {}) => {
     const connectedIds = currentBeamData.connected_beams || [];
     const currentId = getBeamId();
     const beamIds = [currentId, ...connectedIds];
+    shownBeamIds.value = beamIds;
 
     await Promise.all(
         beamIds.map(async (id) => {
@@ -689,6 +706,7 @@ const loadModuleBeams = async ({ preserveCamera = false } = {}) => {
     try {
         const structure = await loadStructure();
         const moduleBeams = structure.beams.filter((beam) => beam.module === currentModule.value);
+        shownBeamIds.value = moduleBeams.map((beam) => beam.beam_id);
 
         await Promise.all(
             moduleBeams.map(async (beam) => {
@@ -727,6 +745,7 @@ const loadPavilion = async ({ preserveCamera = false } = {}) => {
 
     try {
         const structure = await loadStructure();
+        shownBeamIds.value = structure.beams.map((beam) => beam.beam_id);
         await Promise.all(
             structure.beams.map(async (beam) => {
                 const id = beam.beam_id;
@@ -735,12 +754,10 @@ const loadPavilion = async ({ preserveCamera = false } = {}) => {
                 const color = isCurrentBeam ? HIGHLIGHT_COLOR : (isCurrentModule ? MODULE_COLOR : (colorAllModules.value ? moduleColor(beam.module) : WOOD_COLOR));
                 const opacity = isCurrentBeam ? 0.62 : ((isCurrentModule || colorAllModules.value) ? 0.36 : 0.18);
                 try {
-                    const [geometry, beamData] = isCurrentModule
-                        ? await Promise.all([
-                            loadSTL(`${BASE_URL}/beams/${id}/${id}.stl`),
-                            loadBeamData(id),
-                        ])
-                        : [await loadSTL(`${BASE_URL}/beams/${id}/${id}.stl`), null];
+                    const [geometry, beamData] = await Promise.all([
+                        loadSTL(`${BASE_URL}/beams/${id}/${id}.stl`),
+                        loadBeamData(id),
+                    ]);
                     scene.add(makeMesh(geometry, color, opacity, id));
                     addOutline(geometry);
                     if (isCurrentBeam) drawCenterline(currentBeamData, true);
@@ -1003,6 +1020,10 @@ onMounted(async () => {
             </div>
         </div>
 
+        <div class="weight-readout">
+            Shown weight {{ totalShownWeight }} kg
+        </div>
+
         <div class="axis-legend">
             <div class="axis-item"><span class="axis-dot" style="background: #ff3030"></span><span>beam.frame X</span></div>
             <div class="axis-item"><span class="axis-dot" style="background: #2aa84a"></span><span>beam.frame Y</span></div>
@@ -1055,7 +1076,7 @@ onMounted(async () => {
     right: 12px;
     flex-direction: column;
     align-items: flex-end;
-    max-width: min(420px, calc(100% - 220px));
+    max-width: min(520px, calc(100% - 220px));
     color: #111;
     font-size: 12px;
 }
@@ -1069,12 +1090,12 @@ onMounted(async () => {
 }
 
 .nav-group {
+    flex-direction: row;
     align-items: stretch;
 }
 
 .view-buttons button,
-.navigation-buttons button,
-.rotate-toggle {
+.navigation-buttons button {
     padding: 6px 12px;
     font-size: 12px;
     font-family: "Helvetica Neue", sans-serif;
@@ -1085,8 +1106,13 @@ onMounted(async () => {
 }
 
 .rotate-toggle {
-    padding: 4px 8px;
+    padding: 0;
     font-size: 11px;
+    font-family: "Helvetica Neue", sans-serif;
+    font-weight: 500;
+    background: transparent;
+    border: none;
+    border-radius: 0;
 }
 
 .view-buttons button,
@@ -1095,8 +1121,7 @@ onMounted(async () => {
 }
 
 .view-buttons button:hover,
-.navigation-buttons button:hover,
-.rotate-toggle:hover {
+.navigation-buttons button:hover {
     background: #f0f0f0;
 }
 
@@ -1123,6 +1148,21 @@ onMounted(async () => {
 
 .rotate-toggle input {
     margin: 0;
+}
+
+.weight-readout {
+    position: absolute;
+    top: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+    padding: 5px 10px;
+    background: rgba(255, 255, 255, 0.82);
+    border: 1px solid #d0d0d0;
+    color: #111;
+    font-family: "Helvetica Neue", sans-serif;
+    font-size: 12px;
+    font-weight: 500;
 }
 
 .axis-legend {
@@ -1229,6 +1269,17 @@ onMounted(async () => {
     .navigation-buttons {
         top: 164px;
         align-items: flex-start;
+    }
+
+    .nav-group {
+        flex-wrap: wrap;
+    }
+
+    .weight-readout {
+        top: auto;
+        bottom: 102px;
+        left: 10px;
+        transform: none;
     }
 }
 
