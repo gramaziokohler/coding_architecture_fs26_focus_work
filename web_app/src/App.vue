@@ -5,21 +5,26 @@ import ModelViewer from "./components/ModelViewer.vue";
 
 const beamUrl = ref("");
 
+const setBeamUrl = (beam) => {
+    if (!beam) return;
+    if (beam.includes("github.com")) {
+        beam = beam.replace("https://github.com/", "https://raw.githubusercontent.com/");
+        beam = beam.replace("/tree/", "/");
+        beam = beam.replace("/blob/", "/");
+    }
+    if (beam.endsWith(".json")) {
+        beam = beam.replace(".json", "");
+    }
+    beamUrl.value = beam;
+};
+
 onMounted(() => {
     const params = new URLSearchParams(window.location.search);
-    let beam = params.get("beam");
+    const beam = params.get("beam");
 
     if (beam) {
         console.log("Original URL:", beam);
-        if (beam.includes("github.com")) {
-            beam = beam.replace("https://github.com/", "https://raw.githubusercontent.com/");
-            beam = beam.replace("/tree/", "/");
-            beam = beam.replace("/blob/", "/");
-        }
-        if (beam.endsWith(".json")) {
-            beam = beam.replace(".json", "");
-        }
-        beamUrl.value = beam;
+        setBeamUrl(beam);
     } else {
         beamUrl.value = "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data/beams/beam_1";
     }
@@ -30,7 +35,7 @@ onMounted(() => {
     <div class="app-container">
         <InfoPanel v-if="beamUrl" :beam-url="beamUrl" />
         <div class="viewer-container">
-            <ModelViewer v-if="beamUrl" :beam-url="beamUrl" />
+            <ModelViewer v-if="beamUrl" :beam-url="beamUrl" @beam-selected="setBeamUrl" />
         </div>
     </div>
 </template>

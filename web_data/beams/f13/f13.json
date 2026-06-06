@@ -2,83 +2,140 @@
   "beam ID": "f13",
   "name": "F13",
   "module": "F",
-  "width (m)": 0.06,
-  "height (m)": 0.08,
-  "length (m)": 1.12,
-  "volume (cm\u00b3)": 5371.2,
-  "weight (kg)": 2.69,
+  "width (m)": 0.12,
+  "height (m)": 0.14,
+  "length (m)": 0.9538,
+  "volume (cm3)": 16024.2,
+  "weight (kg)": 8.01,
   "local_frame": {
     "origin": [
-      5.1029,
-      0.5366,
-      0.7886
+      -0.8438,
+      -0.2012,
+      0.0
     ],
     "x_axis": [
-      -0.3179,
-      -0.8497,
-      0.4207
+      0.1625,
+      0.9867,
+      0.0
     ],
     "y_axis": [
-      0.1474,
-      0.394,
-      0.9072
+      -0.9867,
+      0.1625,
+      0.0
     ],
     "z_axis": [
-      -0.9366,
-      0.3504,
-      0.0
+      0.0,
+      -0.0,
+      1.0
     ]
   },
   "connected_beams": [
-    "e14",
-    "e12",
-    "f15",
+    "a31",
+    "a35",
     "f12",
-    "f4",
-    "f14"
+    "f15"
   ],
   "global_position": {
     "centerline_start": [
-      5.2807,
-      1.012,
-      0.5532
+      -0.8438,
+      -0.2012,
+      0.0
     ],
     "centerline_end": [
-      4.925,
-      0.0612,
-      1.0239
+      -0.6888,
+      0.7399,
+      0.0
     ],
     "midpoint": [
-      5.1029,
-      0.5366,
-      0.7886
+      -0.8438,
+      -0.2012,
+      0.0
     ],
     "midpoint_normalized": [
-      0.8461,
-      0.4786,
-      0.2859
+      0.0696,
+      0.3459,
+      0.0033
     ]
   },
   "joints": {
     "all": [
-      "382",
-      "381",
-      "373",
-      "372",
-      "357",
-      "356"
+      "244",
+      "245",
+      "249",
+      "250"
     ],
-    "xlap": [
-      "382",
-      "372"
-    ],
+    "xlap": [],
     "tbutt": [
-      "381",
-      "373",
-      "357",
-      "356"
+      "245",
+      "249"
     ],
-    "lmiter": []
+    "lmiter": [
+      "244",
+      "250"
+    ],
+    "details": [
+      {
+        "id": "244",
+        "guid": "80fa850b-142b-484a-924e-5cbcd5673284",
+        "type": "LMiterJoint",
+        "kind": "lmiter",
+        "connected_beams": [
+          "f12",
+          "f13"
+        ],
+        "location": [
+          -0.8438,
+          -0.2012,
+          0.0
+        ]
+      },
+      {
+        "id": "245",
+        "guid": "2802f0f7-e1a9-40f7-8be0-432f330c99be",
+        "type": "TButtJoint",
+        "kind": "tbutt",
+        "connected_beams": [
+          "a35",
+          "f13"
+        ],
+        "location": [
+          -0.8179,
+          0.0352,
+          0.0131
+        ]
+      },
+      {
+        "id": "249",
+        "guid": "8f0b1be0-6102-474f-9628-bf95a7d9ab12",
+        "type": "TButtJoint",
+        "kind": "tbutt",
+        "connected_beams": [
+          "a31",
+          "f13"
+        ],
+        "location": [
+          -0.7287,
+          0.586,
+          0.0141
+        ]
+      },
+      {
+        "id": "250",
+        "guid": "ba21ca1a-fb24-4fe7-8bb6-a2f0e7740070",
+        "type": "LMiterJoint",
+        "kind": "lmiter",
+        "connected_beams": [
+          "f13",
+          "f15"
+        ],
+        "location": [
+          -0.6888,
+          0.7399,
+          0.0
+        ]
+      }
+    ]
   },
+  "processing": [],
   "3d_model": "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data/beams/f13/f13.stl"
 }

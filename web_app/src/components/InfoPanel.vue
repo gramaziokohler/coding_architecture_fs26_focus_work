@@ -1,7 +1,5 @@
-website 
-
 <script setup>
-import { onMounted, ref } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 
 const props = defineProps({
     beamUrl: {
@@ -14,10 +12,16 @@ const beamData = ref(null);
 const loading = ref(true);
 const error = ref(null);
 
-// Chiavi da nascondere completamente
-const HIDDEN_KEYS = ["name", "3d_model", "local_frame", "global_position", "connected_beams"];
+const HIDDEN_KEYS = ["name", "3d_model", "frame", "local_frame", "global_position", "connected_beams", "joints"];
 
-onMounted(async () => {
+const frameData = computed(() => beamData.value?.frame || beamData.value?.local_frame || null);
+const positionData = computed(() => beamData.value?.global_position || {});
+const engravingText = computed(() => beamData.value?.engraving_text || beamData.value?.name || beamData.value?.["beam ID"]);
+const engravingLocation = computed(() => positionData.value?.midpoint || frameData.value?.origin || null);
+
+const loadBeamInfo = async () => {
+    loading.value = true;
+    error.value = null;
     try {
         if (!props.beamUrl) {
             throw new Error("No beam URL provided");
@@ -35,21 +39,23 @@ onMounted(async () => {
     } finally {
         loading.value = false;
     }
-});
+};
+
+onMounted(loadBeamInfo);
+watch(() => props.beamUrl, loadBeamInfo);
 
 const isObject = (value) => typeof value === "object" && value !== null;
 const isArray = (value) => Array.isArray(value);
 
+const formatNumber = (value) => (Number.isFinite(value) ? Number(value).toFixed(4) : value);
+
 const formatValue = (value) => {
-    if (isArray(value)) return value.join(", ");
+    if (isArray(value)) return value.map(formatNumber).join(", ");
     if (isObject(value)) return JSON.stringify(value);
     return value;
 };
 
-// Formatta il nome della chiave: toglie underscore, capitalizza
-const formatLabel = (key) => {
-    return key.replace(/_/g, " ");
-};
+const formatLabel = (key) => key.replace(/_/g, " ");
 </script>
 
 <template>
@@ -57,52 +63,82 @@ const formatLabel = (key) => {
         <div v-if="loading" class="status">Loading...</div>
         <div v-else-if="error" class="error">Error: {{ error }}</div>
         <div v-else-if="beamData" class="beam-info">
-            <h2>{{ beamData.name }}</h2>
-            <ul class="specs-list">
+            <div class="panel-header">
+                <h2>{{ beamData.name }}</h2>
+                <span class="module-tag">Module {{ beamData.module }}</span>
+            </div>
 
-                <!-- Righe normali, escluse le chiavi nascoste -->
-                <li
-                    v-for="(value, key) in beamData"
-                    :key="key"
-                    v-show="!HIDDEN_KEYS.includes(key)"
-                    class="spec-item"
-                >
-                    <!-- Joints -->
-                    <div v-if="key === 'joints'" class="joints-item">
-                        <span class="label">{{ formatLabel(key) }}</span>
-                        <div class="joints-container">
-                            <div
-                                v-for="(items, jointType) in value"
-                                :key="jointType"
-                                class="joint-row"
-                            >
-                                <span class="joint-type">{{ jointType }}</span>
-                                <span class="joint-values">{{
-                                    items.length > 0 ? items.join(", ") : "—"
-                                }}</span>
-                            </div>
+            <div class="info-grid">
+                <section class="info-section">
+                    <h3>Beam</h3>
+                    <ul class="specs-list">
+                        <li
+                            v-for="(value, key) in beamData"
+                            :key="key"
+                            v-show="!HIDDEN_KEYS.includes(key)"
+                            class="spec-item"
+                        >
+                            <span class="label">{{ formatLabel(key) }}</span>
+                            <span class="value">{{ formatValue(value) }}</span>
+                        </li>
+                        <li v-if="beamData.connected_beams?.length" class="spec-item">
+                            <span class="label">connected beams</span>
+                            <span class="value">{{ beamData.connected_beams.join(", ") }}</span>
+                        </li>
+                    </ul>
+                </section>
+
+                <section class="info-section">
+                    <h3>Frame + Centerline</h3>
+                    <ul class="specs-list">
+                        <li v-if="frameData?.origin" class="spec-item">
+                            <span class="label">beam.frame origin</span>
+                            <span class="value">{{ formatValue(frameData.origin) }}</span>
+                        </li>
+                        <li v-if="frameData?.x_axis" class="spec-item">
+                            <span class="label">x axis</span>
+                            <span class="value">{{ formatValue(frameData.x_axis) }}</span>
+                        </li>
+                        <li v-if="frameData?.y_axis" class="spec-item">
+                            <span class="label">y axis</span>
+                            <span class="value">{{ formatValue(frameData.y_axis) }}</span>
+                        </li>
+                        <li v-if="frameData?.z_axis" class="spec-item">
+                            <span class="label">z axis</span>
+                            <span class="value">{{ formatValue(frameData.z_axis) }}</span>
+                        </li>
+                        <li v-if="positionData.centerline_start" class="spec-item">
+                            <span class="label">centerline start</span>
+                            <span class="value">{{ formatValue(positionData.centerline_start) }}</span>
+                        </li>
+                        <li v-if="positionData.centerline_end" class="spec-item">
+                            <span class="label">centerline end</span>
+                            <span class="value">{{ formatValue(positionData.centerline_end) }}</span>
+                        </li>
+                    </ul>
+                </section>
+
+                <section class="info-section">
+                    <h3>Engraving + Joints</h3>
+                    <ul class="specs-list">
+                        <li class="spec-item">
+                            <span class="label">engraving text</span>
+                            <span class="value">{{ engravingText }}</span>
+                        </li>
+                        <li v-if="engravingLocation" class="spec-item">
+                            <span class="label">engraving location</span>
+                            <span class="value">{{ formatValue(engravingLocation) }}</span>
+                        </li>
+                    </ul>
+
+                    <div v-if="beamData.joints" class="joints-container">
+                        <div v-for="(items, jointType) in beamData.joints" :key="jointType" class="joint-row">
+                            <span class="joint-type">{{ jointType }}</span>
+                            <span class="joint-values">{{ items.length > 0 ? items.join(", ") : "none" }}</span>
                         </div>
                     </div>
-
-                    <!-- Regular -->
-                    <div v-else class="regular-item">
-                        <span class="label">{{ formatLabel(key) }}</span>
-                        <span class="value">{{ formatValue(value) }}</span>
-                    </div>
-                </li>
-
-                <!-- Riga connected beams separata, in fondo -->
-                <li
-                    v-if="beamData.connected_beams && beamData.connected_beams.length > 0"
-                    class="spec-item"
-                >
-                    <div class="regular-item">
-                        <span class="label">connected beams</span>
-                        <span class="value">{{ beamData.connected_beams.join(", ") }}</span>
-                    </div>
-                </li>
-
-            </ul>
+                </section>
+            </div>
         </div>
     </div>
 </template>
@@ -112,16 +148,43 @@ const formatLabel = (key) => {
     padding: 12px 16px;
     background: #fff;
     border-bottom: 1px solid #000;
-    max-height: 40vh;
+    max-height: 42vh;
     overflow-y: auto;
 }
 
-h2 {
-    margin: 0 0 8px 0;
-    font-size: 18px;
+.panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+
+h2,
+h3 {
+    margin: 0;
     color: #000;
     line-height: 1.2;
     font-weight: 600;
+}
+
+h2 {
+    font-size: 18px;
+}
+
+h3 {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0;
+    color: #555;
+    margin-bottom: 6px;
+}
+
+.module-tag {
+    border: 1px solid #d0d0d0;
+    padding: 3px 8px;
+    font-size: 12px;
+    color: #111;
 }
 
 .status,
@@ -131,9 +194,15 @@ h2 {
     padding: 4px 0;
 }
 
-.error { color: #000; }
+.error {
+    color: #000;
+}
 
-.beam-info { width: 100%; }
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 18px;
+}
 
 .specs-list {
     list-style: none;
@@ -141,54 +210,41 @@ h2 {
     padding: 0;
     display: flex;
     flex-direction: column;
-    gap: 0;
 }
 
 .spec-item {
     display: flex;
-    flex-direction: column;
-    gap: 4px;
-    padding: 8px 0;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 6px 0;
     border-bottom: 1px solid #e0e0e0;
-    font-size: 13px;
+    font-size: 12px;
 }
 
-.spec-item:last-child { border-bottom: none; }
+.spec-item:last-child {
+    border-bottom: none;
+}
 
 .label {
     color: #666;
     font-weight: 400;
+    flex: 0 0 auto;
 }
 
-.regular-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 16px;
-}
-
-.value {
+.value,
+.joint-values {
     color: #000;
-    font-family: Helvetica Neue;
+    font-family: "Helvetica Neue", sans-serif;
     font-weight: 500;
     text-align: right;
-    flex: 1;
     word-break: break-word;
-}
-
-.joints-item {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
 }
 
 .joints-container {
     display: flex;
     flex-direction: column;
-    gap: 4px;
-    margin-left: 12px;
-    padding-left: 8px;
-    border-left: 2px solid #e0e0e0;
+    gap: 5px;
+    margin-top: 8px;
 }
 
 .joint-row {
@@ -197,23 +253,68 @@ h2 {
     align-items: center;
     gap: 12px;
     font-size: 12px;
+    border-bottom: 1px solid #e0e0e0;
+    padding-bottom: 5px;
 }
 
 .joint-type {
-    color: #666;
-    font-weight: 500;
-    background: #f5f5f5;
+    color: #111;
+    font-weight: 600;
+    border: 1px solid #d8d8d8;
     padding: 2px 6px;
-    border-radius: 3px;
     flex: 0 0 auto;
 }
 
-.joint-values {
-    color: #000;
-    font-family: Helvetica Neue;
-    font-weight: 500;
-    text-align: right;
-    flex: 1;
-    word-break: break-word;
+@media (max-width: 900px) {
+    .info-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+}
+
+@media (max-width: 760px) {
+    .info-panel {
+        max-height: 29vh;
+        padding: 8px 11px;
+    }
+
+    .panel-header {
+        gap: 8px;
+        margin-bottom: 6px;
+    }
+
+    h2 {
+        font-size: 14px;
+    }
+
+    h3 {
+        font-size: 10px;
+        margin-bottom: 3px;
+    }
+
+    .module-tag {
+        padding: 2px 6px;
+        font-size: 10px;
+    }
+
+    .info-grid {
+        gap: 7px;
+    }
+
+    .spec-item,
+    .joint-row {
+        gap: 8px;
+        padding: 4px 0;
+        font-size: 10px;
+    }
+
+    .joint-type {
+        padding: 1px 4px;
+    }
+
+    .joints-container {
+        gap: 3px;
+        margin-top: 4px;
+    }
 }
 </style>
