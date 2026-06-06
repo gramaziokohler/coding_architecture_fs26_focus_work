@@ -15,6 +15,7 @@ from compas_timber.elements import Beam
 from a03_preferred_face_tbutt_joint import PreferredFaceTButtJoint
 from compas_timber.model import TimberModel
 from compas_timber.fabrication import JackRafterCut
+from compas_rhino.conversions import plane_to_rhino
 from timber_design.workflow import DirectRule
 
 
@@ -78,7 +79,7 @@ class GeometricTimberModelCreator:
         self.trimmed_inner_beam_geometries = []
         self._topology_records = []
         self.cutting_planes_inner_beams = []
-        self.jack_rafter_cut_features_inner_beams = []
+        self.jack_rafter_cut_features_inner_beams_by_beam_id = {}
 
         self.arch_plane_A = arch_plane_A
         self.arch_plane_B = arch_plane_B
@@ -94,6 +95,9 @@ class GeometricTimberModelCreator:
         self.arch_A_inner_cross_beam_ref_side_index = arch_A_inner_cross_beam_ref_side_index
         self.arch_B_inner_cross_beam_ref_side_index = arch_B_inner_cross_beam_ref_side_index
 
+    @property
+    def jack_rafter_cut_features_inner_beams(self):
+        return list(self.jack_rafter_cut_features_inner_beams_by_beam_id.values())
 
     def _arch_reference_vector_for_centerline(self, centerline):
         """Choose the closest arch reference plane and return its normal vector."""
@@ -774,25 +778,7 @@ class GeometricTimberModelCreator:
     def _compas_plane_to_rhino_plane(plane):
         """Convert COMPAS Plane to Rhino.Geometry.Plane for Grasshopper preview."""
         try:
-            import Rhino.Geometry as rg
-
-            origin = rg.Point3d(
-                plane.point.x,
-                plane.point.y,
-                plane.point.z,
-            )
-
-            normal = rg.Vector3d(
-                plane.normal.x,
-                plane.normal.y,
-                plane.normal.z,
-            )
-
-            if normal.Length < 0.001:
-                return None
-
-            normal.Unitize()
-            return rg.Plane(origin, normal)
+            return plane_to_rhino(plane)
 
         except Exception:
             return plane    
@@ -1041,16 +1027,12 @@ class GeometricTimberModelCreator:
             compas_plane = Plane(inset_origin, plane_normal)
             rhino_plane = self._compas_plane_to_rhino_plane(compas_plane)
 
-            # Rhino plane for GH preview
-            beam.attributes["inner_cutting_plane"] = rhino_plane
-
             # COMPAS plane for JackRafterCut
             beam.attributes["inner_cutting_compas_plane"] = compas_plane
-
             beam.attributes["inner_cutting_plane_base_point"] = plane_origin
             beam.attributes["inner_cutting_plane_inset_point"] = inset_origin
             beam.attributes["inner_cutting_plane_normal"] = plane_normal
-            beam.attributes["inner_cutting_reference_beam"] = reference_beam
+            beam.attributes["inner_cutting_reference_beam_guid"] = str(reference_beam.guid)
             beam.attributes["inner_cutting_open_end"] = open_end_name
             beam.attributes["inner_cutting_inset_distance"] = inset
             print(
@@ -1075,7 +1057,7 @@ class GeometricTimberModelCreator:
         The feature is added to the beam so the timber model processes it.
         """
 
-        self.jack_rafter_cut_features_inner_beams = []
+        self.jack_rafter_cut_features_inner_beams_by_beam_id = {}
 
         success = 0
         failed = 0
@@ -1090,6 +1072,7 @@ class GeometricTimberModelCreator:
 
             feature = None
             last_error = None
+            selected_ref_side_index = None
 
             # Try different reference sides. Depending on beam orientation,
             # one ref_side_index may be invalid while another works.
@@ -1100,6 +1083,7 @@ class GeometricTimberModelCreator:
                         beam,
                         ref_side_index=ref_side_index
                     )
+                    selected_ref_side_index = ref_side_index
                     break
                 except Exception as e:
                     last_error = e
@@ -1114,42 +1098,27 @@ class GeometricTimberModelCreator:
                 )
                 continue
 
-            # Add the feature to the beam. Different compas_timber versions
-            # expose this differently, so try the common options.
-            added = False
-
-            for method_name in ("add_features", "add_feature"):
-                method = getattr(beam, method_name, None)
-                if method is None:
-                    continue
-
-                try:
-                    if method_name == "add_features":
-                        method([feature])
-                    else:
-                        method(feature)
-                    added = True
-                    break
-                except Exception as e:
-                    print("Could not use beam.{}: {}".format(method_name, e))
-
-            if not added:
-                # Fallback: append to features list if it exists.
-                try:
-                    features = getattr(beam, "features", None)
-                    if features is not None:
-                        features.append(feature)
-                        added = True
-                except Exception as e:
-                    print("Could not append feature to beam.features: {}".format(e))
+            # Add the feature to the beam
+            try:
+                beam.add_feature(feature)
+                added = True
+            except Exception as e:
+                print("Could not append feature to beam.features: {}".format(e))
+                added = False
 
             if not added:
                 failed += 1
                 print("Could not add JackRafterCut feature to beam.")
                 continue
 
-            beam.attributes["inner_jack_rafter_cut"] = feature
-            self.jack_rafter_cut_features_inner_beams.append(feature)
+            # Store as plain attributes for serialization and reconstruction if needed
+            beam.attributes["inner_jack_rafter_cut"] = {
+                "beam_guid": str(beam.guid),
+                "ref_side_index": selected_ref_side_index,
+                "plane": compas_plane,
+            }
+            # Store live instance for internal usage
+            self.jack_rafter_cut_features_inner_beams_by_beam_id[beam.guid] = feature
             success += 1
 
         print(
@@ -1168,7 +1137,7 @@ class GeometricTimberModelCreator:
         failed = 0
 
         for beam in self.trimmed_inner_beams:
-            feature = beam.attributes.get("inner_jack_rafter_cut")
+            feature = self.jack_rafter_cut_features_inner_beams_by_beam_id.get(beam.guid)
 
             if feature is None:
                 failed += 1
