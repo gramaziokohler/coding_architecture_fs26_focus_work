@@ -73,52 +73,68 @@ const formatLabel = (key) => key.replace(/_/g, " ").replace("cm3", "cm³");
             </div>
 
             <div class="info-grid">
-                <!-- LEFT: Beam -->
-                <section class="info-section">
+                <!-- LEFT COLUMN: BEAM -->
+                <div class="info-column">
                     <h3>Beam</h3>
                     <ul class="specs-list">
-                        <li
-                            v-for="(value, key) in beamData"
-                            :key="key"
-                            v-show="!HIDDEN_KEYS.includes(key)"
-                            class="spec-item"
-                        >
-                            <span class="label">{{ formatLabel(key) }}</span>
-                            <span class="value">{{ formatValue(value) }}</span>
+                        <li class="spec-item">
+                            <span class="label">beam ID</span>
+                            <span class="value">{{ beamData["beam ID"] }}</span>
                         </li>
-                        <li v-if="beamData.connected_beams?.length" class="spec-item">
+                        <li class="spec-item">
+                            <span class="label">module</span>
+                            <span class="value">{{ beamData.module }}</span>
+                        </li>
+                        <template v-for="(value, key) in beamData" :key="key">
+                            <li
+                                v-if="!HIDDEN_KEYS.includes(key) && key !== 'beam ID' && key !== 'module' && key !== 'engraving_text'"
+                                class="spec-item"
+                            >
+                                <span class="label">{{ formatLabel(key) }}</span>
+                                <span class="value">{{ formatValue(value) }}</span>
+                            </li>
+                        </template>
+                        <li v-if="beamData.connected_beams" class="spec-item">
                             <span class="label">connected beams</span>
-                            <span class="value">{{ beamData.connected_beams.join(", ") }}</span>
+                            <span class="value">
+                                {{ isArray(beamData.connected_beams)
+                                    ? beamData.connected_beams.join(", ")
+                                    : beamData.connected_beams }}
+                            </span>
                         </li>
                     </ul>
-                </section>
+                </div>
 
-                <!-- RIGHT: Module -->
-                <section class="info-section">
+                <!-- RIGHT COLUMN: MODULE -->
+                <div class="info-column">
                     <h3>Module</h3>
                     <ul class="specs-list">
                         <li class="spec-item">
                             <span class="label">engraving text</span>
                             <span class="value">{{ engravingText }}</span>
                         </li>
-                    </ul>
-                    <div class="joints-section-title">joints</div>
-                    <ul class="specs-list">
-                        <template v-if="filteredJoints">
+
+                        <template v-if="filteredJoints && Object.keys(filteredJoints).length">
+                            <li class="spec-item joints-section-title">
+                                <span>joints</span>
+                            </li>
                             <li
-                                v-for="(items, jointType) in filteredJoints"
+                                v-for="(jointData, jointType) in filteredJoints"
                                 :key="jointType"
                                 class="spec-item"
                             >
-                                <span class="label">{{ jointType }}</span>
-                                <span class="joint-values">{{ items && items.length > 0 ? items.join(", ") : "—" }}</span>
+                                <span class="joint-tag">{{ jointType }}</span>
+                                <span class="joint-values">
+                                    {{ isArray(jointData)
+                                        ? jointData.join(", ")
+                                        : isObject(jointData)
+                                            ? Object.values(jointData).join(", ")
+                                            : jointData ?? "—" }}
+                                </span>
                             </li>
                         </template>
-                        <li v-else class="spec-item">
-                            <span class="value">—</span>
-                        </li>
                     </ul>
-                </section>
+                </div>
             </div>
         </div>
     </div>
@@ -196,6 +212,7 @@ h3 {
 .spec-item {
     display: flex;
     justify-content: space-between;
+    align-items: center;
     gap: 12px;
     padding: 6px 0;
     border-bottom: 1px solid #e0e0e0;
@@ -211,6 +228,19 @@ h3 {
     font-weight: 400;
     flex: 0 0 auto;
     font-size: 12px;
+}
+
+.joint-tag {
+    border: 1px solid #d0d0d0;
+    padding: 0 4px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #666;
+    line-height: 18px;
+    height: 18px;
+    display: inline-flex;
+    align-items: center;
+    flex: 0 0 auto;
 }
 
 .value,
@@ -229,6 +259,7 @@ h3 {
     text-transform: none;
     padding: 6px 0;
     border-bottom: 1px solid #e0e0e0;
+    justify-content: center;
 }
 
 @media (max-width: 900px) {
@@ -260,6 +291,14 @@ h3 {
 
     .label {
         font-size: 10px;
+    }
+
+    .joint-tag {
+        font-size: 9px;
+        font-weight: 600;
+        padding: 0 3px;
+        line-height: 16px;
+        height: 16px;
     }
 
     .joints-section-title {
