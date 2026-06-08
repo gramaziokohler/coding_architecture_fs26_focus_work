@@ -101,9 +101,9 @@ const formatLabel = (key) => key.replace(/_/g, " ").replace("cm3", "cm³");
                             <span class="label">engraving text</span>
                             <span class="value">{{ engravingText }}</span>
                         </li>
-                        <li class="spec-item joints-title-item">
-                            <span class="joints-title">joints</span>
-                        </li>
+                    </ul>
+                    <div class="joints-section-title">joints</div>
+                    <ul class="specs-list">
                         <template v-if="filteredJoints">
                             <li
                                 v-for="(items, jointType) in filteredJoints"
@@ -222,15 +222,13 @@ h3 {
     word-break: break-word;
 }
 
-.joints-title-item {
-    border-bottom: none;
-}
-
-.joints-title {
+.joints-section-title {
     color: #666;
     font-size: 12px;
-    text-transform: none;
     font-weight: 400;
+    text-transform: none;
+    padding: 6px 0;
+    border-bottom: 1px solid #e0e0e0;
 }
 
 @media (max-width: 900px) {
@@ -264,7 +262,7 @@ h3 {
         font-size: 10px;
     }
 
-    .joints-title {
+    .joints-section-title {
         font-size: 10px;
     }
 
