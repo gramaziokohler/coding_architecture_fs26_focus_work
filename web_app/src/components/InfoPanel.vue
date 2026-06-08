@@ -106,7 +106,7 @@ const formatLabel = (key) => key.replace(/_/g, " ");
                     </ul>
 
                     <!-- Joints -->
-                    <h3 class="joints-title">Joints</h3>
+                    <h3 class="joints-title">joints</h3>
                     <div v-if="filteredJoints" class="joints-container">
                         <div v-for="(items, jointType) in filteredJoints" :key="jointType" class="joint-row">
                             <span class="joint-type">{{ jointType }}</span>
