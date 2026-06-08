@@ -432,7 +432,19 @@ def run_numbering(timber_model, Index, RunExport):
         for i, node in enumerate(ordered):
             beam = timber_model.get_element(node)
             name = "{}{}".format(k, i + 1)
-            geom[k].append(beam.geometry)
+            
+            # --- TRUCCO DI CONVERSIONE FONDAMENTALE ---
+            # Estraiamo qui la geometria nativa di Rhino (Brep/Mesh), altrimenti si perde nel passaggio dati
+            rhino_geom = beam.geometry
+            if hasattr(beam.geometry, "native_brep") and beam.geometry.native_brep:
+                rhino_geom = beam.geometry.native_brep
+            elif hasattr(beam.geometry, "native_mesh") and beam.geometry.native_mesh:
+                rhino_geom = beam.geometry.native_mesh
+            elif hasattr(beam.geometry, "to_rhino"):
+                try: rhino_geom = beam.geometry.to_rhino()
+                except: pass
+
+            geom[k].append(rhino_geom)
             beam_label_by_guid[node] = name
 
     # =========================
@@ -638,7 +650,7 @@ def run_numbering(timber_model, Index, RunExport):
             json.dump({"total_beams": len(all_beams_list), "bounding_box": {"min": [round(min_x3, 4), round(min_y3, 4), round(min_z3, 4)], "max": [round(max_x3, 4), round(max_y3, 4), round(max_z3, 4)]}, "beams": all_beams_list}, f, indent=2)
         json_files_created.append(global_structure_path)
 
-        json_export_out = "JSON: | STL: {} | Errori STL: {}".format(len(json_files_created), len(stl_files_created), len(stl_errors))
+        json_export_out = "JSON: {} | STL: {} | Errori STL: {}".format(len(json_files_created), len(stl_files_created), len(stl_errors))
         if stl_errors: json_export_out += "\n" + "\n".join(stl_errors[:5])
 
     # =========================
