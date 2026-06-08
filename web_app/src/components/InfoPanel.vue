@@ -96,6 +96,17 @@ const formatLabel = (key) => key.replace(/_/g, " ");
                 <!-- RIGHT: Module -->
                 <section class="info-section">
                     <h3>Module</h3>
+
+                    <!-- Engraving text (no title) -->
+                    <ul class="specs-list">
+                        <li class="spec-item">
+                            <span class="label">engraving text</span>
+                            <span class="value">{{ engravingText }}</span>
+                        </li>
+                    </ul>
+
+                    <!-- Joints -->
+                    <h3 class="joints-title">Joints</h3>
                     <div v-if="filteredJoints" class="joints-container">
                         <div v-for="(items, jointType) in filteredJoints" :key="jointType" class="joint-row">
                             <span class="joint-type">{{ jointType }}</span>
@@ -103,14 +114,6 @@ const formatLabel = (key) => key.replace(/_/g, " ");
                         </div>
                     </div>
                     <div v-else class="no-joints">—</div>
-
-                    <h3 class="engraving-title">Engraving</h3>
-                    <ul class="specs-list">
-                        <li class="spec-item">
-                            <span class="label">engraving text</span>
-                            <span class="value">{{ engravingText }}</span>
-                        </li>
-                    </ul>
                 </section>
             </div>
         </div>
@@ -154,7 +157,11 @@ h3 {
     margin-bottom: 6px;
 }
 
-.engraving-title {
+.joints-title {
+    font-size: 10px;
+    text-transform: uppercase;
+    color: #888;
+    font-weight: 500;
     margin-top: 14px;
     margin-bottom: 6px;
 }
@@ -273,6 +280,11 @@ h3 {
     h3 {
         font-size: 10px;
         margin-bottom: 3px;
+    }
+
+    .joints-title {
+        font-size: 9px;
+        margin-top: 10px;
     }
 
     .module-tag {
