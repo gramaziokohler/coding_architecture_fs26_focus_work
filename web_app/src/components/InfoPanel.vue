@@ -12,12 +12,20 @@ const beamData = ref(null);
 const loading = ref(true);
 const error = ref(null);
 
-const HIDDEN_KEYS = ["name", "3d_model", "frame", "local_frame", "global_position", "connected_beams", "joints"];
+const HIDDEN_KEYS = ["name", "3d_model", "frame", "local_frame", "global_position", "connected_beams", "joints", "processing", "processings", "features", "machining"];
 
-const frameData = computed(() => beamData.value?.frame || beamData.value?.local_frame || null);
 const positionData = computed(() => beamData.value?.global_position || {});
+const frameData = computed(() => beamData.value?.frame || beamData.value?.local_frame || null);
 const engravingText = computed(() => beamData.value?.engraving_text || beamData.value?.name || beamData.value?.["beam ID"]);
 const engravingLocation = computed(() => positionData.value?.midpoint || frameData.value?.origin || null);
+
+const filteredJoints = computed(() => {
+    if (!beamData.value?.joints) return null;
+    const skip = ["all", "details"];
+    return Object.fromEntries(
+        Object.entries(beamData.value.joints).filter(([key]) => !skip.includes(key))
+    );
+});
 
 const loadBeamInfo = async () => {
     loading.value = true;
@@ -89,37 +97,7 @@ const formatLabel = (key) => key.replace(/_/g, " ");
                 </section>
 
                 <section class="info-section">
-                    <h3>Frame + Centerline</h3>
-                    <ul class="specs-list">
-                        <li v-if="frameData?.origin" class="spec-item">
-                            <span class="label">beam.frame origin</span>
-                            <span class="value">{{ formatValue(frameData.origin) }}</span>
-                        </li>
-                        <li v-if="frameData?.x_axis" class="spec-item">
-                            <span class="label">x axis</span>
-                            <span class="value">{{ formatValue(frameData.x_axis) }}</span>
-                        </li>
-                        <li v-if="frameData?.y_axis" class="spec-item">
-                            <span class="label">y axis</span>
-                            <span class="value">{{ formatValue(frameData.y_axis) }}</span>
-                        </li>
-                        <li v-if="frameData?.z_axis" class="spec-item">
-                            <span class="label">z axis</span>
-                            <span class="value">{{ formatValue(frameData.z_axis) }}</span>
-                        </li>
-                        <li v-if="positionData.centerline_start" class="spec-item">
-                            <span class="label">centerline start</span>
-                            <span class="value">{{ formatValue(positionData.centerline_start) }}</span>
-                        </li>
-                        <li v-if="positionData.centerline_end" class="spec-item">
-                            <span class="label">centerline end</span>
-                            <span class="value">{{ formatValue(positionData.centerline_end) }}</span>
-                        </li>
-                    </ul>
-                </section>
-
-                <section class="info-section">
-                    <h3>Engraving + Joints</h3>
+                    <h3>Engraving</h3>
                     <ul class="specs-list">
                         <li class="spec-item">
                             <span class="label">engraving text</span>
@@ -131,8 +109,9 @@ const formatLabel = (key) => key.replace(/_/g, " ");
                         </li>
                     </ul>
 
-                    <div v-if="beamData.joints" class="joints-container">
-                        <div v-for="(items, jointType) in beamData.joints" :key="jointType" class="joint-row">
+                    <h3 class="joints-title">Joints</h3>
+                    <div v-if="filteredJoints" class="joints-container">
+                        <div v-for="(items, jointType) in filteredJoints" :key="jointType" class="joint-row">
                             <span class="joint-type">{{ jointType }}</span>
                             <span class="joint-values">{{ items.length > 0 ? items.join(", ") : "none" }}</span>
                         </div>
@@ -180,6 +159,11 @@ h3 {
     margin-bottom: 6px;
 }
 
+.joints-title {
+    margin-top: 14px;
+    margin-bottom: 6px;
+}
+
 .module-tag {
     border: 1px solid #d0d0d0;
     padding: 3px 8px;
@@ -200,7 +184,7 @@ h3 {
 
 .info-grid {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: 1fr 2fr;
     gap: 18px;
 }
 
