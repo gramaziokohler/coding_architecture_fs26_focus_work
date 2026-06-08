@@ -2,10 +2,7 @@
 import { computed, onMounted, ref, watch } from "vue";
 
 const props = defineProps({
-    beamUrl: {
-        type: String,
-        default: "",
-    },
+    beamUrl: { type: String, default: "" },
 });
 
 const beamData = ref(null);
@@ -50,8 +47,8 @@ const loadBeamInfo = async () => {
 onMounted(loadBeamInfo);
 watch(() => props.beamUrl, loadBeamInfo);
 
-const isObject = (value) => typeof value === "object" && value !== null;
 const isArray = (value) => Array.isArray(value);
+const isObject = (value) => typeof value === "object" && value !== null;
 const formatNumber = (value) => (Number.isFinite(value) ? Number(value).toFixed(2) : value);
 const formatValue = (value) => {
     if (isArray(value)) return value.map(formatNumber).join(", ");
@@ -60,42 +57,6 @@ const formatValue = (value) => {
     return value;
 };
 const formatLabel = (key) => key.replace(/_/g, " ").replace("cm3", "cm³");
-
-const beamRows = computed(() => {
-    if (!beamData.value) return [];
-    const rows = Object.entries(beamData.value)
-        .filter(([key]) => !HIDDEN_KEYS.includes(key))
-        .map(([key, value]) => ({ label: formatLabel(key), value: formatValue(value) }));
-    if (beamData.value.connected_beams?.length) {
-        rows.push({ label: "connected beams", value: beamData.value.connected_beams.join(", ") });
-    }
-    return rows;
-});
-
-const moduleRows = computed(() => {
-    const rows = [{ label: "engraving text", value: engravingText.value }];
-    if (filteredJoints.value) {
-        rows.push({ label: "joints", value: "", isJointTitle: true });
-        Object.entries(filteredJoints.value).forEach(([type, items]) => {
-            rows.push({ label: type, value: items?.length ? items.join(", ") : "—", isJoint: true });
-        });
-    }
-    return rows;
-});
-
-const unifiedRows = computed(() => {
-    const left = beamRows.value;
-    const right = moduleRows.value;
-    const len = Math.max(left.length, right.length);
-    return Array.from({ length: len }, (_, i) => ({
-        leftLabel: left[i]?.label ?? "",
-        leftValue: left[i]?.value ?? "",
-        rightLabel: right[i]?.label ?? "",
-        rightValue: right[i]?.value ?? "",
-        rightIsJointTitle: right[i]?.isJointTitle ?? false,
-        rightIsJoint: right[i]?.isJoint ?? false,
-    }));
-});
 </script>
 
 <template>
@@ -108,34 +69,48 @@ const unifiedRows = computed(() => {
                 <span class="module-tag">Module {{ beamData.module }}</span>
             </div>
 
-            <!-- Column headers -->
-            <div class="unified-grid headers">
-                <span class="col-header">Beam</span>
-                <span></span>
-                <span class="col-header">Module</span>
-                <span></span>
-            </div>
+            <div class="info-grid">
+                <!-- LEFT: Beam -->
+                <section class="info-section">
+                    <h3>Beam</h3>
+                    <ul class="specs-list">
+                        <li
+                            v-for="(value, key) in beamData"
+                            :key="key"
+                            v-show="!HIDDEN_KEYS.includes(key)"
+                            class="spec-item"
+                        >
+                            <span class="label">{{ formatLabel(key) }}</span>
+                            <span class="value">{{ formatValue(value) }}</span>
+                        </li>
+                        <li v-if="beamData.connected_beams?.length" class="spec-item">
+                            <span class="label">connected beams</span>
+                            <span class="value">{{ beamData.connected_beams.join(", ") }}</span>
+                        </li>
+                    </ul>
+                </section>
 
-            <!-- Unified rows -->
-            <div class="unified-grid">
-                <template v-for="(row, i) in unifiedRows" :key="i">
-                    <!-- Left: beam -->
-                    <span class="label">{{ row.leftLabel }}</span>
-                    <span class="value">{{ row.leftValue }}</span>
+                <!-- RIGHT: Module -->
+                <section class="info-section">
+                    <h3>Module</h3>
+                    <ul class="specs-list">
+                        <li class="spec-item">
+                            <span class="label">engraving text</span>
+                            <span class="value">{{ engravingText }}</span>
+                        </li>
+                    </ul>
 
-                    <!-- Right: module -->
-                    <span
-                        class="label"
-                        :class="{
-                            'joint-title': row.rightIsJointTitle,
-                            'joint-type': row.rightIsJoint
-                        }"
-                    >{{ row.rightLabel }}</span>
-                    <span
-                        class="value"
-                        :class="{ 'joint-title': row.rightIsJointTitle }"
-                    >{{ row.rightIsJointTitle ? '' : row.rightValue }}</span>
-                </template>
+                    <div class="joints-title-row">
+                        <span class="label">joints</span>
+                    </div>
+                    <div v-if="filteredJoints" class="joints-container">
+                        <div v-for="(items, jointType) in filteredJoints" :key="jointType" class="joint-row">
+                            <span class="joint-type">{{ jointType }}</span>
+                            <span class="joint-values">{{ items?.length ? items.join(", ") : "—" }}</span>
+                        </div>
+                    </div>
+                    <div v-else class="no-joints">—</div>
+                </section>
             </div>
         </div>
     </div>
@@ -161,9 +136,16 @@ const unifiedRows = computed(() => {
 h2 {
     margin: 0;
     color: #000;
-    line-height: 1.2;
     font-weight: 600;
     font-size: 18px;
+}
+
+h3 {
+    margin: 0 0 6px 0;
+    font-size: 12px;
+    text-transform: uppercase;
+    color: #555;
+    font-weight: 600;
 }
 
 .module-tag {
@@ -173,65 +155,67 @@ h2 {
     color: #111;
 }
 
-.status,
-.error {
+.status, .error {
     font-size: 13px;
     color: #666;
     padding: 4px 0;
 }
 
-.error {
-    color: #000;
-}
-
-/* Grid */
-.unified-grid {
+.info-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr 1fr;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+    align-items: start;
 }
 
-.unified-grid.headers {
-    margin-bottom: 4px;
+.specs-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
 }
 
-.col-header {
+.spec-item {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    height: 31px;
+    align-items: center;
+    border-bottom: 1px solid #e0e0e0;
     font-size: 12px;
-    text-transform: uppercase;
-    color: #555;
-    font-weight: 600;
+    box-sizing: border-box;
 }
 
-.unified-grid > span {
-    padding: 6px 0;
+.joints-title-row {
+    height: 31px;
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid #e0e0e0;
+    margin-top: 14px;
+}
+
+.joint-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    height: 31px;
     font-size: 12px;
     border-bottom: 1px solid #e0e0e0;
+    box-sizing: border-box;
 }
 
 .label {
     color: #666;
     font-weight: 400;
-}
-
-.value {
-    color: #000;
-    font-weight: 500;
-    text-align: right;
-    padding-right: 24px;
-    word-break: break-word;
-}
-
-/* last value of each pair no right padding */
-.unified-grid > span:nth-child(4n) {
-    padding-right: 0;
-    text-align: right;
-    color: #000;
-    font-weight: 500;
-}
-
-.joint-title {
-    color: #666;
-    font-weight: 400;
     font-size: 12px;
+    flex: 0 0 auto;
+}
+
+.value, .joint-values {
+    color: #000;
+    font-weight: 500;
+    text-align: right;
+    word-break: break-word;
 }
 
 .joint-type {
@@ -239,42 +223,31 @@ h2 {
     font-weight: 600;
     border: 1px solid #d8d8d8;
     padding: 2px 6px;
-    align-self: center;
-    display: inline-block;
-    width: fit-content;
+    flex: 0 0 auto;
+}
+
+.no-joints {
+    font-size: 12px;
+    color: #999;
+}
+
+.joints-container {
+    display: flex;
+    flex-direction: column;
+}
+
+@media (max-width: 900px) {
+    .info-grid { grid-template-columns: 1fr; gap: 12px; }
 }
 
 @media (max-width: 760px) {
-    .info-panel {
-        max-height: 29vh;
-        padding: 8px 11px;
-    }
-
-    .panel-header {
-        gap: 8px;
-        margin-bottom: 6px;
-    }
-
-    h2 {
-        font-size: 14px;
-    }
-
-    .col-header {
-        font-size: 10px;
-    }
-
-    .module-tag {
-        padding: 2px 6px;
-        font-size: 10px;
-    }
-
-    .unified-grid > span {
-        padding: 4px 0;
-        font-size: 10px;
-    }
-
-    .joint-type {
-        padding: 1px 4px;
-    }
+    .info-panel { max-height: 29vh; padding: 8px 11px; }
+    h2 { font-size: 14px; }
+    h3 { font-size: 10px; margin-bottom: 3px; }
+    .module-tag { padding: 2px 6px; font-size: 10px; }
+    .info-grid { gap: 7px; }
+    .spec-item, .joint-row { height: 24px; font-size: 10px; gap: 8px; }
+    .label { font-size: 10px; }
+    .joints-title-row { height: 24px; margin-top: 10px; }
 }
 </style>
