@@ -59,7 +59,7 @@ const formatValue = (value) => {
     if (Number.isFinite(value)) return Number(value).toFixed(2);
     return value;
 };
-const formatLabel = (key) => key.replace(/_/g, " ");
+const formatLabel = (key) => key.replace(/_/g, " ").replace("cm3", "cm³");
 </script>
 
 <template>
@@ -97,7 +97,6 @@ const formatLabel = (key) => key.replace(/_/g, " ");
                 <section class="info-section">
                     <h3>Module</h3>
 
-                    <!-- Engraving text (no title) -->
                     <ul class="specs-list">
                         <li class="spec-item">
                             <span class="label">engraving text</span>
@@ -106,7 +105,9 @@ const formatLabel = (key) => key.replace(/_/g, " ");
                     </ul>
 
                     <!-- Joints -->
-                    <h3 class="joints-title">Joints</h3>
+                    <div class="joints-title-row">
+                        <span class="label">joints</span>
+                    </div>
                     <div v-if="filteredJoints" class="joints-container">
                         <div v-for="(items, jointType) in filteredJoints" :key="jointType" class="joint-row">
                             <span class="joint-type">{{ jointType }}</span>
@@ -157,11 +158,7 @@ h3 {
     margin-bottom: 6px;
 }
 
-.joints-title {
-    font-size: 10px;
-    text-transform: uppercase;
-    color: #888;
-    font-weight: 500;
+.joints-title-row {
     margin-top: 14px;
     margin-bottom: 6px;
 }
@@ -215,6 +212,7 @@ h3 {
     color: #666;
     font-weight: 400;
     flex: 0 0 auto;
+    font-size: 12px;
 }
 
 .value,
@@ -282,9 +280,13 @@ h3 {
         margin-bottom: 3px;
     }
 
-    .joints-title {
-        font-size: 9px;
+    .joints-title-row {
         margin-top: 10px;
+        margin-bottom: 3px;
+    }
+
+    .label {
+        font-size: 10px;
     }
 
     .module-tag {
@@ -312,3 +314,4 @@ h3 {
     }
 }
 </style>
+
