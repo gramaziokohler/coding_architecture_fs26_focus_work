@@ -27,8 +27,8 @@ class DrillingProcessor:
         
         self.hardware_screws_by_type = {}
         self.screw_lengths_by_type = {}
-        self.extrema_screws_by_type = {}
         self.miter_counts = {}
+        self.screw_lengths_by_type = {}
 
     def process_drillings(self):
         print("--- Starting Drilling Generation ---")
@@ -41,7 +41,6 @@ class DrillingProcessor:
         
         self.hardware_screws_by_type = {}
         self.screw_lengths_by_type = {}
-        self.extrema_screws_by_type = {}
         self.miter_counts = {}
         
         for beam in self.timber_model.beams:
@@ -209,7 +208,7 @@ class DrillingProcessor:
     # EXPLICIT FOUNDATION BUTT DRILLING
     # =====================================================================
     def _apply_foundation_butt_drilling(self, joint, abut_beam, cont_beam):
-        joint_label = "TButtJoint - foundation"
+        joint_label = "TButtJoint - foundation inner structure"
         
         line_a = abut_beam.centerline
         line_c = cont_beam.centerline
@@ -272,7 +271,18 @@ class DrillingProcessor:
 # =====================================================================
     # EXPLICIT STANDARD BUTT DRILLING
     # =====================================================================
-    def _apply_standard_butt_drilling(self, joint):
+    def _apply_butt_drilling(self, joint, beam1, beam2):
+        """Routes the TButtJoint to the appropriate drilling logic based on category."""
+        cat1 = beam1.attributes.get("category", "inner")
+        cat2 = beam2.attributes.get("category", "inner")
+
+        if cat1 == "base" or cat2 == "base":
+            return self._apply_foundation_butt_drilling(joint, beam1, beam2)
+        else:
+            # Removed the extra arguments to fix the TypeError
+            return self._apply_standard_butt_drilling(joint, beam1, beam2)
+
+    def _apply_standard_butt_drilling(self, joint, beam1, beam2):
         """
         Calculates a diagonal screw path from the far face of the continuous beam 
         into the end-grain of the abutting beam, exactly matching your calculator.
@@ -340,7 +350,7 @@ class DrillingProcessor:
         ]
         hw_lines = [line_1, line_2]
         
-        joint_label = "TButtJoint - arch" if abut_beam.attributes.get("category") == "arch" or cont_beam.attributes.get("category") == "arch" else "TButtJoint - inner"
+        joint_label = "TButtJoint - arch" if abut_beam.attributes.get("category") == "arch" or cont_beam.attributes.get("category") == "arch" else "TButtJoint - interior"
         
         self._generate_features(cnc_lines, hw_lines, abut_beam, cont_beam, joint_label, req_screw_length)
 
@@ -445,19 +455,6 @@ class DrillingProcessor:
                 self.screw_lines.append(hw_line)
                 self.hardware_screws_by_type[joint_label] += 1
                 self.screw_lengths_by_type[joint_label].append(req_screw_length)
-                
-                # Track longest and shortest screws per joint type
-                if joint_label not in self.extrema_screws_by_type:
-                    self.extrema_screws_by_type[joint_label] = {
-                        "longest": {"line": hw_line, "length": req_screw_length},
-                        "shortest": {"line": hw_line, "length": req_screw_length}
-                    }
-                else:
-                    if req_screw_length > self.extrema_screws_by_type[joint_label]["longest"]["length"]:
-                        self.extrema_screws_by_type[joint_label]["longest"] = {"line": hw_line, "length": req_screw_length}
-                    if req_screw_length < self.extrema_screws_by_type[joint_label]["shortest"]["length"]:
-                        self.extrema_screws_by_type[joint_label]["shortest"] = {"line": hw_line, "length": req_screw_length}
-                
                 success = True
             else:
                 self.failed_screw_info.append({
