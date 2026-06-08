@@ -27,7 +27,6 @@ class DrillingProcessor:
         
         self.hardware_screws_by_type = {}
         self.screw_lengths_by_type = {}
-        self.extrema_screws_by_type = {}
         self.miter_counts = {}
 
     def process_drillings(self):
@@ -41,7 +40,6 @@ class DrillingProcessor:
         
         self.hardware_screws_by_type = {}
         self.screw_lengths_by_type = {}
-        self.extrema_screws_by_type = {}
         self.miter_counts = {}
         
         for beam in self.timber_model.beams:
@@ -107,7 +105,11 @@ class DrillingProcessor:
                         cont_beam, abut_beam = abut_beam, cont_beam
                     self._apply_foundation_butt_drilling(joint, abut_beam, cont_beam)
                 else:
-                    self._apply_standard_butt_drilling(joint)
+                    if cat_c == "arch" or cat_a == "arch":
+                        joint_label = "TButtJoint - arch"
+                    else:
+                        joint_label = "TButtJoint - interior interior"
+                    self._apply_standard_butt_drilling(joint, abut_beam, cont_beam, joint_label)
 
             elif isinstance(joint, (XLapJoint, TLapJoint)):
                 self._apply_lap_drilling(joint, elements[0], elements[1])
@@ -209,7 +211,7 @@ class DrillingProcessor:
     # EXPLICIT FOUNDATION BUTT DRILLING
     # =====================================================================
     def _apply_foundation_butt_drilling(self, joint, abut_beam, cont_beam):
-        joint_label = "TButtJoint - foundation"
+        joint_label = "TButtJoint - foundation inner structure"
         
         line_a = abut_beam.centerline
         line_c = cont_beam.centerline
@@ -272,77 +274,74 @@ class DrillingProcessor:
 # =====================================================================
     # EXPLICIT STANDARD BUTT DRILLING
     # =====================================================================
-    def _apply_standard_butt_drilling(self, joint):
-        """
-        Calculates a diagonal screw path from the far face of the continuous beam 
-        into the end-grain of the abutting beam, exactly matching your calculator.
-        """
-        # 1. GEOMETRIC ROLE DETECTION (Bulletproof)
-        line1, line2 = joint.main_beam.centerline, joint.cross_beam.centerline
-        res = intersection_line_line(line1, line2)
-        if not res or res[0] is None:
-            return
-
-        pt_a, pt_b = res
-        # pt_a is on main_beam, pt_b is on cross_beam
-        # Find which is the abutting beam (end closer to intersection)
-        d_main = min(distance_point_point(pt_a, line1.start), distance_point_point(pt_a, line1.end))
-        d_cross = min(distance_point_point(pt_b, line2.start), distance_point_point(pt_b, line2.end))
+    def _apply_standard_butt_drilling(self, joint, abut_beam, cont_beam, joint_label):
+        line_a = abut_beam.centerline
+        line_c = cont_beam.centerline
         
-        # Abutting beam is the one ending at the joint
-        if d_main < d_cross:
-            abut_beam, cont_beam = joint.main_beam, joint.cross_beam
-            pt_abut, pt_cont = pt_a, pt_b
+        res = intersection_line_line(line_a, line_c)
+        if not res or res[0] is None: return False
+        
+        anchor_pt = Point(res[0][0], res[0][1], res[0][2])
+        dir_s = line_a.direction
+        d_start = distance_point_point(anchor_pt, line_a.start)
+        d_end = distance_point_point(anchor_pt, line_a.end)
+        
+        if d_start > d_end:
+            vec_to_far = Vector.from_start_end(anchor_pt, line_a.start)
         else:
-            abut_beam, cont_beam = joint.cross_beam, joint.main_beam
-            pt_abut, pt_cont = pt_b, pt_a
-
-        # 2. VECTOR MATH
-        # dir_s points strictly INTO the abutting beam
-        dir_s = abut_beam.centerline.direction.copy()
-        vec_to_mid = Vector.from_start_end(pt_abut, abut_beam.centerline.midpoint)
-        if dir_s.dot(vec_to_mid) < 0:
+            vec_to_far = Vector.from_start_end(anchor_pt, line_a.end)
+            
+        if dir_s.dot(vec_to_far) < 0:
             dir_s.scale(-1)
         dir_s.unitize()
-
-        dir_cont = cont_beam.centerline.direction.copy()
-        dir_cont.unitize()
-
-        # 3. DIAGONAL TRAVERSAL (The 50cm calculator logic)
-        dist_centers = distance_point_point(pt_abut, pt_cont)
-        cos_alpha = abs(dir_s.dot(dir_cont))
-        sin_alpha = math.sqrt(max(0.001, 1.0 - cos_alpha**2))
         
-        # Diagonal distance from center of continuous beam to its face
-        thickness_c = max(cont_beam.width, cont_beam.height)
-        traversal_half = (thickness_c / 2.0 + dist_centers) / sin_alpha
-        
-        # Total screw = Traversing continuous beam (2 * half) + 8cm anchor
-        req_screw_length = (2.0 * traversal_half) + 0.080
-        
-        # 4. OFFSET FOR PAIR OF SCREWS
-        offset_dir = dir_s.cross(dir_cont)
+        screw_dir = dir_s                                     
+        base_pt = anchor_pt
+        offset_dir = abut_beam.frame.yaxis                    
+        if offset_dir.length < 1e-5:
+            offset_dir = dir_s.cross(line_c.direction)
         offset_dir.unitize()
+        target_beam = cont_beam                               
+
         offset_vec = offset_dir * (self.screw_spacing / 2.0)
         
-        # 5. GENERATE DRILLING FEATURES
-        # Start at far face, end 8cm inside abutting
-        start_pt = pt_abut - (dir_s * traversal_half)
-        end_pt = pt_abut + (dir_s * 0.080)
+        # --- NEW DYNAMIC LENGTH LOGIC ---
+        # 1. Shoot a ray to find the exact entry point on the continuous beam's outer face
+        center_head = self._surface_entry(base_pt, screw_dir, target_beam)
         
-        line_1 = Line(start_pt + offset_vec, end_pt + offset_vec)
-        line_2 = Line(start_pt - offset_vec, end_pt - offset_vec)
+        if center_head:
+            # Distance from the outer face to the centerline intersection
+            half_thickness = distance_point_point(center_head, base_pt)
+            # True diagonal distance through the entire first beam
+            dist_through_beam1 = half_thickness * 2.0
+        else:
+            # Fallback if the ray misses
+            dist_through_beam1 = max(cont_beam.width, cont_beam.height)
+            
+        # 2. Rule: Penetrate beam 2 by the exact same distance it travels through beam 1
+        raw_screw_length = dist_through_beam1 * 2.0
+        req_screw_length = math.ceil(raw_screw_length / 0.010) * 0.010 # Round up to nearest 10mm
         
-        # Create CNC lines with tolerance
-        cnc_lines = [
-            Line(line_1.start - (dir_s * 0.050), line_1.end + (dir_s * 0.050)),
-            Line(line_2.start - (dir_s * 0.050), line_2.end + (dir_s * 0.050))
-        ]
-        hw_lines = [line_1, line_2]
+        cnc_lines = []
+        hw_lines = []
         
-        joint_label = "TButtJoint - arch" if abut_beam.attributes.get("category") == "arch" or cont_beam.attributes.get("category") == "arch" else "TButtJoint - inner"
-        
-        self._generate_features(cnc_lines, hw_lines, abut_beam, cont_beam, joint_label, req_screw_length)
+        for pos in (base_pt + offset_vec, base_pt - offset_vec):
+            head = self._surface_entry(pos, screw_dir, target_beam)
+            if head is None:
+                half = dist_through_beam1 / 2.0
+                head = pos - screw_dir * half
+                
+            tail = head + screw_dir * req_screw_length
+            
+            # Hardware Vis: Exact physical screw length
+            hw_lines.append(Line(head, tail))
+            
+            # CNC Toolpath: Overhangs entry surface by 10mm to satisfy the solver
+            cnc_head = head - screw_dir * 0.010
+            cnc_tail = tail + screw_dir * 0.010
+            cnc_lines.append(Line(cnc_head, cnc_tail))
+
+        return self._generate_features(cnc_lines, hw_lines, abut_beam, cont_beam, joint_label, req_screw_length)
 
     # =====================================================================
     # EXPLICIT LAP DRILLING
@@ -445,19 +444,6 @@ class DrillingProcessor:
                 self.screw_lines.append(hw_line)
                 self.hardware_screws_by_type[joint_label] += 1
                 self.screw_lengths_by_type[joint_label].append(req_screw_length)
-                
-                # Track longest and shortest screws per joint type
-                if joint_label not in self.extrema_screws_by_type:
-                    self.extrema_screws_by_type[joint_label] = {
-                        "longest": {"line": hw_line, "length": req_screw_length},
-                        "shortest": {"line": hw_line, "length": req_screw_length}
-                    }
-                else:
-                    if req_screw_length > self.extrema_screws_by_type[joint_label]["longest"]["length"]:
-                        self.extrema_screws_by_type[joint_label]["longest"] = {"line": hw_line, "length": req_screw_length}
-                    if req_screw_length < self.extrema_screws_by_type[joint_label]["shortest"]["length"]:
-                        self.extrema_screws_by_type[joint_label]["shortest"] = {"line": hw_line, "length": req_screw_length}
-                
                 success = True
             else:
                 self.failed_screw_info.append({
