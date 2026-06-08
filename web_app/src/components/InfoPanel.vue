@@ -163,6 +163,7 @@ h3 {
     font-weight: 500;
     margin-top: 14px;
     margin-bottom: 6px;
+    text-transform: none;
 }
 
 .module-tag {
