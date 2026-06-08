@@ -17,7 +17,6 @@ const HIDDEN_KEYS = ["name", "3d_model", "frame", "local_frame", "global_positio
 const positionData = computed(() => beamData.value?.global_position || {});
 const frameData = computed(() => beamData.value?.frame || beamData.value?.local_frame || null);
 const engravingText = computed(() => beamData.value?.engraving_text || beamData.value?.name || beamData.value?.["beam ID"]);
-const engravingLocation = computed(() => positionData.value?.midpoint || frameData.value?.origin || null);
 
 const filteredJoints = computed(() => {
     if (!beamData.value?.joints) return null;
@@ -55,11 +54,12 @@ watch(() => props.beamUrl, loadBeamInfo);
 const isObject = (value) => typeof value === "object" && value !== null;
 const isArray = (value) => Array.isArray(value);
 
-const formatNumber = (value) => (Number.isFinite(value) ? Number(value).toFixed(4) : value);
+const formatNumber = (value) => (Number.isFinite(value) ? Number(value).toFixed(2) : value);
 
-const formatValue = (value) => {
+const formatValue = (value, key) => {
     if (isArray(value)) return value.map(formatNumber).join(", ");
     if (isObject(value)) return JSON.stringify(value);
+    if (Number.isFinite(value)) return Number(value).toFixed(2);
     return value;
 };
 
@@ -87,7 +87,7 @@ const formatLabel = (key) => key.replace(/_/g, " ");
                             class="spec-item"
                         >
                             <span class="label">{{ formatLabel(key) }}</span>
-                            <span class="value">{{ formatValue(value) }}</span>
+                            <span class="value">{{ formatValue(value, key) }}</span>
                         </li>
                         <li v-if="beamData.connected_beams?.length" class="spec-item">
                             <span class="label">connected beams</span>
@@ -102,10 +102,6 @@ const formatLabel = (key) => key.replace(/_/g, " ");
                         <li class="spec-item">
                             <span class="label">engraving text</span>
                             <span class="value">{{ engravingText }}</span>
-                        </li>
-                        <li v-if="engravingLocation" class="spec-item">
-                            <span class="label">engraving location</span>
-                            <span class="value">{{ formatValue(engravingLocation) }}</span>
                         </li>
                     </ul>
 
