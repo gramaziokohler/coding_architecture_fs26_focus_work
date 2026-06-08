@@ -133,6 +133,14 @@ const formatLabel = (key) => key.replace(/_/g, " ").replace("cm3", "cm³");
                                 </span>
                             </li>
                         </template>
+                        <template v-else>
+                            <li class="spec-item joints-section-title">
+                                <span>joints</span>
+                            </li>
+                            <li class="spec-item">
+                                <span class="value" style="width: 100%; text-align: right;">—</span>
+                            </li>
+                        </template>
                     </ul>
                 </div>
             </div>
