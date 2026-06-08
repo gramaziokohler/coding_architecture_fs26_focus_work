@@ -12,11 +12,14 @@ const beamData = ref(null);
 const loading = ref(true);
 const error = ref(null);
 
-const HIDDEN_KEYS = ["name", "3d_model", "frame", "local_frame", "global_position", "connected_beams", "joints", "processing", "processings", "features", "machining"];
+const HIDDEN_KEYS = [
+    "name", "3d_model", "frame", "local_frame", "global_position",
+    "connected_beams", "joints", "processing", "processings", "features", "machining"
+];
 
-const positionData = computed(() => beamData.value?.global_position || {});
-const frameData = computed(() => beamData.value?.frame || beamData.value?.local_frame || null);
-const engravingText = computed(() => beamData.value?.engraving_text || beamData.value?.name || beamData.value?.["beam ID"]);
+const engravingText = computed(() =>
+    beamData.value?.engraving_text || beamData.value?.name || beamData.value?.["beam ID"]
+);
 
 const filteredJoints = computed(() => {
     if (!beamData.value?.joints) return null;
@@ -30,15 +33,11 @@ const loadBeamInfo = async () => {
     loading.value = true;
     error.value = null;
     try {
-        if (!props.beamUrl) {
-            throw new Error("No beam URL provided");
-        }
+        if (!props.beamUrl) throw new Error("No beam URL provided");
         const beamName = props.beamUrl.split("/").pop();
         const jsonUrl = props.beamUrl + "/" + beamName + ".json";
         const response = await fetch(jsonUrl);
-        if (!response.ok) {
-            throw new Error(`Failed to fetch beam data: ${response.status} ${response.statusText}`);
-        }
+        if (!response.ok) throw new Error(`Failed to fetch beam data: ${response.status} ${response.statusText}`);
         beamData.value = await response.json();
     } catch (e) {
         error.value = e.message;
@@ -53,16 +52,13 @@ watch(() => props.beamUrl, loadBeamInfo);
 
 const isObject = (value) => typeof value === "object" && value !== null;
 const isArray = (value) => Array.isArray(value);
-
 const formatNumber = (value) => (Number.isFinite(value) ? Number(value).toFixed(2) : value);
-
-const formatValue = (value, key) => {
+const formatValue = (value) => {
     if (isArray(value)) return value.map(formatNumber).join(", ");
     if (isObject(value)) return JSON.stringify(value);
     if (Number.isFinite(value)) return Number(value).toFixed(2);
     return value;
 };
-
 const formatLabel = (key) => key.replace(/_/g, " ");
 </script>
 
@@ -77,6 +73,7 @@ const formatLabel = (key) => key.replace(/_/g, " ");
             </div>
 
             <div class="info-grid">
+                <!-- LEFT: Beam -->
                 <section class="info-section">
                     <h3>Beam</h3>
                     <ul class="specs-list">
@@ -87,7 +84,7 @@ const formatLabel = (key) => key.replace(/_/g, " ");
                             class="spec-item"
                         >
                             <span class="label">{{ formatLabel(key) }}</span>
-                            <span class="value">{{ formatValue(value, key) }}</span>
+                            <span class="value">{{ formatValue(value) }}</span>
                         </li>
                         <li v-if="beamData.connected_beams?.length" class="spec-item">
                             <span class="label">connected beams</span>
@@ -96,22 +93,24 @@ const formatLabel = (key) => key.replace(/_/g, " ");
                     </ul>
                 </section>
 
+                <!-- RIGHT: Module -->
                 <section class="info-section">
-                    <h3>Engraving</h3>
+                    <h3>Module</h3>
+                    <div v-if="filteredJoints" class="joints-container">
+                        <div v-for="(items, jointType) in filteredJoints" :key="jointType" class="joint-row">
+                            <span class="joint-type">{{ jointType }}</span>
+                            <span class="joint-values">{{ items && items.length > 0 ? items.join(", ") : "—" }}</span>
+                        </div>
+                    </div>
+                    <div v-else class="no-joints">—</div>
+
+                    <h3 class="engraving-title">Engraving</h3>
                     <ul class="specs-list">
                         <li class="spec-item">
                             <span class="label">engraving text</span>
                             <span class="value">{{ engravingText }}</span>
                         </li>
                     </ul>
-
-                    <h3 class="joints-title">Joints</h3>
-                    <div v-if="filteredJoints" class="joints-container">
-                        <div v-for="(items, jointType) in filteredJoints" :key="jointType" class="joint-row">
-                            <span class="joint-type">{{ jointType }}</span>
-                            <span class="joint-values">{{ items.length > 0 ? items.join(", ") : "none" }}</span>
-                        </div>
-                    </div>
                 </section>
             </div>
         </div>
@@ -155,7 +154,7 @@ h3 {
     margin-bottom: 6px;
 }
 
-.joints-title {
+.engraving-title {
     margin-top: 14px;
     margin-bottom: 6px;
 }
@@ -224,7 +223,6 @@ h3 {
     display: flex;
     flex-direction: column;
     gap: 5px;
-    margin-top: 8px;
 }
 
 .joint-row {
@@ -243,6 +241,11 @@ h3 {
     border: 1px solid #d8d8d8;
     padding: 2px 6px;
     flex: 0 0 auto;
+}
+
+.no-joints {
+    font-size: 12px;
+    color: #999;
 }
 
 @media (max-width: 900px) {
@@ -294,7 +297,6 @@ h3 {
 
     .joints-container {
         gap: 3px;
-        margin-top: 4px;
     }
 }
 </style>
