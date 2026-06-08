@@ -23,11 +23,14 @@ class DrillingProcessor:
         self.summary_text = ""
         
         self.processed_beam_pairs = set()
+
+        self.debug_points = []
         
         self.hardware_screws_by_type = {}
         self.screw_lengths_by_type = {}
         self.extrema_screws_by_type = {}
         self.miter_counts = {}
+        
 
     def process_drillings(self):
         print("--- Starting Drilling Generation ---")
@@ -204,70 +207,134 @@ class DrillingProcessor:
         candidates.sort(key=lambda pt: distance_point_point(pos, pt))
         return candidates[0]
 
+
     # =====================================================================
     # EXPLICIT FOUNDATION BUTT DRILLING
     # =====================================================================
     def _apply_foundation_butt_drilling(self, joint, abut_beam, cont_beam):
         joint_label = "TButtJoint - foundation"
         
-        line_a = abut_beam.centerline
-        line_c = cont_beam.centerline
-        
-        res = intersection_line_line(line_a, line_c)
-        if not res or res[0] is None: return False
-        
-        anchor_pt = Point(res[0][0], res[0][1], res[0][2])
-        dir_s = line_a.direction
-        d_start = distance_point_point(anchor_pt, line_a.start)
-        d_end = distance_point_point(anchor_pt, line_a.end)
-        
-        if d_start > d_end:
-            vec_to_far = Vector.from_start_end(anchor_pt, line_a.start)
+        # 1. FIND THE TOP PLANE OF THE FOUNDATION
+        if hasattr(joint, 'cross_beam_ref_side_index') and joint.cross_beam_ref_side_index is not None:
+            top_face_index = joint.cross_beam_ref_side_index
+            top_frame = cont_beam.ref_sides[top_face_index]
+            top_plane = (top_frame.point, top_frame.normal)
         else:
-            vec_to_far = Vector.from_start_end(anchor_pt, line_a.end)
+            c_mid = cont_beam.centerline.midpoint
+            top_plane = (c_mid + cont_beam.frame.zaxis * (cont_beam.height / 2.0), cont_beam.frame.zaxis)
             
-        if dir_s.dot(vec_to_far) < 0:
-            dir_s.scale(-1)
-        dir_s.unitize()
-        
-        # Identify Contact End
-        if distance_point_point(line_a.start, anchor_pt) <= distance_point_point(line_a.end, anchor_pt):
-            joint_end = line_a.start
-        else:
-            joint_end = line_a.end
+        screw_dir = top_plane[1].copy()
+        screw_dir.scale(-1)
+        screw_dir.unitize()
 
-        # Horizontal direction along incoming beam
-        along = Vector(dir_s.x, dir_s.y, 0.0)
-        if along.length < 1e-6: along = Vector(1, 0, 0)
-        along.unitize()
-
-        screw_dir = Vector(0, 0, -1)                          
-        base_pt = joint_end + along * (0.5 * cont_beam.width) 
-        offset_dir = Vector(along.x, along.y, along.z)        
-        offset_dir.unitize()
-        target_beam = abut_beam                               
-
-        offset_vec = offset_dir * (self.screw_spacing / 2.0)
+        # 2. FIND THE TRUE CENTROID OF THE TOUCHING SURFACE (The Red Diamond)
+        w, h = abut_beam.width, abut_beam.height
+        c_mid = abut_beam.centerline.midpoint
+        vy, vz = abut_beam.frame.yaxis, abut_beam.frame.zaxis
         
-        cnc_lines = []
-        hw_lines = []
-        req_screw_length = self.screw_length 
+        # Get the 4 corners of the beam's cross-section in 3D space
+        corners = [
+            c_mid + vy * (w/2.0) + vz * (h/2.0),
+            c_mid - vy * (w/2.0) + vz * (h/2.0),
+            c_mid - vy * (w/2.0) - vz * (h/2.0),
+            c_mid + vy * (w/2.0) - vz * (h/2.0)
+        ]
         
-        for pos in (base_pt + offset_vec, base_pt - offset_vec):
-            head = self._surface_entry(pos, screw_dir, target_beam)
-            if head is None:
-                half = max(target_beam.width, target_beam.height) / 2.0
-                head = pos - screw_dir * half
+        footprint_pts = []
+        beam_axis = abut_beam.centerline.direction.copy()
+        
+        # Project each corner along the beam's axis until it hits the foundation plane
+        for corner in corners:
+            edge_line = Line(corner, corner + beam_axis * 10.0)
+            res_pt = intersection_line_plane(edge_line, top_plane)
+            if res_pt:
+                footprint_pts.append(Point(*res_pt))
                 
-            tail = head + screw_dir * req_screw_length
+        if len(footprint_pts) != 4:
+            return False # Fallback if parallel (impossible for a T-Butt)
             
-            hw_lines.append(Line(head, tail))
+        # The true center is the average (centroid) of the 4 footprint corners
+        cx = sum(p.x for p in footprint_pts) / 4.0
+        cy = sum(p.y for p in footprint_pts) / 4.0
+        cz = sum(p.z for p in footprint_pts) / 4.0
+        center_of_area = Point(cx, cy, cz)
+        
+        # ==========================================
+        # DEBUG: PRINT AND STORE THE CENTER POINT
+        # ==========================================
+        print(f"Footprint Center found at -> X: {cx:.3f}, Y: {cy:.3f}, Z: {cz:.3f}")
+        
+        # Safely create a debug list if it doesn't exist yet
+        if not hasattr(self, 'debug_points'):
+            self.debug_points = []
+            
+        # Add the point to our visual debug list
+        self.debug_points.append(center_of_area)
+        # ==========================================
+        
+        # 3. CALCULATE SCREW SPACING (Left and Right)
+        dir_flat = Vector(beam_axis.x, beam_axis.y, 0.0)
+        if dir_flat.length < 1e-6: dir_flat = Vector(1, 0, 0)
+        dir_flat.unitize()
+        
+        offset_dir = dir_flat.cross(Vector(0, 0, 1))
+        if offset_dir.length < 1e-5: offset_dir = Vector(0, 1, 0)
+        offset_dir.unitize()
+        offset_vec = offset_dir * (self.screw_spacing / 2.0)
+
+        # 4. FIND THE 'UP' PLANE OF THE ARCH BEAM
+        best_face = None
+        max_dot = -1.0
+        for face in abut_beam.ref_sides[:4]:
+            normal = face.normal.copy()
+            normal.unitize()
+            dot = normal.dot(Vector(0, 0, 1))
+            if dot > max_dot:
+                max_dot = dot
+                best_face = face
+                
+        arch_top_plane = (best_face.point, best_face.normal)
+
+        # 5. GENERATE DYNAMIC LENGTH SCREWS
+        hw_lines = []
+        cnc_lines = []
+        calculated_lengths = []
+        
+        for pos_offset in [offset_vec, -offset_vec]:
+            # The contact point on the foundation plane
+            contact_pt = center_of_area + pos_offset
+            
+            # Anchor exactly 8cm into the foundation
+            target_tail = contact_pt + screw_dir * 0.080
+            
+            # Project straight UP to find where the screw enters the angled wood
+            vertical_line = Line(contact_pt, contact_pt + Vector(0, 0, 1.0))
+            res_plane = intersection_line_plane(vertical_line, arch_top_plane)
+            
+            if res_plane:
+                head = Point(*res_plane)
+            else:
+                head = contact_pt - screw_dir * max(w, h)
+
+            raw_length = distance_point_point(head, target_tail)
+            req_len = math.ceil(raw_length / 0.010) * 0.010
+            calculated_lengths.append({"head": head, "req_len": req_len})
+
+        # 6. STANDARDIZE HARDWARE & GENERATE LINES
+        final_screw_length = max(item["req_len"] for item in calculated_lengths)
+        
+        for item in calculated_lengths:
+            head = item["head"]
+            final_tail = head + screw_dir * final_screw_length
+            
+            hw_lines.append(Line(head, final_tail))
             
             cnc_head = head - screw_dir * 0.010
-            cnc_tail = tail + screw_dir * 0.010
+            cnc_tail = final_tail + screw_dir * 0.010
             cnc_lines.append(Line(cnc_head, cnc_tail))
 
-        return self._generate_features(cnc_lines, hw_lines, abut_beam, cont_beam, joint_label, req_screw_length)
+        return self._generate_features(cnc_lines, hw_lines, abut_beam, cont_beam, joint_label, final_screw_length)
+    
 
 # =====================================================================
     # EXPLICIT STANDARD BUTT DRILLING
