@@ -59,7 +59,7 @@ const formatValue = (value) => {
     if (Number.isFinite(value)) return Number(value).toFixed(2);
     return value;
 };
-const formatLabel = (key) => key.replace(/_/g, " ");
+const formatLabel = (key) => key.replace(/_/g, " ").replace("cm3", "cm³");
 </script>
 
 <template>
