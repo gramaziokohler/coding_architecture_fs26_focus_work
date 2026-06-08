@@ -159,7 +159,6 @@ h3 {
 
 .joints-title {
     font-size: 10px;
-    text-transform: uppercase;
     color: #888;
     font-weight: 500;
     margin-top: 14px;
