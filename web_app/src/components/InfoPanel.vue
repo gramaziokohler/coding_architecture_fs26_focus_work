@@ -96,25 +96,28 @@ const formatLabel = (key) => key.replace(/_/g, " ").replace("cm3", "cm³");
                 <!-- RIGHT: Module -->
                 <section class="info-section">
                     <h3>Module</h3>
-
                     <ul class="specs-list">
                         <li class="spec-item">
                             <span class="label">engraving text</span>
                             <span class="value">{{ engravingText }}</span>
                         </li>
                     </ul>
-
-                    <!-- Joints -->
-                    <div class="joints-title-row">
-                        <span class="label">joints</span>
-                    </div>
-                    <div v-if="filteredJoints" class="joints-container">
-                        <div v-for="(items, jointType) in filteredJoints" :key="jointType" class="joint-row">
-                            <span class="joint-type">{{ jointType }}</span>
-                            <span class="joint-values">{{ items && items.length > 0 ? items.join(", ") : "—" }}</span>
-                        </div>
-                    </div>
-                    <div v-else class="no-joints">—</div>
+                    <div class="joints-section-title">joints</div>
+                    <ul class="specs-list">
+                        <template v-if="filteredJoints">
+                            <li
+                                v-for="(items, jointType) in filteredJoints"
+                                :key="jointType"
+                                class="spec-item"
+                            >
+                                <span class="label">{{ jointType }}</span>
+                                <span class="joint-values">{{ items && items.length > 0 ? items.join(", ") : "—" }}</span>
+                            </li>
+                        </template>
+                        <li v-else class="spec-item">
+                            <span class="value">—</span>
+                        </li>
+                    </ul>
                 </section>
             </div>
         </div>
@@ -155,11 +158,6 @@ h3 {
     text-transform: uppercase;
     letter-spacing: 0;
     color: #555;
-    margin-bottom: 6px;
-}
-
-.joints-title-row {
-    margin-top: 14px;
     margin-bottom: 6px;
 }
 
@@ -224,33 +222,13 @@ h3 {
     word-break: break-word;
 }
 
-.joints-container {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-}
-
-.joint-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 12px;
+.joints-section-title {
+    color: #666;
     font-size: 12px;
+    font-weight: 400;
+    text-transform: none;
+    padding: 6px 0;
     border-bottom: 1px solid #e0e0e0;
-    padding-bottom: 5px;
-}
-
-.joint-type {
-    color: #111;
-    font-weight: 600;
-    border: 1px solid #d8d8d8;
-    padding: 2px 6px;
-    flex: 0 0 auto;
-}
-
-.no-joints {
-    font-size: 12px;
-    color: #999;
 }
 
 @media (max-width: 900px) {
@@ -280,12 +258,11 @@ h3 {
         margin-bottom: 3px;
     }
 
-    .joints-title-row {
-        margin-top: 10px;
-        margin-bottom: 3px;
+    .label {
+        font-size: 10px;
     }
 
-    .label {
+    .joints-section-title {
         font-size: 10px;
     }
 
@@ -298,20 +275,10 @@ h3 {
         gap: 7px;
     }
 
-    .spec-item,
-    .joint-row {
+    .spec-item {
         gap: 8px;
         padding: 4px 0;
         font-size: 10px;
     }
-
-    .joint-type {
-        padding: 1px 4px;
-    }
-
-    .joints-container {
-        gap: 3px;
-    }
 }
 </style>
-
