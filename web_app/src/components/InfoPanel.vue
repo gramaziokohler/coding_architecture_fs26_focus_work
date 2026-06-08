@@ -24,9 +24,9 @@ const engravingText = computed(() =>
 const filteredJoints = computed(() => {
     if (!beamData.value?.joints) return null;
     const skip = ["all", "details"];
-    return Object.fromEntries(
-        Object.entries(beamData.value.joints).filter(([key]) => !skip.includes(key))
-    );
+    const entries = Object.entries(beamData.value.joints).filter(([key]) => !skip.includes(key));
+    if (entries.length === 0) return null;
+    return Object.fromEntries(entries);
 });
 
 const loadBeamInfo = async () => {
@@ -114,10 +114,11 @@ const formatLabel = (key) => key.replace(/_/g, " ").replace("cm3", "cm³");
                             <span class="value">{{ engravingText }}</span>
                         </li>
 
-                        <template v-if="filteredJoints && Object.keys(filteredJoints).length">
-                            <li class="spec-item joints-section-title">
-                                <span>joints</span>
-                            </li>
+                        <li class="spec-item joints-section-title">
+                            <span>joints</span>
+                        </li>
+
+                        <template v-if="filteredJoints">
                             <li
                                 v-for="(jointData, jointType) in filteredJoints"
                                 :key="jointType"
@@ -134,9 +135,6 @@ const formatLabel = (key) => key.replace(/_/g, " ").replace("cm3", "cm³");
                             </li>
                         </template>
                         <template v-else>
-                            <li class="spec-item joints-section-title">
-                                <span>joints</span>
-                            </li>
                             <li class="spec-item">
                                 <span class="value" style="width: 100%; text-align: right;">—</span>
                             </li>
