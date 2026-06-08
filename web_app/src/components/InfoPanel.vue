@@ -102,11 +102,15 @@ const formatLabel = (key) => key.replace(/_/g, " ").replace("cm3", "cm³");
                             <span class="value">{{ engravingText }}</span>
                         </li>
                         <li class="spec-item joints-title-item">
-                            <span class="label joints-title">joints</span>
+                            <span class="joints-title">joints</span>
                         </li>
                         <template v-if="filteredJoints">
-                            <li v-for="(items, jointType) in filteredJoints" :key="jointType" class="spec-item">
-                                <span class="joint-type">{{ jointType }}</span>
+                            <li
+                                v-for="(items, jointType) in filteredJoints"
+                                :key="jointType"
+                                class="spec-item"
+                            >
+                                <span class="label">{{ jointType }}</span>
                                 <span class="joint-values">{{ items && items.length > 0 ? items.join(", ") : "—" }}</span>
                             </li>
                         </template>
@@ -223,33 +227,10 @@ h3 {
 }
 
 .joints-title {
-    color: #555;
+    color: #666;
     font-size: 12px;
-    text-transform: uppercase;
-    font-weight: 600;
-}
-
-.joint-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 12px;
-    font-size: 12px;
-    border-bottom: 1px solid #e0e0e0;
-    padding-bottom: 5px;
-}
-
-.joint-type {
-    color: #111;
-    font-weight: 600;
-    border: 1px solid #d8d8d8;
-    padding: 2px 6px;
-    flex: 0 0 auto;
-}
-
-.no-joints {
-    font-size: 12px;
-    color: #999;
+    text-transform: none;
+    font-weight: 400;
 }
 
 @media (max-width: 900px) {
@@ -296,15 +277,10 @@ h3 {
         gap: 7px;
     }
 
-    .spec-item,
-    .joint-row {
+    .spec-item {
         gap: 8px;
         padding: 4px 0;
         font-size: 10px;
-    }
-
-    .joint-type {
-        padding: 1px 4px;
     }
 }
 </style>
