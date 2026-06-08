@@ -3,7 +3,6 @@ from compas.geometry import Point, Vector, Line, intersection_line_line, distanc
 from compas_timber.fabrication import Drilling
 from compas_timber.connections import (
     LMiterJoint,
-    TBirdsmouthJoint,
     TButtJoint,
     TLapJoint,
     XLapJoint,
@@ -269,80 +268,95 @@ class DrillingProcessor:
             cnc_lines.append(Line(cnc_head, cnc_tail))
 
         return self._generate_features(cnc_lines, hw_lines, abut_beam, cont_beam, joint_label, req_screw_length)
+
 # =====================================================================
     # EXPLICIT STANDARD BUTT DRILLING
     # =====================================================================
     def _apply_standard_butt_drilling(self, joint):
         """
-        Calculates a diagonal screw path from the far face of the continuous beam 
-        into the end-grain of the abutting beam, exactly matching your calculator.
+        Straightforward logic: Extends the centerline of the abutting (cross) beam
+        straight through the continuous (main) beam into the end-grain.
         """
-        # 1. GEOMETRIC ROLE DETECTION (Bulletproof)
-        line1, line2 = joint.main_beam.centerline, joint.cross_beam.centerline
+        # 1. BULLETPROOF GEOMETRIC ROLE DETECTION
+        # Ignore semantic labels. Find out which beam actually ends at the joint.
+        elements = [joint.main_beam, joint.cross_beam]
+        line1, line2 = elements[0].centerline, elements[1].centerline
+        
         res = intersection_line_line(line1, line2)
         if not res or res[0] is None:
             return
 
-        pt_a, pt_b = res
-        # pt_a is on main_beam, pt_b is on cross_beam
-        # Find which is the abutting beam (end closer to intersection)
-        d_main = min(distance_point_point(pt_a, line1.start), distance_point_point(pt_a, line1.end))
-        d_cross = min(distance_point_point(pt_b, line2.start), distance_point_point(pt_b, line2.end))
+        pt_a = Point(*res[0])
+        pt_b = Point(*res[1])
         
-        # Abutting beam is the one ending at the joint
-        if d_main < d_cross:
-            abut_beam, cont_beam = joint.main_beam, joint.cross_beam
-            pt_abut, pt_cont = pt_a, pt_b
+        # Check which beam's endpoint is closer to the intersection
+        d1 = min(distance_point_point(pt_a, line1.start), distance_point_point(pt_a, line1.end))
+        d2 = min(distance_point_point(pt_b, line2.start), distance_point_point(pt_b, line2.end))
+        
+        # The abutting beam is the one ending at the joint (smaller distance to end)
+        if d1 < d2:
+            abut_beam, cont_beam = elements[0], elements[1]
+            intersection_pt = pt_a
         else:
-            abut_beam, cont_beam = joint.cross_beam, joint.main_beam
-            pt_abut, pt_cont = pt_b, pt_a
+            abut_beam, cont_beam = elements[1], elements[0]
+            intersection_pt = pt_b
 
-        # 2. VECTOR MATH
-        # dir_s points strictly INTO the abutting beam
-        dir_s = abut_beam.centerline.direction.copy()
-        vec_to_mid = Vector.from_start_end(pt_abut, abut_beam.centerline.midpoint)
-        if dir_s.dot(vec_to_mid) < 0:
-            dir_s.scale(-1)
-        dir_s.unitize()
+        # 2. ESTABLISH THE DRILL AXIS
+        # Now we are 100% sure we are using the centerline of the abutting beam
+        centerline = abut_beam.centerline
+        dir_into_abut = centerline.direction.copy()
+        
+        # Ensure the vector points INTO the abutting beam from the intersection
+        vec_to_mid = Vector.from_start_end(intersection_pt, centerline.midpoint)
+        if dir_into_abut.dot(vec_to_mid) < 0:
+            dir_into_abut.scale(-1)
+        dir_into_abut.unitize()
 
+        # 3. CALCULATE DYNAMIC LENGTH & POINTS
+        thickness_c = max(cont_beam.width, cont_beam.height)
+        
+        # Start at the exact far face of the continuous beam
+        start_pt = intersection_pt - (dir_into_abut * (thickness_c / 2.0))
+        
+        # DYNAMIC LENGTH: Traverse full continuous beam + anchor 80mm into abutting beam
+        anchor_depth = 0.080 
+        raw_screw_length = thickness_c + anchor_depth
+        req_screw_length = math.ceil(raw_screw_length / 0.010) * 0.010
+        
+        end_pt = start_pt + (dir_into_abut * req_screw_length)
+
+        # 4. OFFSET FOR TWO SCREWS
         dir_cont = cont_beam.centerline.direction.copy()
         dir_cont.unitize()
-
-        # 3. DIAGONAL TRAVERSAL (The 50cm calculator logic)
-        dist_centers = distance_point_point(pt_abut, pt_cont)
-        cos_alpha = abs(dir_s.dot(dir_cont))
-        sin_alpha = math.sqrt(max(0.001, 1.0 - cos_alpha**2))
+        offset_dir = dir_into_abut.cross(dir_cont)
         
-        # Diagonal distance from center of continuous beam to its face
-        thickness_c = max(cont_beam.width, cont_beam.height)
-        traversal_half = (thickness_c / 2.0 + dist_centers) / sin_alpha
-        
-        # Total screw = Traversing continuous beam (2 * half) + 8cm anchor
-        req_screw_length = (2.0 * traversal_half) + 0.080
-        
-        # 4. OFFSET FOR PAIR OF SCREWS
-        offset_dir = dir_s.cross(dir_cont)
+        if offset_dir.length < 1e-5:
+            offset_dir = Vector(0, 0, 1) 
+            
         offset_dir.unitize()
         offset_vec = offset_dir * (self.screw_spacing / 2.0)
         
-        # 5. GENERATE DRILLING FEATURES
-        # Start at far face, end 8cm inside abutting
-        start_pt = pt_abut - (dir_s * traversal_half)
-        end_pt = pt_abut + (dir_s * 0.080)
+        # 5. GENERATE THE LINES
+        hw_line_1 = Line(start_pt + offset_vec, end_pt + offset_vec)
+        hw_line_2 = Line(start_pt - offset_vec, end_pt - offset_vec)
         
-        line_1 = Line(start_pt + offset_vec, end_pt + offset_vec)
-        line_2 = Line(start_pt - offset_vec, end_pt - offset_vec)
+        extension = 0.050
+        cnc_line_1 = Line(hw_line_1.start - (dir_into_abut * extension), hw_line_1.end + (dir_into_abut * extension))
+        cnc_line_2 = Line(hw_line_2.start - (dir_into_abut * extension), hw_line_2.end + (dir_into_abut * extension))
         
-        # Create CNC lines with tolerance
-        cnc_lines = [
-            Line(line_1.start - (dir_s * 0.050), line_1.end + (dir_s * 0.050)),
-            Line(line_2.start - (dir_s * 0.050), line_2.end + (dir_s * 0.050))
-        ]
-        hw_lines = [line_1, line_2]
+        # 6. ROUTE TO FEATURE GENERATOR
+        cat_a = abut_beam.attributes.get("category", "inner")
+        cat_c = cont_beam.attributes.get("category", "inner")
+        joint_label = "TButtJoint - arch" if cat_a == "arch" or cat_c == "arch" else "TButtJoint - inner"
         
-        joint_label = "TButtJoint - arch" if abut_beam.attributes.get("category") == "arch" or cont_beam.attributes.get("category") == "arch" else "TButtJoint - inner"
-        
-        self._generate_features(cnc_lines, hw_lines, abut_beam, cont_beam, joint_label, req_screw_length)
+        self._generate_features(
+            [cnc_line_1, cnc_line_2], 
+            [hw_line_1, hw_line_2], 
+            abut_beam, 
+            cont_beam, 
+            joint_label, 
+            req_screw_length
+        )
 
     # =====================================================================
     # EXPLICIT LAP DRILLING
