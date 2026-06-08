@@ -259,6 +259,7 @@ h3 {
     text-transform: none;
     padding: 6px 0;
     border-bottom: 1px solid #e0e0e0;
+    justify-content: center;
 }
 
 @media (max-width: 900px) {
