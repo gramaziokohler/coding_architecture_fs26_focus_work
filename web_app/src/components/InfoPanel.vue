@@ -234,7 +234,7 @@ h3 {
     border: 1px solid #d0d0d0;
     padding: 0 4px;
     font-size: 12px;
-    font-weight: 400;
+    font-weight: 600;
     color: #666;
     line-height: 18px;
     height: 18px;
@@ -294,6 +294,7 @@ h3 {
 
     .joint-tag {
         font-size: 9px;
+        font-weight: 600;
         padding: 0 3px;
         line-height: 16px;
         height: 16px;
