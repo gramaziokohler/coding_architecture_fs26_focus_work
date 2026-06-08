@@ -123,9 +123,7 @@ const formatLabel = (key) => key.replace(/_/g, " ").replace("cm3", "cm³");
                                 :key="jointType"
                                 class="spec-item"
                             >
-                                <span class="label">
-                                    <span class="joint-tag">{{ jointType }}</span>
-                                </span>
+                                <span class="joint-tag">{{ jointType }}</span>
                                 <span class="joint-values">
                                     {{ isArray(jointData)
                                         ? jointData.join(", ")
@@ -234,10 +232,15 @@ h3 {
 
 .joint-tag {
     border: 1px solid #d0d0d0;
-    padding: 0px 4px;
-    font-size: 11px;
-    line-height: 1;
-    display: inline-block;
+    padding: 0 4px;
+    font-size: 12px;
+    font-weight: 400;
+    color: #666;
+    line-height: 18px;
+    height: 18px;
+    display: inline-flex;
+    align-items: center;
+    flex: 0 0 auto;
 }
 
 .value,
@@ -291,7 +294,9 @@ h3 {
 
     .joint-tag {
         font-size: 9px;
-        padding: 0px 3px;
+        padding: 0 3px;
+        line-height: 16px;
+        height: 16px;
     }
 
     .joints-section-title {
