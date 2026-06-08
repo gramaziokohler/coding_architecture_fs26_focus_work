@@ -60,6 +60,42 @@ const formatValue = (value) => {
     return value;
 };
 const formatLabel = (key) => key.replace(/_/g, " ").replace("cm3", "cm³");
+
+const beamRows = computed(() => {
+    if (!beamData.value) return [];
+    const rows = Object.entries(beamData.value)
+        .filter(([key]) => !HIDDEN_KEYS.includes(key))
+        .map(([key, value]) => ({ label: formatLabel(key), value: formatValue(value) }));
+    if (beamData.value.connected_beams?.length) {
+        rows.push({ label: "connected beams", value: beamData.value.connected_beams.join(", ") });
+    }
+    return rows;
+});
+
+const moduleRows = computed(() => {
+    const rows = [{ label: "engraving text", value: engravingText.value }];
+    if (filteredJoints.value) {
+        rows.push({ label: "joints", value: "", isJointTitle: true });
+        Object.entries(filteredJoints.value).forEach(([type, items]) => {
+            rows.push({ label: type, value: items?.length ? items.join(", ") : "—", isJoint: true });
+        });
+    }
+    return rows;
+});
+
+const unifiedRows = computed(() => {
+    const left = beamRows.value;
+    const right = moduleRows.value;
+    const len = Math.max(left.length, right.length);
+    return Array.from({ length: len }, (_, i) => ({
+        leftLabel: left[i]?.label ?? "",
+        leftValue: left[i]?.value ?? "",
+        rightLabel: right[i]?.label ?? "",
+        rightValue: right[i]?.value ?? "",
+        rightIsJointTitle: right[i]?.isJointTitle ?? false,
+        rightIsJoint: right[i]?.isJoint ?? false,
+    }));
+});
 </script>
 
 <template>
@@ -72,50 +108,34 @@ const formatLabel = (key) => key.replace(/_/g, " ").replace("cm3", "cm³");
                 <span class="module-tag">Module {{ beamData.module }}</span>
             </div>
 
-            <div class="info-grid">
-                <!-- LEFT: Beam -->
-                <section class="info-section">
-                    <h3>Beam</h3>
-                    <ul class="specs-list">
-                        <li
-                            v-for="(value, key) in beamData"
-                            :key="key"
-                            v-show="!HIDDEN_KEYS.includes(key)"
-                            class="spec-item"
-                        >
-                            <span class="label">{{ formatLabel(key) }}</span>
-                            <span class="value">{{ formatValue(value) }}</span>
-                        </li>
-                        <li v-if="beamData.connected_beams?.length" class="spec-item">
-                            <span class="label">connected beams</span>
-                            <span class="value">{{ beamData.connected_beams.join(", ") }}</span>
-                        </li>
-                    </ul>
-                </section>
+            <!-- Column headers -->
+            <div class="unified-grid headers">
+                <span class="col-header">Beam</span>
+                <span></span>
+                <span class="col-header">Module</span>
+                <span></span>
+            </div>
 
-                <!-- RIGHT: Module -->
-                <section class="info-section">
-                    <h3>Module</h3>
+            <!-- Unified rows -->
+            <div class="unified-grid">
+                <template v-for="(row, i) in unifiedRows" :key="i">
+                    <!-- Left: beam -->
+                    <span class="label">{{ row.leftLabel }}</span>
+                    <span class="value">{{ row.leftValue }}</span>
 
-                    <ul class="specs-list">
-                        <li class="spec-item">
-                            <span class="label">engraving text</span>
-                            <span class="value">{{ engravingText }}</span>
-                        </li>
-                    </ul>
-
-                    <!-- Joints -->
-                    <div class="joints-title-row">
-                        <span class="label">joints</span>
-                    </div>
-                    <div v-if="filteredJoints" class="joints-container">
-                        <div v-for="(items, jointType) in filteredJoints" :key="jointType" class="joint-row">
-                            <span class="joint-type">{{ jointType }}</span>
-                            <span class="joint-values">{{ items && items.length > 0 ? items.join(", ") : "—" }}</span>
-                        </div>
-                    </div>
-                    <div v-else class="no-joints">—</div>
-                </section>
+                    <!-- Right: module -->
+                    <span
+                        class="label"
+                        :class="{
+                            'joint-title': row.rightIsJointTitle,
+                            'joint-type': row.rightIsJoint
+                        }"
+                    >{{ row.rightLabel }}</span>
+                    <span
+                        class="value"
+                        :class="{ 'joint-title': row.rightIsJointTitle }"
+                    >{{ row.rightIsJointTitle ? '' : row.rightValue }}</span>
+                </template>
             </div>
         </div>
     </div>
@@ -138,29 +158,12 @@ const formatLabel = (key) => key.replace(/_/g, " ").replace("cm3", "cm³");
     margin-bottom: 10px;
 }
 
-h2,
-h3 {
+h2 {
     margin: 0;
     color: #000;
     line-height: 1.2;
     font-weight: 600;
-}
-
-h2 {
     font-size: 18px;
-}
-
-h3 {
-    font-size: 12px;
-    text-transform: uppercase;
-    letter-spacing: 0;
-    color: #555;
-    margin-bottom: 6px;
-}
-
-.joints-title-row {
-    margin-top: 14px;
-    margin-bottom: 6px;
 }
 
 .module-tag {
@@ -181,63 +184,54 @@ h3 {
     color: #000;
 }
 
-.info-grid {
+/* Grid */
+.unified-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 18px;
+    grid-template-columns: 1fr 1fr 1fr 1fr;
 }
 
-.specs-list {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
+.unified-grid.headers {
+    margin-bottom: 4px;
 }
 
-.spec-item {
-    display: flex;
-    justify-content: space-between;
-    gap: 12px;
-    padding: 6px 0;
-    border-bottom: 1px solid #e0e0e0;
+.col-header {
     font-size: 12px;
+    text-transform: uppercase;
+    color: #555;
+    font-weight: 600;
 }
 
-.spec-item:last-child {
-    border-bottom: none;
+.unified-grid > span {
+    padding: 6px 0;
+    font-size: 12px;
+    border-bottom: 1px solid #e0e0e0;
 }
 
 .label {
     color: #666;
     font-weight: 400;
-    flex: 0 0 auto;
-    font-size: 12px;
 }
 
-.value,
-.joint-values {
+.value {
     color: #000;
-    font-family: "Helvetica Neue", sans-serif;
     font-weight: 500;
     text-align: right;
+    padding-right: 24px;
     word-break: break-word;
 }
 
-.joints-container {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
+/* last value of each pair no right padding */
+.unified-grid > span:nth-child(4n) {
+    padding-right: 0;
+    text-align: right;
+    color: #000;
+    font-weight: 500;
 }
 
-.joint-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 12px;
+.joint-title {
+    color: #666;
+    font-weight: 400;
     font-size: 12px;
-    border-bottom: 1px solid #e0e0e0;
-    padding-bottom: 5px;
 }
 
 .joint-type {
@@ -245,19 +239,9 @@ h3 {
     font-weight: 600;
     border: 1px solid #d8d8d8;
     padding: 2px 6px;
-    flex: 0 0 auto;
-}
-
-.no-joints {
-    font-size: 12px;
-    color: #999;
-}
-
-@media (max-width: 900px) {
-    .info-grid {
-        grid-template-columns: 1fr;
-        gap: 12px;
-    }
+    align-self: center;
+    display: inline-block;
+    width: fit-content;
 }
 
 @media (max-width: 760px) {
@@ -275,17 +259,7 @@ h3 {
         font-size: 14px;
     }
 
-    h3 {
-        font-size: 10px;
-        margin-bottom: 3px;
-    }
-
-    .joints-title-row {
-        margin-top: 10px;
-        margin-bottom: 3px;
-    }
-
-    .label {
+    .col-header {
         font-size: 10px;
     }
 
@@ -294,23 +268,13 @@ h3 {
         font-size: 10px;
     }
 
-    .info-grid {
-        gap: 7px;
-    }
-
-    .spec-item,
-    .joint-row {
-        gap: 8px;
+    .unified-grid > span {
         padding: 4px 0;
         font-size: 10px;
     }
 
     .joint-type {
         padding: 1px 4px;
-    }
-
-    .joints-container {
-        gap: 3px;
     }
 }
 </style>
