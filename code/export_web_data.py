@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Export a COMPAS TimberModel JSON into the web viewer data format.
 
-The exporter intentionally keeps beam naming in ``get_beam_identity``. Group C
+Note: The exporter intentionally keeps beam naming in ``get_beam_identity``. Group C
 can replace only that function once their final attribute names are fixed.
 """
 
