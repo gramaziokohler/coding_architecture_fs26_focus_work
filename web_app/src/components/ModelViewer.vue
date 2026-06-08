@@ -78,8 +78,8 @@ const beamWeightKg = (beamData) => {
     if (Number.isFinite(beamData["volume (cm³)"])) {
         return beamData["volume (cm³)"] / 1000000 * FALLBACK_DENSITY_KG_M3;
     }
-    if (Number.isFinite(beamData["volume (cm3)"])) {
-        return beamData["volume (cm3)"] / 1000000 * FALLBACK_DENSITY_KG_M3;
+    if (Number.isFinite(beamData["volume (cm³)"])) {
+        return beamData["volume (cm³)"] / 1000000 * FALLBACK_DENSITY_KG_M3;
     }
     return 0;
 };

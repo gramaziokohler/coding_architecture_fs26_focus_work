@@ -12,26 +12,32 @@ const beamData = ref(null);
 const loading = ref(true);
 const error = ref(null);
 
-const HIDDEN_KEYS = ["name", "3d_model", "frame", "local_frame", "global_position", "connected_beams", "joints"];
+const HIDDEN_KEYS = [
+    "name", "3d_model", "frame", "local_frame", "global_position",
+    "connected_beams", "joints", "processing", "processings", "features", "machining"
+];
 
-const frameData = computed(() => beamData.value?.frame || beamData.value?.local_frame || null);
-const positionData = computed(() => beamData.value?.global_position || {});
-const engravingText = computed(() => beamData.value?.engraving_text || beamData.value?.name || beamData.value?.["beam ID"]);
-const engravingLocation = computed(() => positionData.value?.midpoint || frameData.value?.origin || null);
+const engravingText = computed(() =>
+    beamData.value?.engraving_text || beamData.value?.name || beamData.value?.["beam ID"]
+);
+
+const filteredJoints = computed(() => {
+    if (!beamData.value?.joints) return null;
+    const skip = ["all", "details"];
+    return Object.fromEntries(
+        Object.entries(beamData.value.joints).filter(([key]) => !skip.includes(key))
+    );
+});
 
 const loadBeamInfo = async () => {
     loading.value = true;
     error.value = null;
     try {
-        if (!props.beamUrl) {
-            throw new Error("No beam URL provided");
-        }
+        if (!props.beamUrl) throw new Error("No beam URL provided");
         const beamName = props.beamUrl.split("/").pop();
         const jsonUrl = props.beamUrl + "/" + beamName + ".json";
         const response = await fetch(jsonUrl);
-        if (!response.ok) {
-            throw new Error(`Failed to fetch beam data: ${response.status} ${response.statusText}`);
-        }
+        if (!response.ok) throw new Error(`Failed to fetch beam data: ${response.status} ${response.statusText}`);
         beamData.value = await response.json();
     } catch (e) {
         error.value = e.message;
@@ -46,16 +52,14 @@ watch(() => props.beamUrl, loadBeamInfo);
 
 const isObject = (value) => typeof value === "object" && value !== null;
 const isArray = (value) => Array.isArray(value);
-
-const formatNumber = (value) => (Number.isFinite(value) ? Number(value).toFixed(4) : value);
-
+const formatNumber = (value) => (Number.isFinite(value) ? Number(value).toFixed(2) : value);
 const formatValue = (value) => {
     if (isArray(value)) return value.map(formatNumber).join(", ");
     if (isObject(value)) return JSON.stringify(value);
+    if (Number.isFinite(value)) return Number(value).toFixed(2);
     return value;
 };
-
-const formatLabel = (key) => key.replace(/_/g, " ");
+const formatLabel = (key) => key.replace(/_/g, " ").replace("cm3", "cm³");
 </script>
 
 <template>
@@ -69,6 +73,7 @@ const formatLabel = (key) => key.replace(/_/g, " ");
             </div>
 
             <div class="info-grid">
+                <!-- LEFT: Beam -->
                 <section class="info-section">
                     <h3>Beam</h3>
                     <ul class="specs-list">
@@ -88,55 +93,28 @@ const formatLabel = (key) => key.replace(/_/g, " ");
                     </ul>
                 </section>
 
+                <!-- RIGHT: Module -->
                 <section class="info-section">
-                    <h3>Frame + Centerline</h3>
-                    <ul class="specs-list">
-                        <li v-if="frameData?.origin" class="spec-item">
-                            <span class="label">beam.frame origin</span>
-                            <span class="value">{{ formatValue(frameData.origin) }}</span>
-                        </li>
-                        <li v-if="frameData?.x_axis" class="spec-item">
-                            <span class="label">x axis</span>
-                            <span class="value">{{ formatValue(frameData.x_axis) }}</span>
-                        </li>
-                        <li v-if="frameData?.y_axis" class="spec-item">
-                            <span class="label">y axis</span>
-                            <span class="value">{{ formatValue(frameData.y_axis) }}</span>
-                        </li>
-                        <li v-if="frameData?.z_axis" class="spec-item">
-                            <span class="label">z axis</span>
-                            <span class="value">{{ formatValue(frameData.z_axis) }}</span>
-                        </li>
-                        <li v-if="positionData.centerline_start" class="spec-item">
-                            <span class="label">centerline start</span>
-                            <span class="value">{{ formatValue(positionData.centerline_start) }}</span>
-                        </li>
-                        <li v-if="positionData.centerline_end" class="spec-item">
-                            <span class="label">centerline end</span>
-                            <span class="value">{{ formatValue(positionData.centerline_end) }}</span>
-                        </li>
-                    </ul>
-                </section>
+                    <h3>Module</h3>
 
-                <section class="info-section">
-                    <h3>Engraving + Joints</h3>
                     <ul class="specs-list">
                         <li class="spec-item">
                             <span class="label">engraving text</span>
                             <span class="value">{{ engravingText }}</span>
                         </li>
-                        <li v-if="engravingLocation" class="spec-item">
-                            <span class="label">engraving location</span>
-                            <span class="value">{{ formatValue(engravingLocation) }}</span>
-                        </li>
                     </ul>
 
-                    <div v-if="beamData.joints" class="joints-container">
-                        <div v-for="(items, jointType) in beamData.joints" :key="jointType" class="joint-row">
+                    <!-- Joints -->
+                    <div class="joints-title-row">
+                        <span class="label">joints</span>
+                    </div>
+                    <div v-if="filteredJoints" class="joints-container">
+                        <div v-for="(items, jointType) in filteredJoints" :key="jointType" class="joint-row">
                             <span class="joint-type">{{ jointType }}</span>
-                            <span class="joint-values">{{ items.length > 0 ? items.join(", ") : "none" }}</span>
+                            <span class="joint-values">{{ items && items.length > 0 ? items.join(", ") : "—" }}</span>
                         </div>
                     </div>
+                    <div v-else class="no-joints">—</div>
                 </section>
             </div>
         </div>
@@ -180,6 +158,11 @@ h3 {
     margin-bottom: 6px;
 }
 
+.joints-title-row {
+    margin-top: 14px;
+    margin-bottom: 6px;
+}
+
 .module-tag {
     border: 1px solid #d0d0d0;
     padding: 3px 8px;
@@ -200,7 +183,7 @@ h3 {
 
 .info-grid {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: 1fr 1fr;
     gap: 18px;
 }
 
@@ -229,6 +212,7 @@ h3 {
     color: #666;
     font-weight: 400;
     flex: 0 0 auto;
+    font-size: 12px;
 }
 
 .value,
@@ -244,7 +228,6 @@ h3 {
     display: flex;
     flex-direction: column;
     gap: 5px;
-    margin-top: 8px;
 }
 
 .joint-row {
@@ -263,6 +246,11 @@ h3 {
     border: 1px solid #d8d8d8;
     padding: 2px 6px;
     flex: 0 0 auto;
+}
+
+.no-joints {
+    font-size: 12px;
+    color: #999;
 }
 
 @media (max-width: 900px) {
@@ -292,6 +280,15 @@ h3 {
         margin-bottom: 3px;
     }
 
+    .joints-title-row {
+        margin-top: 10px;
+        margin-bottom: 3px;
+    }
+
+    .label {
+        font-size: 10px;
+    }
+
     .module-tag {
         padding: 2px 6px;
         font-size: 10px;
@@ -314,7 +311,7 @@ h3 {
 
     .joints-container {
         gap: 3px;
-        margin-top: 4px;
     }
 }
 </style>
+
