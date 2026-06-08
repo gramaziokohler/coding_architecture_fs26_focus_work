@@ -184,7 +184,7 @@ h3 {
 
 .info-grid {
     display: grid;
-    grid-template-columns: 1fr 2fr;
+    grid-template-columns: 1fr 1fr;
     gap: 18px;
 }
 
