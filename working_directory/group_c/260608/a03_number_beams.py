@@ -361,21 +361,21 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
             beam_label_by_guid[node] = name
 
     # =========================
-    # 7B. STRUTTURA INTERNA DEI CO-GIUNTI CON NAMING COMPOUND
+    # 7B. STRUTTURA INTERNA DEI CO-GIUNTI CON NAMING COMPOUND CORRETTO
     # =========================
-    joint_name_by_pair = {}  # (sorted_guid_a, sorted_guid_b) -> "d2-d1"
-    beam_joints = defaultdict(list)  # beam_guid -> [(param, "d2-d1"), ...]
-    joint_type_by_name = {}  # "d2-d1" -> "XLapJoint"
+    joint_name_by_pair = {}  # (sorted_guid_a, sorted_guid_b) -> "a1-a2"
+    beam_joints = defaultdict(list)  # beam_guid -> [(param, "a1-a2"), ...]
+    joint_type_by_name = {}  # "a1-a2" -> "XLapJoint"
     
     for joint in timber_model.joints:
         ea, eb = joint.elements
         ga, gb = str(ea.guid), str(eb.guid)
         pair_key = tuple(sorted([ga, gb]))
 
-        # Se joint non ancora visto, crea il nome compound
+        # Se joint non ancora visto, crea il nome compound con i NOMI DEI BEAM
         if pair_key not in joint_name_by_pair:
-            beam_a_name = beam_label_by_guid.get(ga, "unknown")
-            beam_b_name = beam_label_by_guid.get(gb, "unknown")
+            beam_a_name = beam_label_by_guid.get(ga, "unknown").lower()
+            beam_b_name = beam_label_by_guid.get(gb, "unknown").lower()
             # Ordina i nomi alfabeticamente
             joint_names_sorted = sorted([beam_a_name, beam_b_name])
             joint_name = "{}-{}".format(joint_names_sorted[0], joint_names_sorted[1])
@@ -393,13 +393,6 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
         
         beam_joints[ga].append((param_a, joint_name))
         beam_joints[gb].append((param_b, joint_name))
-
-    A_geom_out = geom["A"]
-    B_geom_out = geom["B"]
-    C_geom_out = geom["C"]
-    D_geom_out = geom["D"]
-    E_geom_out = geom["E"]
-    F_geom_out = geom["F"]
 
     # =========================
     # 9. ELABORAZIONE DETTAGLI
