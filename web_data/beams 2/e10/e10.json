@@ -1,0 +1,78 @@
+{
+  "beam ID": "e10",
+  "name": "E10",
+  "module": "E",
+  "width (m)": 0.06,
+  "height (m)": 0.08,
+  "length (m)": 1.2044,
+  "volume (cm3)": 5781.16,
+  "weight (kg)": 2.89,
+  "local_frame": {
+    "origin": [
+      5.1886,
+      0.2086,
+      0.7896
+    ],
+    "x_axis": [
+      -0.7897,
+      -0.0756,
+      0.6089
+    ],
+    "y_axis": [
+      -0.118,
+      0.9926,
+      -0.0299
+    ],
+    "z_axis": [
+      -0.6021,
+      -0.0955,
+      -0.7927
+    ]
+  },
+  "connected_beams": [
+    "e11",
+    "e12",
+    "e25",
+    "e9"
+  ],
+  "global_position": {
+    "centerline_start": [
+      5.6642,
+      0.2541,
+      0.4229
+    ],
+    "centerline_end": [
+      4.7131,
+      0.1631,
+      1.1563
+    ],
+    "midpoint": [
+      4.7131,
+      0.1631,
+      1.1563
+    ],
+    "midpoint_normalized": [
+      0.8329,
+      0.4097,
+      0.4192
+    ]
+  },
+  "joints": {
+    "all": [
+      "01",
+      "02",
+      "198",
+      "218"
+    ],
+    "xlap": [
+      "01",
+      "218"
+    ],
+    "tbutt": [
+      "02",
+      "198"
+    ],
+    "lmiter": "-"
+  },
+  "3d_model": "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data/beams/e10/e10.stl"
+}

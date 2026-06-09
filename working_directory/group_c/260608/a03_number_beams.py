@@ -32,32 +32,42 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
         l = vector_length(v)
         return [c/l for c in v] if l else [0.0, 0.0, 0.0]
 
+    def unwrap_vector(v):
+        """Gestisce vettori COMPAS annidati tipo {"dtype": "...", "data": [x,y,z]}"""
+        if isinstance(v, dict):
+            v = v.get("data", v)
+        if isinstance(v, dict):
+            return [float(v.get("x", 0.0)), float(v.get("y", 0.0)), float(v.get("z", 0.0))]
+        return [float(c) for c in v]
+
     # =========================
-    # FRAME PARSING (robusto, come nel secondo script)
+    # FRAME PARSING (robusto)
     # =========================
     def get_beam_frame(beam):
         """Legge beam.frame con fallback multipli, restituisce dict con origin/x_axis/y_axis/z_axis"""
         try:
             frame = beam.frame
-            # COMPAS Frame object
+            # COMPAS Frame object (caso piu' comune in Grasshopper)
             if hasattr(frame, 'point') and hasattr(frame, 'xaxis'):
                 origin = [float(frame.point.x), float(frame.point.y), float(frame.point.z)]
                 x_axis = vector_normalize([float(frame.xaxis.x), float(frame.xaxis.y), float(frame.xaxis.z)])
                 y_axis = vector_normalize([float(frame.yaxis.x), float(frame.yaxis.y), float(frame.yaxis.z)])
                 z_axis = vector_cross(x_axis, y_axis)
                 return {"origin": origin, "x_axis": x_axis, "y_axis": y_axis, "z_axis": z_axis}
-            # dict-like
+            # dict-like (JSON gia' caricato)
             if isinstance(frame, dict):
                 data = frame.get("data", frame)
-                origin = data.get("point") or data.get("origin")
-                x_axis = data.get("xaxis") or data.get("x_axis")
-                y_axis = data.get("yaxis") or data.get("y_axis")
-                if origin and x_axis and y_axis:
-                    x_axis = vector_normalize([float(v) for v in x_axis])
-                    y_axis = vector_normalize([float(v) for v in y_axis])
+                raw_origin = data.get("point") or data.get("origin")
+                raw_x = data.get("xaxis") or data.get("x_axis")
+                raw_y = data.get("yaxis") or data.get("y_axis")
+                if raw_origin and raw_x and raw_y:
+                    origin = unwrap_vector(raw_origin)
+                    x_axis = vector_normalize(unwrap_vector(raw_x))
+                    y_axis = vector_normalize(unwrap_vector(raw_y))
                     z_axis = vector_cross(x_axis, y_axis)
-                    return {"origin": [float(v) for v in origin], "x_axis": x_axis, "y_axis": y_axis, "z_axis": z_axis}
-        except: pass
+                    return {"origin": origin, "x_axis": x_axis, "y_axis": y_axis, "z_axis": z_axis}
+        except:
+            pass
 
         # Fallback: ricava il frame dalla centerline
         try:
@@ -72,7 +82,8 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
             z_axis = vector_normalize(vector_cross(x_axis, ref))
             y_axis = vector_normalize(vector_cross(z_axis, x_axis))
             return {"origin": origin, "x_axis": x_axis, "y_axis": y_axis, "z_axis": z_axis}
-        except: pass
+        except:
+            pass
 
         return {"origin": [0,0,0], "x_axis": [1,0,0], "y_axis": [0,1,0], "z_axis": [0,0,1]}
 
@@ -84,7 +95,8 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
             start = vector_sub(frame["origin"], vector_scale(frame["x_axis"], length / 2.0))
             end = vector_add(frame["origin"], vector_scale(frame["x_axis"], length / 2.0))
             return start, end
-        except: pass
+        except:
+            pass
         try:
             cl = beam.centerline
             s = cl.start if hasattr(cl, 'start') else cl.point_at(0.0)
@@ -190,7 +202,6 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
     # SEZIONE E PESO
     # =========================
     def get_beam_section(beam):
-        # Prima prova attributi diretti lunghezza/larghezza/altezza
         try:
             w = float(beam.width)
             h = float(beam.height)
@@ -235,7 +246,7 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
         return vector_normalize(vector_cross(vector_sub(b,a), vector_sub(c,a)))
 
     def beam_box_vertices(frame, length, width, height):
-        origin = frame["origin"]
+        origin = frame["origin"][:]
         ax = vector_scale(frame["x_axis"], length/2.0)
         ay = vector_scale(frame["y_axis"], width/2.0)
         az = vector_scale(frame["z_axis"], height/2.0)
@@ -267,7 +278,6 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
             fp.write("endsolid {}\n".format(name))
 
     def geometry_to_mesh(geometry):
-        """Converte geometry COMPAS in (vertices, faces) se possibile"""
         candidates = geometry if isinstance(geometry, (list,tuple)) else [geometry]
         all_verts, all_faces = [], []
         for candidate in candidates:
@@ -289,7 +299,6 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
         with open(path, 'w') as fp:
             fp.write("solid {}\n".format(name))
             for face in faces:
-                # triangola
                 tris = [face] if len(face)==3 else [(face[0],face[i],face[i+1]) for i in range(1,len(face)-1)]
                 for tri in tris:
                     a,b,c = ([float(c) for c in vertices[i]] for i in tri)
@@ -303,12 +312,10 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
 
     def save_stl(beam, beam_id, beam_folder, frame, w, h, length):
         stl_path = os.path.join(beam_folder, "{}.stl".format(beam_id))
-        # Prova geometry COMPAS
         mesh_data = geometry_to_mesh(beam.geometry)
         if mesh_data:
             write_mesh_stl(stl_path, beam_id, mesh_data[0], mesh_data[1])
             return stl_path
-        # Prova native_brep -> mesh Rhino
         geom = beam.geometry
         native = None
         if hasattr(geom, 'native_brep') and geom.native_brep:
@@ -332,7 +339,6 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
                     write_mesh_stl(stl_path, beam_id, verts, faces)
                     return stl_path
             except: pass
-        # Fallback box
         if w and h and length:
             w_m = w if w < 1 else w/100.0
             h_m = h if h < 1 else h/100.0

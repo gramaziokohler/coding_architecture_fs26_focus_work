@@ -1,0 +1,78 @@
+{
+  "beam ID": "b11",
+  "name": "B11",
+  "module": "B",
+  "width (m)": 0.12,
+  "height (m)": 0.14,
+  "length (m)": 0.9991,
+  "volume (cm3)": 16784.33,
+  "weight (kg)": 8.39,
+  "local_frame": {
+    "origin": [
+      -0.6888,
+      0.7399,
+      0.0
+    ],
+    "x_axis": [
+      -0.1216,
+      0.9926,
+      0.0
+    ],
+    "y_axis": [
+      -0.9926,
+      -0.1216,
+      0.0
+    ],
+    "z_axis": [
+      0.0,
+      0.0,
+      1.0
+    ]
+  },
+  "connected_beams": [
+    "b26",
+    "b8",
+    "b10",
+    "a18"
+  ],
+  "global_position": {
+    "centerline_start": [
+      -0.6281,
+      0.2441,
+      0.0
+    ],
+    "centerline_end": [
+      -0.7496,
+      1.2357,
+      0.0
+    ],
+    "midpoint": [
+      -0.7496,
+      1.2357,
+      0.0
+    ],
+    "midpoint_normalized": [
+      0.0499,
+      0.6077,
+      0.0
+    ]
+  },
+  "joints": {
+    "all": [
+      "246",
+      "247",
+      "248",
+      "250"
+    ],
+    "xlap": "-",
+    "tbutt": [
+      "247",
+      "248"
+    ],
+    "lmiter": [
+      "246",
+      "250"
+    ]
+  },
+  "3d_model": "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data/beams/b11/b11.stl"
+}

@@ -1,0 +1,78 @@
+{
+  "beam ID": "c21",
+  "name": "C21",
+  "module": "C",
+  "width (m)": 0.06,
+  "height (m)": 0.08,
+  "length (m)": 1.0531,
+  "volume (cm3)": 5054.85,
+  "weight (kg)": 2.53,
+  "local_frame": {
+    "origin": [
+      1.7562,
+      -0.2252,
+      2.1676
+    ],
+    "x_axis": [
+      1.0,
+      0.0063,
+      -0.0009
+    ],
+    "y_axis": [
+      0.0063,
+      -0.9769,
+      0.2137
+    ],
+    "z_axis": [
+      0.0005,
+      -0.2137,
+      -0.9769
+    ]
+  },
+  "connected_beams": [
+    "c22",
+    "c1",
+    "c23",
+    "c19"
+  ],
+  "global_position": {
+    "centerline_start": [
+      1.2297,
+      -0.2285,
+      2.1681
+    ],
+    "centerline_end": [
+      2.2828,
+      -0.2219,
+      2.1672
+    ],
+    "midpoint": [
+      2.2828,
+      -0.2219,
+      2.1672
+    ],
+    "midpoint_normalized": [
+      0.4845,
+      0.3386,
+      0.7856
+    ]
+  },
+  "joints": {
+    "all": [
+      "105",
+      "123",
+      "124",
+      "139"
+    ],
+    "xlap": [
+      "105",
+      "124"
+    ],
+    "tbutt": [
+      "123",
+      "139"
+    ],
+    "lmiter": "-"
+  },
+  "3d_model": "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data/beams/c21/c21.stl"
+}

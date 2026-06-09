@@ -1,0 +1,78 @@
+{
+  "beam ID": "e2",
+  "name": "E2",
+  "module": "E",
+  "width (m)": 0.06,
+  "height (m)": 0.08,
+  "length (m)": 0.844,
+  "volume (cm3)": 4051.38,
+  "weight (kg)": 2.03,
+  "local_frame": {
+    "origin": [
+      4.4223,
+      -0.6496,
+      1.5717
+    ],
+    "x_axis": [
+      0.6665,
+      -0.6535,
+      -0.3588
+    ],
+    "y_axis": [
+      -0.3992,
+      -0.7193,
+      0.5686
+    ],
+    "z_axis": [
+      -0.6296,
+      -0.2358,
+      -0.7403
+    ]
+  },
+  "connected_beams": [
+    "e1",
+    "e33",
+    "e3",
+    "e5"
+  ],
+  "global_position": {
+    "centerline_start": [
+      4.1411,
+      -0.3738,
+      1.7231
+    ],
+    "centerline_end": [
+      4.7036,
+      -0.9254,
+      1.4203
+    ],
+    "midpoint": [
+      4.7036,
+      -0.9254,
+      1.4203
+    ],
+    "midpoint_normalized": [
+      0.8315,
+      0.2088,
+      0.5149
+    ]
+  },
+  "joints": {
+    "all": [
+      "308",
+      "309",
+      "311",
+      "312"
+    ],
+    "xlap": [
+      "308",
+      "311"
+    ],
+    "tbutt": [
+      "309",
+      "312"
+    ],
+    "lmiter": "-"
+  },
+  "3d_model": "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data/beams/e2/e2.stl"
+}
