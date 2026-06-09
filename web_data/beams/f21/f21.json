@@ -4,7 +4,8 @@
   "module": "F",
   "width (m)": 0.06,
   "height (m)": 0.08,
-  "length (m)": 0.48,
+  "length (m)": 0.4826,
+  "volume (cm3)": 2316.4,
   "volume (cm\u00b3)": 2316.4,
   "weight (kg)": 1.16,
   "local_frame": {
@@ -30,7 +31,7 @@
     ]
   },
   "connected_beams": [
-    "e6",
+    "e15",
     "f12",
     "f22"
   ],
@@ -69,23 +70,52 @@
       "327"
     ],
     "lmiter": [],
+    "other": [],
     "details": [
       {
         "id": "336",
         "type": "PreferredFaceTButtJoint",
-        "kind": "tbutt"
+        "kind": "tbutt",
+        "connected_beams": [
+          "f21",
+          "f22"
+        ],
+        "location": [
+          5.83,
+          0.9105,
+          0.0115
+        ]
       },
       {
         "id": "235",
         "type": "TButtJoint",
-        "kind": "tbutt"
+        "kind": "tbutt",
+        "connected_beams": [
+          "f12",
+          "f21"
+        ],
+        "location": [
+          5.7188,
+          0.8004,
+          0.1463
+        ]
       },
       {
         "id": "327",
         "type": "TButtJoint",
-        "kind": "tbutt"
+        "kind": "tbutt",
+        "connected_beams": [
+          "e15",
+          "f21"
+        ],
+        "location": [
+          5.589,
+          0.6576,
+          0.284
+        ]
       }
     ]
   },
+  "processing": [],
   "3d_model": "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data/beams/f21/f21.stl"
 }
