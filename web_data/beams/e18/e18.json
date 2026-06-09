@@ -30,10 +30,10 @@
     ]
   },
   "connected_beams": [
-    "f22",
     "e17",
+    "e19",
     "e22",
-    "e19"
+    "f22"
   ],
   "global_position": {
     "centerline_start": [
@@ -59,25 +59,37 @@
   },
   "joints": {
     "all": [
-      "335",
-      "337",
-      "333",
-      "331"
+      "e18-e22",
+      "e18-e19",
+      "e17-e18",
+      "e18-f22"
     ],
     "xlap": [],
     "tbutt": [],
     "lmiter": [
-      "335",
-      "331"
+      "e18-e22",
+      "e18-f22"
     ],
-    "custom": [
+    "details": [
       {
-        "id": "337",
-        "type": "PreferredFaceTButtJoint"
+        "id": "e18-e22",
+        "type": "LMiterJoint",
+        "kind": "lmiter"
       },
       {
-        "id": "333",
-        "type": "PreferredFaceTButtJoint"
+        "id": "e18-e19",
+        "type": "PreferredFaceTButtJoint",
+        "kind": "other"
+      },
+      {
+        "id": "e17-e18",
+        "type": "PreferredFaceTButtJoint",
+        "kind": "other"
+      },
+      {
+        "id": "e18-f22",
+        "type": "LMiterJoint",
+        "kind": "lmiter"
       }
     ]
   },

@@ -32,10 +32,10 @@
   "connected_beams": [
     "a26",
     "a28",
-    "c30",
-    "c9",
     "c10",
-    "c31"
+    "c30",
+    "c31",
+    "c9"
   ],
   "global_position": {
     "centerline_start": [
@@ -61,35 +61,49 @@
   },
   "joints": {
     "all": [
-      "279",
-      "281",
-      "282",
-      "284",
-      "285",
-      "289"
+      "a26-c29",
+      "a28-c29",
+      "c29-c30",
+      "c29-c9",
+      "c10-c29",
+      "c29-c31"
     ],
     "xlap": [],
     "tbutt": [],
     "lmiter": [
-      "279",
-      "289"
+      "a26-c29",
+      "c29-c31"
     ],
-    "custom": [
+    "details": [
       {
-        "id": "281",
-        "type": "PreferredFaceTButtJoint"
+        "id": "a26-c29",
+        "type": "LMiterJoint",
+        "kind": "lmiter"
       },
       {
-        "id": "282",
-        "type": "PreferredFaceTButtJoint"
+        "id": "a28-c29",
+        "type": "PreferredFaceTButtJoint",
+        "kind": "other"
       },
       {
-        "id": "284",
-        "type": "PreferredFaceTButtJoint"
+        "id": "c29-c30",
+        "type": "PreferredFaceTButtJoint",
+        "kind": "other"
       },
       {
-        "id": "285",
-        "type": "PreferredFaceTButtJoint"
+        "id": "c29-c9",
+        "type": "PreferredFaceTButtJoint",
+        "kind": "other"
+      },
+      {
+        "id": "c10-c29",
+        "type": "PreferredFaceTButtJoint",
+        "kind": "other"
+      },
+      {
+        "id": "c29-c31",
+        "type": "LMiterJoint",
+        "kind": "lmiter"
       }
     ]
   },

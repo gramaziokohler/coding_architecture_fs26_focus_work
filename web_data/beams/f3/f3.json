@@ -59,21 +59,42 @@
   },
   "joints": {
     "all": [
-      "211",
-      "215",
-      "216",
-      "226"
+      "f1-f3",
+      "f29-f3",
+      "f3-f4",
+      "f3-f6"
     ],
     "xlap": [
-      "211",
-      "216"
+      "f1-f3",
+      "f3-f4"
     ],
     "tbutt": [
-      "215",
-      "226"
+      "f29-f3",
+      "f3-f6"
     ],
     "lmiter": [],
-    "custom": []
+    "details": [
+      {
+        "id": "f1-f3",
+        "type": "XLapJoint",
+        "kind": "xlap"
+      },
+      {
+        "id": "f29-f3",
+        "type": "TButtJoint",
+        "kind": "tbutt"
+      },
+      {
+        "id": "f3-f4",
+        "type": "XLapJoint",
+        "kind": "xlap"
+      },
+      {
+        "id": "f3-f6",
+        "type": "TButtJoint",
+        "kind": "tbutt"
+      }
+    ]
   },
   "3d_model": "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data/beams/f3/f3.stl"
 }

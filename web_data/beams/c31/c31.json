@@ -57,16 +57,27 @@
   },
   "joints": {
     "all": [
-      "289",
-      "297"
+      "c29-c31",
+      "c31-e36"
     ],
     "xlap": [],
     "tbutt": [],
     "lmiter": [
-      "289",
-      "297"
+      "c29-c31",
+      "c31-e36"
     ],
-    "custom": []
+    "details": [
+      {
+        "id": "c29-c31",
+        "type": "LMiterJoint",
+        "kind": "lmiter"
+      },
+      {
+        "id": "c31-e36",
+        "type": "LMiterJoint",
+        "kind": "lmiter"
+      }
+    ]
   },
   "3d_model": "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data/beams/c31/c31.stl"
 }

@@ -30,8 +30,8 @@
     ]
   },
   "connected_beams": [
-    "a13",
     "a11",
+    "a13",
     "a14",
     "a2"
   ],
@@ -59,23 +59,39 @@
   },
   "joints": {
     "all": [
-      "241",
-      "19",
-      "20",
-      "267"
+      "a12-a14",
+      "a12-a13",
+      "a11-a12",
+      "a12-a2"
     ],
     "xlap": [
-      "20"
+      "a11-a12"
     ],
     "tbutt": [
-      "19",
-      "267"
+      "a12-a13",
+      "a12-a2"
     ],
     "lmiter": [],
-    "custom": [
+    "details": [
       {
-        "id": "241",
-        "type": "PreferredFaceTButtJoint"
+        "id": "a12-a14",
+        "type": "PreferredFaceTButtJoint",
+        "kind": "other"
+      },
+      {
+        "id": "a12-a13",
+        "type": "TButtJoint",
+        "kind": "tbutt"
+      },
+      {
+        "id": "a11-a12",
+        "type": "XLapJoint",
+        "kind": "xlap"
+      },
+      {
+        "id": "a12-a2",
+        "type": "TButtJoint",
+        "kind": "tbutt"
       }
     ]
   },

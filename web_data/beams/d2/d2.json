@@ -30,9 +30,9 @@
     ]
   },
   "connected_beams": [
+    "d1",
     "d3",
     "d6",
-    "d1",
     "d8"
   ],
   "global_position": {
@@ -59,21 +59,42 @@
   },
   "joints": {
     "all": [
-      "95",
-      "99",
-      "100",
-      "114"
+      "d2-d3",
+      "d2-d6",
+      "d1-d2",
+      "d2-d8"
     ],
     "xlap": [
-      "95",
-      "100"
+      "d2-d3",
+      "d1-d2"
     ],
     "tbutt": [
-      "99",
-      "114"
+      "d2-d6",
+      "d2-d8"
     ],
     "lmiter": [],
-    "custom": []
+    "details": [
+      {
+        "id": "d2-d3",
+        "type": "XLapJoint",
+        "kind": "xlap"
+      },
+      {
+        "id": "d2-d6",
+        "type": "TButtJoint",
+        "kind": "tbutt"
+      },
+      {
+        "id": "d1-d2",
+        "type": "XLapJoint",
+        "kind": "xlap"
+      },
+      {
+        "id": "d2-d8",
+        "type": "TButtJoint",
+        "kind": "tbutt"
+      }
+    ]
   },
   "3d_model": "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data/beams/d2/d2.stl"
 }

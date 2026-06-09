@@ -58,20 +58,31 @@
   },
   "joints": {
     "all": [
-      "259",
-      "264",
-      "279"
+      "a16-a26",
+      "a24-a26",
+      "a26-c29"
     ],
     "xlap": [],
     "tbutt": [],
     "lmiter": [
-      "259",
-      "279"
+      "a16-a26",
+      "a26-c29"
     ],
-    "custom": [
+    "details": [
       {
-        "id": "264",
-        "type": "PreferredFaceTButtJoint"
+        "id": "a16-a26",
+        "type": "LMiterJoint",
+        "kind": "lmiter"
+      },
+      {
+        "id": "a24-a26",
+        "type": "PreferredFaceTButtJoint",
+        "kind": "other"
+      },
+      {
+        "id": "a26-c29",
+        "type": "LMiterJoint",
+        "kind": "lmiter"
       }
     ]
   },

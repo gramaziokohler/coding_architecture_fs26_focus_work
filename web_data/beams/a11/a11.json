@@ -58,19 +58,35 @@
   },
   "joints": {
     "all": [
-      "20",
-      "255",
-      "252"
+      "a11-a12",
+      "a11-a3",
+      "a11-a17"
     ],
     "xlap": [
-      "20"
+      "a11-a12"
     ],
     "tbutt": [
-      "255",
-      "252"
+      "a11-a3",
+      "a11-a17"
     ],
     "lmiter": [],
-    "custom": []
+    "details": [
+      {
+        "id": "a11-a12",
+        "type": "XLapJoint",
+        "kind": "xlap"
+      },
+      {
+        "id": "a11-a3",
+        "type": "TButtJoint",
+        "kind": "tbutt"
+      },
+      {
+        "id": "a11-a17",
+        "type": "TButtJoint",
+        "kind": "tbutt"
+      }
+    ]
   },
   "3d_model": "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data/beams/a11/a11.stl"
 }

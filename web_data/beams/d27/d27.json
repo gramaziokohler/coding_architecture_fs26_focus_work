@@ -57,18 +57,24 @@
   },
   "joints": {
     "all": [
-      "286",
-      "110"
+      "d27-d28",
+      "d26-d27"
     ],
     "xlap": [],
     "tbutt": [
-      "110"
+      "d26-d27"
     ],
     "lmiter": [],
-    "custom": [
+    "details": [
       {
-        "id": "286",
-        "type": "PreferredFaceTButtJoint"
+        "id": "d27-d28",
+        "type": "PreferredFaceTButtJoint",
+        "kind": "other"
+      },
+      {
+        "id": "d26-d27",
+        "type": "TButtJoint",
+        "kind": "tbutt"
       }
     ]
   },
