@@ -2,103 +2,87 @@
   "beam ID": "e23",
   "name": "E23",
   "module": "E",
-  "width (m)": 0.06,
-  "height (m)": 0.08,
-  "length (m)": 0.6217,
-  "volume (cm3)": 2984.02,
-  "weight (kg)": 1.49,
+  "width (m)": 0.08,
+  "height (m)": 0.1,
+  "length (m)": 1.49,
+  "volume (cm\u00b3)": 11946.44,
+  "weight (kg)": 5.97,
   "local_frame": {
     "origin": [
-      5.5614,
-      1.9647,
-      0.4395
+      5.5303,
+      -0.8451,
+      0.5539
     ],
     "x_axis": [
-      0.3002,
-      -0.8163,
-      -0.4935
+      0.5587,
+      0.3708,
+      -0.7419
     ],
     "y_axis": [
-      -0.5964,
-      -0.5644,
-      0.5708
+      0.6181,
+      0.4102,
+      0.6705
     ],
     "z_axis": [
-      -0.7445,
-      0.123,
-      -0.6562
+      0.553,
+      -0.8332,
+      0.0
     ]
   },
   "connected_beams": [
-    "e24",
-    "f27"
+    "e5",
+    "e4",
+    "e21",
+    "e22"
   ],
   "global_position": {
     "centerline_start": [
-      5.5614,
-      1.9647,
-      0.4395
+      5.1132,
+      -1.122,
+      1.1079
     ],
     "centerline_end": [
-      5.748,
-      1.4573,
-      0.1327
+      5.9475,
+      -0.5683,
+      0.0
     ],
     "midpoint": [
-      5.5614,
-      1.9647,
-      0.4395
+      5.5303,
+      -0.8451,
+      0.5539
     ],
     "midpoint_normalized": [
-      0.9471,
-      0.7398,
-      0.1618
+      0.95,
+      0.2236,
+      0.2008
     ]
   },
   "joints": {
     "all": [
-      "236",
-      "324"
+      "314",
+      "316",
+      "326",
+      "342"
     ],
     "xlap": [],
-    "tbutt": [
-      "236",
-      "324"
+    "tbutt": [],
+    "lmiter": [
+      "314"
     ],
-    "lmiter": [],
-    "details": [
+    "custom": [
       {
-        "id": "236",
-        "guid": "a2159cef-424a-4f64-95b4-da7445a70f30",
-        "type": "TButtJoint",
-        "kind": "tbutt",
-        "connected_beams": [
-          "e23",
-          "e24"
-        ],
-        "location": [
-          5.7596,
-          1.4447,
-          0.1374
-        ]
+        "id": "316",
+        "type": "PreferredFaceTButtJoint"
       },
       {
-        "id": "324",
-        "guid": "f48a8000-facd-4094-9c64-e9e0cd9e0b8b",
-        "type": "TButtJoint",
-        "kind": "tbutt",
-        "connected_beams": [
-          "e23",
-          "f27"
-        ],
-        "location": [
-          5.5622,
-          1.9741,
-          0.4346
-        ]
+        "id": "326",
+        "type": "PreferredFaceTButtJoint"
+      },
+      {
+        "id": "342",
+        "type": "PreferredFaceTButtJoint"
       }
     ]
   },
-  "processing": [],
   "3d_model": "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data/beams/e23/e23.stl"
 }
