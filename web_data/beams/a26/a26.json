@@ -4,8 +4,7 @@
   "module": "A",
   "width (m)": 0.08,
   "height (m)": 0.1,
-  "length (m)": 1.5029,
-  "volume (cm3)": 12023.48,
+  "length (m)": 1.5,
   "volume (cm\u00b3)": 12023.48,
   "weight (kg)": 6.01,
   "local_frame": {
@@ -64,59 +63,11 @@
       "279"
     ],
     "xlap": [],
-    "tbutt": [
-      "264"
-    ],
+    "tbutt": [],
     "lmiter": [
       "259",
       "279"
-    ],
-    "other": [],
-    "details": [
-      {
-        "id": "259",
-        "type": "LMiterJoint",
-        "kind": "lmiter",
-        "connected_beams": [
-          "a16",
-          "a26"
-        ],
-        "location": [
-          -0.4356,
-          -1.5386,
-          1.1217
-        ]
-      },
-      {
-        "id": "264",
-        "type": "PreferredFaceTButtJoint",
-        "kind": "tbutt",
-        "connected_beams": [
-          "a24",
-          "a26"
-        ],
-        "location": [
-          -0.2789,
-          -1.5927,
-          1.2889
-        ]
-      },
-      {
-        "id": "279",
-        "type": "LMiterJoint",
-        "kind": "lmiter",
-        "connected_beams": [
-          "a26",
-          "c29"
-        ],
-        "location": [
-          0.6099,
-          -1.9106,
-          2.1352
-        ]
-      }
     ]
   },
-  "processing": [],
-  "3d_model": "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data/beams/a26/a26.stl"
+  "3d_model": "beams/a26/a26.stl"
 }

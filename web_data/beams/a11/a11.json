@@ -4,8 +4,7 @@
   "module": "A",
   "width (m)": 0.06,
   "height (m)": 0.08,
-  "length (m)": 1.0368,
-  "volume (cm3)": 4976.65,
+  "length (m)": 1.04,
   "volume (cm\u00b3)": 4976.65,
   "weight (kg)": 2.49,
   "local_frame": {
@@ -70,53 +69,7 @@
       "255",
       "252"
     ],
-    "lmiter": [],
-    "other": [],
-    "details": [
-      {
-        "id": "20",
-        "type": "XLapJoint",
-        "kind": "xlap",
-        "connected_beams": [
-          "a11",
-          "a12"
-        ],
-        "location": [
-          -0.4922,
-          -0.4531,
-          0.5159
-        ]
-      },
-      {
-        "id": "255",
-        "type": "TButtJoint",
-        "kind": "tbutt",
-        "connected_beams": [
-          "a11",
-          "a3"
-        ],
-        "location": [
-          -0.5289,
-          -0.2025,
-          0.3882
-        ]
-      },
-      {
-        "id": "252",
-        "type": "TButtJoint",
-        "kind": "tbutt",
-        "connected_beams": [
-          "a11",
-          "a17"
-        ],
-        "location": [
-          -0.643,
-          0.2816,
-          0.1587
-        ]
-      }
-    ]
+    "lmiter": []
   },
-  "processing": [],
-  "3d_model": "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data/beams/a11/a11.stl"
+  "3d_model": "beams/a11/a11.stl"
 }

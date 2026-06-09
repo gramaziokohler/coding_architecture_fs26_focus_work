@@ -4,8 +4,7 @@
   "module": "D",
   "width (m)": 0.08,
   "height (m)": 0.1,
-  "length (m)": 1.1792,
-  "volume (cm3)": 9433.64,
+  "length (m)": 1.18,
   "volume (cm\u00b3)": 9433.64,
   "weight (kg)": 4.72,
   "local_frame": {
@@ -66,74 +65,11 @@
       "233"
     ],
     "xlap": [],
-    "tbutt": [
-      "292",
-      "232"
-    ],
+    "tbutt": [],
     "lmiter": [
       "290",
       "233"
-    ],
-    "other": [],
-    "details": [
-      {
-        "id": "290",
-        "type": "LMiterJoint",
-        "kind": "lmiter",
-        "connected_beams": [
-          "d23",
-          "d28"
-        ],
-        "location": [
-          1.8797,
-          3.3959,
-          2.2869
-        ]
-      },
-      {
-        "id": "292",
-        "type": "PreferredFaceTButtJoint",
-        "kind": "tbutt",
-        "connected_beams": [
-          "d23",
-          "d24"
-        ],
-        "location": [
-          2.0253,
-          3.3737,
-          2.2985
-        ]
-      },
-      {
-        "id": "232",
-        "type": "PreferredFaceTButtJoint",
-        "kind": "tbutt",
-        "connected_beams": [
-          "d22",
-          "d23"
-        ],
-        "location": [
-          2.9008,
-          3.2402,
-          2.2843
-        ]
-      },
-      {
-        "id": "233",
-        "type": "LMiterJoint",
-        "kind": "lmiter",
-        "connected_beams": [
-          "d23",
-          "f31"
-        ],
-        "location": [
-          3.044,
-          3.2183,
-          2.2705
-        ]
-      }
     ]
   },
-  "processing": [],
-  "3d_model": "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data/beams/d23/d23.stl"
+  "3d_model": "beams/d23/d23.stl"
 }

@@ -4,8 +4,7 @@
   "module": "D",
   "width (m)": 0.06,
   "height (m)": 0.08,
-  "length (m)": 1.0492,
-  "volume (cm3)": 5036.35,
+  "length (m)": 1.05,
   "volume (cm\u00b3)": 5036.35,
   "weight (kg)": 2.52,
   "local_frame": {
@@ -73,67 +72,7 @@
       "134",
       "122"
     ],
-    "lmiter": [],
-    "other": [],
-    "details": [
-      {
-        "id": "154",
-        "type": "XLapJoint",
-        "kind": "xlap",
-        "connected_beams": [
-          "d11",
-          "d12"
-        ],
-        "location": [
-          3.1034,
-          1.3611,
-          1.9921
-        ]
-      },
-      {
-        "id": "134",
-        "type": "TButtJoint",
-        "kind": "tbutt",
-        "connected_beams": [
-          "d12",
-          "d13"
-        ],
-        "location": [
-          2.8204,
-          1.3808,
-          2.0153
-        ]
-      },
-      {
-        "id": "133",
-        "type": "XLapJoint",
-        "kind": "xlap",
-        "connected_beams": [
-          "d10",
-          "d12"
-        ],
-        "location": [
-          2.6906,
-          1.3996,
-          2.0194
-        ]
-      },
-      {
-        "id": "122",
-        "type": "TButtJoint",
-        "kind": "tbutt",
-        "connected_beams": [
-          "d12",
-          "d7"
-        ],
-        "location": [
-          2.2803,
-          1.4264,
-          2.0162
-        ]
-      }
-    ]
+    "lmiter": []
   },
-  "processing": [],
-  "3d_model": "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data/beams/d12/d12.stl"
+  "3d_model": "beams/d12/d12.stl"
 }

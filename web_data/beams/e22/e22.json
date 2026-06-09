@@ -4,8 +4,7 @@
   "module": "E",
   "width (m)": 0.12,
   "height (m)": 0.14,
-  "length (m)": 0.7573,
-  "volume (cm3)": 12723.2,
+  "length (m)": 0.76,
   "volume (cm\u00b3)": 12723.2,
   "weight (kg)": 6.36,
   "local_frame": {
@@ -64,59 +63,10 @@
       "335"
     ],
     "xlap": [],
-    "tbutt": [
-      "342",
-      "339"
-    ],
+    "tbutt": [],
     "lmiter": [
       "335"
-    ],
-    "other": [],
-    "details": [
-      {
-        "id": "342",
-        "type": "PreferredFaceTButtJoint",
-        "kind": "tbutt",
-        "connected_beams": [
-          "e22",
-          "e23"
-        ],
-        "location": [
-          5.9249,
-          -0.5698,
-          0.0
-        ]
-      },
-      {
-        "id": "339",
-        "type": "PreferredFaceTButtJoint",
-        "kind": "tbutt",
-        "connected_beams": [
-          "e21",
-          "e22"
-        ],
-        "location": [
-          5.8712,
-          -0.2119,
-          0.0078
-        ]
-      },
-      {
-        "id": "335",
-        "type": "LMiterJoint",
-        "kind": "lmiter",
-        "connected_beams": [
-          "e18",
-          "e22"
-        ],
-        "location": [
-          5.826,
-          -0.0314,
-          0.0
-        ]
-      }
     ]
   },
-  "processing": [],
-  "3d_model": "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data/beams/e22/e22.stl"
+  "3d_model": "beams/e22/e22.stl"
 }
