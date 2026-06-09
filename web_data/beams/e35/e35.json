@@ -1,0 +1,76 @@
+{
+  "beam ID": "e35",
+  "name": "E35",
+  "module": "E",
+  "width (m)": 0.06,
+  "height (m)": 0.08,
+  "length (m)": 0.72,
+  "volume (cm\u00b3)": 3458.1,
+  "weight (kg)": 1.73,
+  "local_frame": {
+    "origin": [
+      4.113,
+      -1.4229,
+      2.0235
+    ],
+    "x_axis": [
+      0.4025,
+      0.735,
+      -0.5456
+    ],
+    "y_axis": [
+      0.2621,
+      0.4786,
+      0.838
+    ],
+    "z_axis": [
+      0.8771,
+      -0.4803,
+      0.0
+    ]
+  },
+  "connected_beams": [
+    "e36",
+    "e33"
+  ],
+  "global_position": {
+    "centerline_start": [
+      3.968,
+      -1.6876,
+      2.2201
+    ],
+    "centerline_end": [
+      4.258,
+      -1.1581,
+      1.827
+    ],
+    "midpoint": [
+      4.113,
+      -1.4229,
+      2.0235
+    ],
+    "midpoint_normalized": [
+      0.7469,
+      0.117,
+      0.7335
+    ]
+  },
+  "joints": {
+    "all": [
+      "181",
+      "305"
+    ],
+    "xlap": [],
+    "tbutt": [
+      "305"
+    ],
+    "lmiter": [],
+    "custom": [
+      {
+        "id": "181",
+        "type": "PreferredFaceTButtJoint"
+      }
+    ]
+  },
+  "3d_model": "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data/beams/e35/e35.stl"
+}

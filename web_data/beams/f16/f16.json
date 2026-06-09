@@ -2,31 +2,31 @@
   "beam ID": "f16",
   "name": "F16",
   "module": "F",
-  "width (m)": 0.08,
-  "height (m)": 0.1,
-  "length (m)": 1.1984,
-  "volume (cm3)": 9586.84,
-  "weight (kg)": 4.79,
+  "width (m)": 0.06,
+  "height (m)": 0.08,
+  "length (m)": 0.62,
+  "volume (cm\u00b3)": 2984.02,
+  "weight (kg)": 1.49,
   "local_frame": {
     "origin": [
-      1.775,
-      -2.1038,
-      2.7652
+      5.6547,
+      1.711,
+      0.2861
     ],
     "x_axis": [
-      0.9968,
-      0.0787,
-      -0.0111
+      0.3002,
+      -0.8163,
+      -0.4935
     ],
     "y_axis": [
-      -0.0675,
-      0.9121,
-      0.4044
+      0.1703,
+      -0.4632,
+      0.8697
     ],
     "z_axis": [
-      0.042,
-      -0.4024,
-      0.9145
+      -0.9386,
+      -0.3451,
+      0.0
     ]
   },
   "connected_beams": [
@@ -35,70 +35,42 @@
   ],
   "global_position": {
     "centerline_start": [
-      1.775,
-      -2.1038,
-      2.7652
+      5.5614,
+      1.9647,
+      0.4395
     ],
     "centerline_end": [
-      2.9696,
-      -2.0095,
-      2.7519
+      5.748,
+      1.4573,
+      0.1327
     ],
     "midpoint": [
-      1.775,
-      -2.1038,
-      2.7652
+      5.6547,
+      1.711,
+      0.2861
     ],
     "midpoint_normalized": [
-      0.4284,
-      0.0,
-      1.0
+      0.9679,
+      0.6954,
+      0.1037
     ]
   },
   "joints": {
     "all": [
-      "289",
-      "297"
+      "324",
+      "236"
     ],
     "xlap": [],
-    "tbutt": [],
-    "lmiter": [
-      "289",
-      "297"
+    "tbutt": [
+      "236"
     ],
-    "details": [
+    "lmiter": [],
+    "custom": [
       {
-        "id": "289",
-        "guid": "ca8ed793-c795-4f49-b81e-36b7a256d947",
-        "type": "LMiterJoint",
-        "kind": "lmiter",
-        "connected_beams": [
-          "f14",
-          "f16"
-        ],
-        "location": [
-          1.775,
-          -2.1038,
-          2.7652
-        ]
-      },
-      {
-        "id": "297",
-        "guid": "ced636e8-cf7f-4886-aa54-9b117e3fab1c",
-        "type": "LMiterJoint",
-        "kind": "lmiter",
-        "connected_beams": [
-          "f16",
-          "f17"
-        ],
-        "location": [
-          2.9696,
-          -2.0095,
-          2.7519
-        ]
+        "id": "324",
+        "type": "PreferredFaceTButtJoint"
       }
     ]
   },
-  "processing": [],
   "3d_model": "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data/beams/f16/f16.stl"
 }

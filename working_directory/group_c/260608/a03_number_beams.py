@@ -2,8 +2,9 @@ import os
 import sys
 import re
 import json
+import math
 import Rhino.Geometry as rg
-from collections import deque
+from collections import deque, defaultdict
 from compas.datastructures import Graph
 
 def run_numbering(timber_model, Index, RunExport, OutputFolder):
@@ -13,7 +14,7 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
     debug_out = ""
     info_out = ""
     json_export_out = "Export non avviato (RunExport è False)."
-    
+
     A_geom_out, B_geom_out, C_geom_out = [], [], []
     D_geom_out, E_geom_out, F_geom_out = [], [], []
 
@@ -245,7 +246,27 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
         return volume * WOOD_DENSITY
 
     # =========================
-    # 6D. FUNZIONI STL
+    # 6D. FUNZIONE IDENTITÀ BEAM (DAL NUOVO EXPORTER)
+    # NOTE: Group C - Mahalo può sostituire solo questa funzione
+    # quando i nomi degli attributi finali sono confermati.
+    # =========================
+    def get_beam_identity(beam, fallback_name):
+        """Ritorna (beam_id, display_name) per il beam.
+        Cerca prima attributi custom sul modello, poi usa il fallback."""
+        # Prova attributi custom di Group C
+        for attr in ['assembly_id', 'beam_id', 'label', 'name', 'tag']:
+            try:
+                val = beam.attributes.get(attr) if hasattr(beam, 'attributes') else None
+                if val:
+                    clean = str(val).strip().lower().replace(" ", "_")
+                    return clean, str(val).strip()
+            except:
+                continue
+        # Fallback al nome generato dalla numerazione spaziale
+        return fallback_name.lower(), fallback_name
+
+    # =========================
+    # 6E. FUNZIONI STL
     # =========================
     def compas_mesh_to_rg(compas_mesh):
         rg_mesh = rg.Mesh()
@@ -275,13 +296,14 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
             def write_tri(p0, p1, p2):
                 ux = p1.X - p0.X; uy = p1.Y - p0.Y; uz = p1.Z - p0.Z
                 vx = p2.X - p0.X; vy = p2.Y - p0.Y; vz = p2.Z - p0.Z
-                nx = uy * vz - uz * vy
-                ny = uz * vx - ux * vz
-                nz = ux * vy - uy * vx
-                length = (nx**2 + ny**2 + nz**2) ** 0.5
-                if length > 0: nx /= length; ny /= length; nz /= length
-                lines.append("  facet normal {} {} {}".format(nx, ny, nz))
-                lines.append("    outer loop\n      vertex {} {} {}\n      vertex {} {} {}\n      vertex {} {} {}\n    endloop\n  endfacet".format(p0.X,p0.Y,p0.Z, p1.X,p1.Y,p1.Z, p2.X,p2.Y,p2.Z))
+                nx_ = uy * vz - uz * vy
+                ny_ = uz * vx - ux * vz
+                nz_ = ux * vy - uy * vx
+                length = (nx_**2 + ny_**2 + nz_**2) ** 0.5
+                if length > 0: nx_ /= length; ny_ /= length; nz_ /= length
+                lines.append("  facet normal {} {} {}".format(nx_, ny_, nz_))
+                lines.append("    outer loop\n      vertex {} {} {}\n      vertex {} {} {}\n      vertex {} {} {}\n    endloop\n  endfacet".format(
+                    p0.X,p0.Y,p0.Z, p1.X,p1.Y,p1.Z, p2.X,p2.Y,p2.Z))
             if face.IsTriangle: write_tri(verts[face.A], verts[face.B], verts[face.C])
             else:
                 write_tri(verts[face.A], verts[face.B], verts[face.C])
@@ -310,7 +332,7 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
         return None
 
     # =========================
-    # 6E. FUNZIONE FRAME LOCALE BEAM
+    # 6F. FUNZIONE FRAME LOCALE BEAM
     # =========================
     def get_beam_local_frame(beam):
         try:
@@ -329,7 +351,9 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
             y_axis = [z_axis[1]*x_axis[2] - z_axis[2]*x_axis[1], z_axis[2]*x_axis[0] - z_axis[0]*x_axis[2], z_axis[0]*x_axis[1] - z_axis[1]*x_axis[0]]
             return {
                 "origin": [round((start.x+end.x)/2.0, 4), round((start.y+end.y)/2.0, 4), round((start.z+end.z)/2.0, 4)],
-                "x_axis": [round(v, 4) for v in x_axis], "y_axis": [round(v, 4) for v in y_axis], "z_axis": [round(v, 4) for v in z_axis]
+                "x_axis": [round(v, 4) for v in x_axis],
+                "y_axis": [round(v, 4) for v in y_axis],
+                "z_axis": [round(v, 4) for v in z_axis]
             }
         except: return None
 
@@ -346,8 +370,9 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
 
         for i, node in enumerate(ordered):
             beam = timber_model.get_element(node)
-            name = "{}{}".format(k, i + 1)
-            
+            fallback_name = "{}{}".format(k, i + 1)
+            _, display_name = get_beam_identity(beam, fallback_name)
+
             rhino_geom = beam.geometry
             if hasattr(beam.geometry, "native_brep") and beam.geometry.native_brep:
                 rhino_geom = beam.geometry.native_brep
@@ -358,10 +383,10 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
                 except: pass
 
             geom[k].append(rhino_geom)
-            beam_label_by_guid[node] = name
+            beam_label_by_guid[node] = display_name
 
     # =========================
-    # 7B. STRUTTURA INTERNA DEI CO-GIUNTI (SOLO PER METADATI JSON)
+    # 7B. STRUTTURA INTERNA DEI GIUNTI
     # =========================
     joint_number_by_pair = {}
     beam_joints = {node: [] for node in g.nodes()}
@@ -408,7 +433,7 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
             weight = get_beam_weight(beam, length)
             volume_m3 = (w if w < 1 else w / 100.0) * (h if h < 1 else h / 100.0) * length if (w and h) else 0.0
 
-            full_info_string = "{} | L={:.2f}m | Sez={} | Vol={:.2f}cm3 | Peso={:.1f}kg".format(
+            full_info_string = "{} | L={:.2f}m | Sez={} | Vol={:.2f}cm³ | Peso={:.1f}kg".format(
                 name, length, orientation, volume_m3 * 1_000_000, weight
             )
             summary_by_category[k].append(full_info_string)
@@ -442,7 +467,8 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
             s, e = get_line_start(cl), get_line_end(cl)
             all_beams_positions[label] = {
                 "guid": node, "module": assignment.get(node, "?"),
-                "centerline_start": [round(s.x, 4), round(s.y, 4), round(s.z, 4)], "centerline_end": [round(e.x, 4), round(e.y, 4), round(e.z, 4)],
+                "centerline_start": [round(s.x, 4), round(s.y, 4), round(s.z, 4)],
+                "centerline_end": [round(e.x, 4), round(e.y, 4), round(e.z, 4)],
                 "midpoint": [round(px, 4), round(py, 4), round(pz, 4)],
                 "midpoint_normalized": [round((px - min_x3) / rx, 4), round((py - min_y3) / ry, 4), round((pz - min_z3) / rz, 4)]
             }
@@ -464,7 +490,9 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
         for k in labels_keys:
             for node in ordered_by_module.get(k, []):
                 name = beam_label_by_guid.get(node, "?")
+                beam_id, display_name = get_beam_identity(beam, name)
                 beam = timber_model.get_element(node)
+
                 try: length = beam.centerline.length
                 except: length = 0.0
 
@@ -479,14 +507,20 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
                 for param, j_num in joints_list:
                     if j_num not in seen: clean_joints.append(j_num); seen.add(j_num)
 
-                xlap, tbutt, lmiter = [], [], []
+                # Categorizzazione joints — aggiungi qui nuovi tipi custom
+                xlap, tbutt, lmiter, custom = [], [], [], []
                 for j_num in clean_joints:
                     j_type = joint_type_by_number.get(j_num, "")
-                    if j_type == 'XLapJoint': xlap.append(j_num)
-                    elif j_type == 'TButtJoint': tbutt.append(j_num)
-                    elif j_type == 'LMiterJoint': lmiter.append(j_num)
+                    if j_type == 'XLapJoint':
+                        xlap.append(j_num)
+                    elif j_type == 'TButtJoint':
+                        tbutt.append(j_num)
+                    elif j_type == 'LMiterJoint':
+                        lmiter.append(j_num)
+                    else:
+                        # Tutti i joint custom non riconosciuti finiscono qui
+                        custom.append({"id": j_num, "type": j_type})
 
-                beam_id = name.lower()
                 beam_folder = os.path.join(output_folder, beam_id)
                 if not os.path.exists(beam_folder): os.makedirs(beam_folder)
 
@@ -496,16 +530,29 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
 
                 global_pos = all_beams_positions.get(name, {})
                 beam_data = {
-                    "beam ID": beam_id, "name": name, "module": k,
-                    "width (m)": round(w_m, 4) if w_m else None, "height (m)": round(h_m, 4) if h_m else None,
-                    "length (m)": round(length, 2), "volume (cm³)": round(volume_m3 * 1_000_000, 2), "weight (kg)": round(weight, 2),
+                    "beam ID": beam_id,
+                    "name": display_name,
+                    "module": k,
+                    "width (m)": round(w_m, 4) if w_m else None,
+                    "height (m)": round(h_m, 4) if h_m else None,
+                    "length (m)": round(length, 2),
+                    "volume (cm³)": round(volume_m3 * 1_000_000, 2),
+                    "weight (kg)": round(weight, 2),
                     "local_frame": get_beam_local_frame(beam),
                     "connected_beams": [beam_label_by_guid[nbr].lower() for nbr in g.neighbors(node) if nbr in beam_label_by_guid],
                     "global_position": {
-                        "centerline_start": global_pos.get("centerline_start"), "centerline_end": global_pos.get("centerline_end"),
-                        "midpoint": global_pos.get("midpoint"), "midpoint_normalized": global_pos.get("midpoint_normalized")
+                        "centerline_start": global_pos.get("centerline_start"),
+                        "centerline_end": global_pos.get("centerline_end"),
+                        "midpoint": global_pos.get("midpoint"),
+                        "midpoint_normalized": global_pos.get("midpoint_normalized")
                     },
-                    "joints": {"all": clean_joints, "xlap": xlap, "tbutt": tbutt, "lmiter": lmiter},
+                    "joints": {
+                        "all": clean_joints,
+                        "xlap": xlap,
+                        "tbutt": tbutt,
+                        "lmiter": lmiter,
+                        "custom": custom   # <-- nuovi joint custom qui
+                    },
                     "3d_model": "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data/beams/{}/{}.stl".format(beam_id, beam_id)
                 }
 
@@ -513,37 +560,51 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
                 with open(json_path, 'w') as f: json.dump(beam_data, f, indent=2)
                 json_files_created.append(json_path)
 
+        # structure.json globale
         all_beams_list = []
         for k in labels_keys:
             for node in ordered_by_module.get(k, []):
                 label = beam_label_by_guid.get(node, "?")
-                gpos  = all_beams_positions.get(label, {})
+                beam = timber_model.get_element(node)
+                beam_id, _ = get_beam_identity(beam, label)
+                gpos = all_beams_positions.get(label, {})
                 all_beams_list.append({
-                    "beam_id": label.lower(), "module": k,
-                    "centerline_start": gpos.get("centerline_start"), "centerline_end": gpos.get("centerline_end"),
-                    "midpoint": gpos.get("midpoint"), "midpoint_normalized": gpos.get("midpoint_normalized"),
+                    "beam_id": beam_id,
+                    "module": k,
+                    "centerline_start": gpos.get("centerline_start"),
+                    "centerline_end": gpos.get("centerline_end"),
+                    "midpoint": gpos.get("midpoint"),
+                    "midpoint_normalized": gpos.get("midpoint_normalized"),
                     "connected_beams": [beam_label_by_guid[nbr].lower() for nbr in g.neighbors(node) if nbr in beam_label_by_guid]
                 })
 
         if not os.path.exists(output_folder): os.makedirs(output_folder)
         with open(global_structure_path, 'w') as f:
-            json.dump({"total_beams": len(all_beams_list), "bounding_box": {"min": [round(min_x3, 4), round(min_y3, 4), round(min_z3, 4)], "max": [round(max_x3, 4), round(max_y3, 4), round(max_z3, 4)]}, "beams": all_beams_list}, f, indent=2)
+            json.dump({
+                "total_beams": len(all_beams_list),
+                "bounding_box": {
+                    "min": [round(min_x3, 4), round(min_y3, 4), round(min_z3, 4)],
+                    "max": [round(max_x3, 4), round(max_y3, 4), round(max_z3, 4)]
+                },
+                "beams": all_beams_list
+            }, f, indent=2)
         json_files_created.append(global_structure_path)
 
-        json_export_out = "JSON: {} | STL: {} | Errori STL: {}".format(len(json_files_created), len(stl_files_created), len(stl_errors))
+        json_export_out = "JSON: {} | STL: {} | Errori STL: {}".format(
+            len(json_files_created), len(stl_files_created), len(stl_errors))
         if stl_errors: json_export_out += "\n" + "\n".join(stl_errors[:5])
 
     # =========================
-    # 13. RETURN FINALE MODIFICATO (9 USCITE TOTALI)
+    # 13. RETURN FINALE (9 USCITE)
     # =========================
     return (
-        debug_out,          # 0
-        info_out,           # 1
-        json_export_out,    # 2
-        A_geom_out,         # 3
-        B_geom_out,         # 4
-        C_geom_out,         # 5
-        D_geom_out,         # 6
-        E_geom_out,         # 7
-        F_geom_out          # 8
+        debug_out,      # 0
+        info_out,       # 1
+        json_export_out,# 2
+        A_geom_out,     # 3
+        B_geom_out,     # 4
+        C_geom_out,     # 5
+        D_geom_out,     # 6
+        E_geom_out,     # 7
+        F_geom_out      # 8
     )
