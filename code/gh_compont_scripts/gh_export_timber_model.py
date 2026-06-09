@@ -81,6 +81,41 @@ def restore_temporary_export_attributes(removed):
         beam.attributes[key] = value
 
 
+def mark_feature_as_standalone(feature):
+    try:
+        feature.is_joinery = False
+    except Exception:
+        try:
+            feature.__dict__["is_joinery"] = False
+        except Exception:
+            pass
+
+    try:
+        feature.is_standalone_fabrication_feature = True
+    except Exception:
+        pass
+
+
+def mark_standalone_inner_jack_rafter_cut_features(model):
+    """Keep free-end JackRafterCuts in Beam.features during JSON export."""
+
+    marked = 0
+
+    for beam in iter_model_beams(model):
+        attributes = getattr(beam, "attributes", None) or {}
+        if not attributes.get("inner_jack_rafter_cut"):
+            continue
+
+        for feature in getattr(beam, "features", None) or []:
+            if type(feature).__name__ != "JackRafterCut":
+                continue
+
+            mark_feature_as_standalone(feature)
+            marked += 1
+
+    return marked
+
+
 def collect_joint_feature_ids(model):
     feature_ids = set()
 
@@ -188,6 +223,7 @@ def collect_feature_export_issues(model):
 export_message = "Check 'run' state and ensure 'path' is a complete file path."
 removed_attributes_count = 0
 removed_features_count = 0
+marked_standalone_jack_rafter_count = 0
 
 if run and path:
     if not path.lower().endswith(".json"):
@@ -195,6 +231,7 @@ if run and path:
 
     removed_attributes = strip_temporary_export_attributes(model)
     removed_attributes_count = len(removed_attributes)
+    marked_standalone_jack_rafter_count = mark_standalone_inner_jack_rafter_cut_features(model)
     removed_features = strip_temporary_joinery_features(model)
     removed_features_count = len(removed_features)
 
@@ -217,3 +254,5 @@ if removed_attributes_count:
     print("Removed {} temporary preview geometry attributes for export only.".format(removed_attributes_count))
 if removed_features_count:
     print("Removed {} generated joint-owned features for export only.".format(removed_features_count))
+if marked_standalone_jack_rafter_count:
+    print("Marked {} inner JackRafterCut features as standalone for export.".format(marked_standalone_jack_rafter_count))
