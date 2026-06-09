@@ -6,7 +6,7 @@ import Rhino.Geometry as rg
 from collections import deque
 from compas.datastructures import Graph
 
-def run_numbering(timber_model, Index, RunExport):
+def run_numbering(timber_model, Index, RunExport, OutputFolder):
     # =========================
     # INSTANZIAZIONE OUTPUT PREDEFINITI
     # =========================
@@ -16,10 +16,6 @@ def run_numbering(timber_model, Index, RunExport):
     
     A_geom_out, B_geom_out, C_geom_out = [], [], []
     D_geom_out, E_geom_out, F_geom_out = [], [], []
-    
-    joint_points_out = []
-    joint_labels_out = []
-    joint_textdots_out = []
 
     try:
         idx = int(Index)
@@ -150,7 +146,7 @@ def run_numbering(timber_model, Index, RunExport):
         return order
 
     # =========================
-    # 6B. FUNZIONI GEOMETRICHE PER GEOMETRIA JOINTS
+    # 6B. FUNZIONI GEOMETRICHE PER METADATI
     # =========================
     def get_line_start(line):
         if hasattr(line, "start"): return line.start
@@ -171,11 +167,7 @@ def run_numbering(timber_model, Index, RunExport):
         except:
             a = get_line_start(line)
             b = get_line_end(line)
-            return type(a)(
-                a.x + (b.x - a.x) * t,
-                a.y + (b.y - a.y) * t,
-                a.z + (b.z - a.z) * t
-            )
+            return type(a)(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t, a.z + (b.z - a.z) * t)
 
     def joint_point_from_beams(ea, eb):
         best_pa, best_pb = None, None
@@ -192,11 +184,7 @@ def run_numbering(timber_model, Index, RunExport):
                     best_d = d
                     best_pa = pa
                     best_pb = pb
-        return rg.Point3d(
-            (best_pa.x + best_pb.x) / 2.0,
-            (best_pa.y + best_pb.y) / 2.0,
-            (best_pa.z + best_pb.z) / 2.0
-        )
+        return rg.Point3d((best_pa.x + best_pb.x) / 2.0, (best_pa.y + best_pb.y) / 2.0, (best_pa.z + best_pb.z) / 2.0)
 
     def parameter_on_centerline(beam, point):
         best_t = 0.0
@@ -264,8 +252,7 @@ def run_numbering(timber_model, Index, RunExport):
         vertices = list(compas_mesh.vertices())
         vertex_map = {}
         for i, v in enumerate(vertices):
-            try:
-                x, y, z = compas_mesh.vertex_coordinates(v)
+            try: x, y, z = compas_mesh.vertex_coordinates(v)
             except:
                 pt = compas_mesh.vertex_attributes(v, ['x', 'y', 'z'])
                 x, y, z = pt
@@ -273,10 +260,8 @@ def run_numbering(timber_model, Index, RunExport):
             vertex_map[v] = i
         for face in compas_mesh.faces():
             fv = list(compas_mesh.face_vertices(face))
-            if len(fv) == 3:
-                rg_mesh.Faces.AddFace(vertex_map[fv[0]], vertex_map[fv[1]], vertex_map[fv[2]])
-            elif len(fv) == 4:
-                rg_mesh.Faces.AddFace(vertex_map[fv[0]], vertex_map[fv[1]], vertex_map[fv[2]], vertex_map[fv[3]])
+            if len(fv) == 3: rg_mesh.Faces.AddFace(vertex_map[fv[0]], vertex_map[fv[1]], vertex_map[fv[2]])
+            elif len(fv) == 4: rg_mesh.Faces.AddFace(vertex_map[fv[0]], vertex_map[fv[1]], vertex_map[fv[2]], vertex_map[fv[3]])
         rg_mesh.Normals.ComputeNormals()
         rg_mesh.Compact()
         return rg_mesh
@@ -287,7 +272,6 @@ def run_numbering(timber_model, Index, RunExport):
         for i in range(rg_mesh.Faces.Count):
             face = rg_mesh.Faces[i]
             verts = rg_mesh.Vertices
-
             def write_tri(p0, p1, p2):
                 ux = p1.X - p0.X; uy = p1.Y - p0.Y; uz = p1.Z - p0.Z
                 vx = p2.X - p0.X; vy = p2.Y - p0.Y; vz = p2.Z - p0.Z
@@ -295,78 +279,34 @@ def run_numbering(timber_model, Index, RunExport):
                 ny = uz * vx - ux * vz
                 nz = ux * vy - uy * vx
                 length = (nx**2 + ny**2 + nz**2) ** 0.5
-                if length > 0:
-                    nx /= length; ny /= length; nz /= length
+                if length > 0: nx /= length; ny /= length; nz /= length
                 lines.append("  facet normal {} {} {}".format(nx, ny, nz))
-                lines.append("    outer loop")
-                lines.append("      vertex {} {} {}".format(p0.X, p0.Y, p0.Z))
-                lines.append("      vertex {} {} {}".format(p1.X, p1.Y, p1.Z))
-                lines.append("      vertex {} {} {}".format(p2.X, p2.Y, p2.Z))
-                lines.append("    endloop")
-                lines.append("  endfacet")
-
-            if face.IsTriangle:
-                write_tri(verts[face.A], verts[face.B], verts[face.C])
+                lines.append("    outer loop\n      vertex {} {} {}\n      vertex {} {} {}\n      vertex {} {} {}\n    endloop\n  endfacet".format(p0.X,p0.Y,p0.Z, p1.X,p1.Y,p1.Z, p2.X,p2.Y,p2.Z))
+            if face.IsTriangle: write_tri(verts[face.A], verts[face.B], verts[face.C])
             else:
                 write_tri(verts[face.A], verts[face.B], verts[face.C])
                 write_tri(verts[face.A], verts[face.C], verts[face.D])
-
         lines.append("endsolid beam")
-        with open(path, 'w') as f:
-            f.write("\n".join(lines))
+        with open(path, 'w') as f: f.write("\n".join(lines))
 
     def save_stl(geometry, beam_id, beam_folder):
         stl_path = os.path.join(beam_folder, "{}.stl".format(beam_id))
-        errors = []
-
         if hasattr(geometry, 'to_stl'):
             try:
                 geometry.to_stl(stl_path)
                 if os.path.exists(stl_path): return stl_path
-            except Exception as e1:
-                errors.append("to_stl failed: {}".format(e1))
-
-        if hasattr(geometry, 'native_brep'):
+            except: pass
+        if hasattr(geometry, 'native_brep') or isinstance(geometry, rg.Brep):
             try:
-                native = geometry.native_brep
-                if isinstance(native, rg.Brep):
-                    meshp = rg.MeshingParameters.Default
-                    meshes = rg.Mesh.CreateFromBrep(native, meshp)
-                    if meshes:
-                        joined = rg.Mesh()
-                        for m in meshes: joined.Append(m)
-                        write_stl(joined, stl_path)
-                        if os.path.exists(stl_path): return stl_path
-            except Exception as e2:
-                errors.append("native_brep failed: {}".format(e2))
-
-        if hasattr(geometry, 'to_meshes'):
-            try:
-                meshes = geometry.to_meshes()
-                if meshes:
-                    joined = rg.Mesh()
-                    for m in meshes:
-                        if isinstance(m, rg.Mesh): joined.Append(m)
-                        elif hasattr(m, 'native_mesh'): joined.Append(m.native_mesh)
-                        elif hasattr(m, 'vertices') and hasattr(m, 'faces'): joined.Append(compas_mesh_to_rg(m))
-                    if joined.Faces.Count > 0:
-                        write_stl(joined, stl_path)
-                        if os.path.exists(stl_path): return stl_path
-            except Exception as e3:
-                errors.append("to_meshes failed: {}".format(e3))
-
-        if isinstance(geometry, rg.Brep):
-            try:
+                native = geometry.native_brep if hasattr(geometry, 'native_brep') else geometry
                 meshp = rg.MeshingParameters.Default
-                meshes = rg.Mesh.CreateFromBrep(geometry, meshp)
+                meshes = rg.Mesh.CreateFromBrep(native, meshp)
                 if meshes:
                     joined = rg.Mesh()
                     for m in meshes: joined.Append(m)
                     write_stl(joined, stl_path)
-                    if os.path.exists(stl_path): return stl_path
-            except Exception as e4:
-                errors.append("rg.Brep failed: {}".format(e4))
-
+                    return stl_path
+            except: pass
         return None
 
     # =========================
@@ -375,48 +315,23 @@ def run_numbering(timber_model, Index, RunExport):
     def get_beam_local_frame(beam):
         try:
             line = beam.centerline
-            try:
-                start = line.start
-                end = line.end
-            except:
-                start = get_line_start(line)
-                end = get_line_end(line)
-
-            dx = end.x - start.x
-            dy = end.y - start.y
-            dz = end.z - start.z
+            start = line.start if hasattr(line, "start") else get_line_start(line)
+            end = line.end if hasattr(line, "end") else get_line_end(line)
+            dx, dy, dz = end.x - start.x, end.y - start.y, end.z - start.z
             length = (dx**2 + dy**2 + dz**2) ** 0.5
-
             if length < 1e-10: return None
-
             x_axis = [dx/length, dy/length, dz/length]
-            if abs(x_axis[2]) > 0.9: ref = [1.0, 0.0, 0.0]
-            else: ref = [0.0, 0.0, 1.0]
-
-            cx = x_axis[1]*ref[2] - x_axis[2]*ref[1]
-            cy = x_axis[2]*ref[0] - x_axis[0]*ref[2]
-            cz = x_axis[0]*ref[1] - x_axis[1]*ref[0]
+            ref = [1.0, 0.0, 0.0] if abs(x_axis[2]) > 0.9 else [0.0, 0.0, 1.0]
+            cx, cy, cz = x_axis[1]*ref[2] - x_axis[2]*ref[1], x_axis[2]*ref[0] - x_axis[0]*ref[2], x_axis[0]*ref[1] - x_axis[1]*ref[0]
             c_len = (cx**2 + cy**2 + cz**2) ** 0.5
             if c_len < 1e-10: return None
             z_axis = [cx/c_len, cy/c_len, cz/c_len]
-
-            yx = z_axis[1]*x_axis[2] - z_axis[2]*x_axis[1]
-            yy = z_axis[2]*x_axis[0] - z_axis[0]*x_axis[2]
-            yz = z_axis[0]*x_axis[1] - z_axis[1]*x_axis[0]
-            y_len = (yx**2 + yy**2 + yz**2) ** 0.5
-            if y_len < 1e-10: return None
-            y_axis = [yx/y_len, yy/y_len, yz/y_len]
-
-            origin = [(start.x + end.x) / 2.0, (start.y + end.y) / 2.0, (start.z + end.z) / 2.0]
-
+            y_axis = [z_axis[1]*x_axis[2] - z_axis[2]*x_axis[1], z_axis[2]*x_axis[0] - z_axis[0]*x_axis[2], z_axis[0]*x_axis[1] - z_axis[1]*x_axis[0]]
             return {
-                "origin": [round(v, 4) for v in origin],
-                "x_axis": [round(v, 4) for v in x_axis],
-                "y_axis": [round(v, 4) for v in y_axis],
-                "z_axis": [round(v, 4) for v in z_axis]
+                "origin": [round((start.x+end.x)/2.0, 4), round((start.y+end.y)/2.0, 4), round((start.z+end.z)/2.0, 4)],
+                "x_axis": [round(v, 4) for v in x_axis], "y_axis": [round(v, 4) for v in y_axis], "z_axis": [round(v, 4) for v in z_axis]
             }
-        except:
-            return None
+        except: return None
 
     # =========================
     # 7. GENERAZIONE OUTPUT BEAMS
@@ -433,8 +348,6 @@ def run_numbering(timber_model, Index, RunExport):
             beam = timber_model.get_element(node)
             name = "{}{}".format(k, i + 1)
             
-            # --- TRUCCO DI CONVERSIONE FONDAMENTALE ---
-            # Estraiamo qui la geometria nativa di Rhino (Brep/Mesh), altrimenti si perde nel passaggio dati
             rhino_geom = beam.geometry
             if hasattr(beam.geometry, "native_brep") and beam.geometry.native_brep:
                 rhino_geom = beam.geometry.native_brep
@@ -448,45 +361,30 @@ def run_numbering(timber_model, Index, RunExport):
             beam_label_by_guid[node] = name
 
     # =========================
-    # 7B. NOMINAZIONE E CALCOLO JOINTS GLOBALI
+    # 7B. STRUTTURA INTERNA DEI CO-GIUNTI (SOLO PER METADATI JSON)
     # =========================
     joint_number_by_pair = {}
     beam_joints = {node: [] for node in g.nodes()}
     joint_type_by_number = {}
-
     counter = 1
+
     for joint in timber_model.joints:
         ea, eb = joint.elements
-        ga = str(ea.guid)
-        gb = str(eb.guid)
-
+        ga, gb = str(ea.guid), str(eb.guid)
         pair_key = tuple(sorted([ga, gb]))
-        is_new_joint = False
 
         if pair_key not in joint_number_by_pair:
             joint_number = "{:02d}".format(counter)
             joint_number_by_pair[pair_key] = joint_number
             joint_type_by_number[joint_number] = type(joint).__name__
             counter += 1
-            is_new_joint = True
         else:
             joint_number = joint_number_by_pair[pair_key]
 
         jp = joint_point_from_beams(ea, eb)
-        param_a = parameter_on_centerline(ea, jp)
-        param_b = parameter_on_centerline(eb, jp)
+        beam_joints[ga].append((parameter_on_centerline(ea, jp), joint_number))
+        beam_joints[gb].append((parameter_on_centerline(eb, jp), joint_number))
 
-        beam_joints[ga].append((param_a, joint_number))
-        beam_joints[gb].append((param_b, joint_number))
-
-        if is_new_joint:
-            joint_points_out.append(jp)
-            joint_labels_out.append(joint_number)
-            joint_textdots_out.append(rg.TextDot(joint_number, jp))
-
-    # =========================
-    # 8. PREVIEW GEOMETRIE MODULI
-    # =========================
     A_geom_out = geom["A"]
     B_geom_out = geom["B"]
     C_geom_out = geom["C"]
@@ -495,20 +393,16 @@ def run_numbering(timber_model, Index, RunExport):
     F_geom_out = geom["F"]
 
     # =========================
-    # 9. ELABORAZIONE COMPLETA E DETTAGLIATA
+    # 9. ELABORAZIONE DETTAGLI
     # =========================
     summary_by_category = {k: [] for k in labels_keys}
     info_lines_master = []
 
     for k in labels_keys:
-        nodes_in_module = ordered_by_module.get(k, [])
-        for node in nodes_in_module:
+        for node in ordered_by_module.get(k, []):
             name = beam_label_by_guid.get(node, "?")
             beam = timber_model.get_element(node)
-
-            try: length = beam.centerline.length
-            except: length = 0.0
-
+            length = beam.centerline.length if hasattr(beam.centerline, 'length') else 0.0
             w, h = get_beam_section(beam)
             orientation = get_orientation_string(w, h)
             weight = get_beam_weight(beam, length)
@@ -520,17 +414,12 @@ def run_numbering(timber_model, Index, RunExport):
             summary_by_category[k].append(full_info_string)
             info_lines_master.append(full_info_string)
 
-    # =========================
-    # 10. ORDINAMENTO E OUTPUT INFO
-    # =========================
     def sort_key(line):
         match = re.match(r'([A-Z]+)(\d+)', line)
-        if match: return (match.group(1), int(match.group(2)))
-        return (line, 0)
+        return (match.group(1), int(match.group(2))) if match else (line, 0)
 
     info_list = sorted(info_lines_master, key=sort_key)
-    if 0 <= idx < len(info_list): info_out = info_list[idx]
-    else: info_out = info_list[0] if info_list else "nessun beam"
+    info_out = info_list[idx] if (0 <= idx < len(info_list)) else (info_list[0] if info_list else "nessun beam")
 
     # =========================
     # 10B. POSIZIONI GLOBALI TUTTI I BEAM
@@ -540,51 +429,42 @@ def run_numbering(timber_model, Index, RunExport):
     min_x3, max_x3 = min(p[0] for p in all_pts_list), max(p[0] for p in all_pts_list)
     min_y3, max_y3 = min(p[1] for p in all_pts_list), max(p[1] for p in all_pts_list)
     min_z3, max_z3 = min(p[2] for p in all_pts_list), max(p[2] for p in all_pts_list)
-
-    range_x3 = max_x3 - min_x3 if max_x3 != min_x3 else 1.0
-    range_y3 = max_y3 - min_y3 if max_y3 != min_y3 else 1.0
-    range_z3 = max_z3 - min_z3 if max_z3 != min_z3 else 1.0
+    rx = max_x3 - min_x3 if max_x3 != min_x3 else 1.0
+    ry = max_y3 - min_y3 if max_y3 != min_y3 else 1.0
+    rz = max_z3 - min_z3 if max_z3 != min_z3 else 1.0
 
     for node in g.nodes():
         label = beam_label_by_guid.get(node, node)
         px, py, pz = pts[node]
         beam = timber_model.get_element(node)
-
         try:
             cl = beam.centerline
-            s = get_line_start(cl)
-            e = get_line_end(cl)
+            s, e = get_line_start(cl), get_line_end(cl)
             all_beams_positions[label] = {
                 "guid": node, "module": assignment.get(node, "?"),
-                "centerline_start": [round(s.x, 4), round(s.y, 4), round(s.z, 4)],
-                "centerline_end":   [round(e.x, 4), round(e.y, 4), round(e.z, 4)],
+                "centerline_start": [round(s.x, 4), round(s.y, 4), round(s.z, 4)], "centerline_end": [round(e.x, 4), round(e.y, 4), round(e.z, 4)],
                 "midpoint": [round(px, 4), round(py, 4), round(pz, 4)],
-                "midpoint_normalized": [round((px - min_x3) / range_x3, 4), round((py - min_y3) / range_y3, 4), round((pz - min_z3) / range_z3, 4)]
+                "midpoint_normalized": [round((px - min_x3) / rx, 4), round((py - min_y3) / ry, 4), round((pz - min_z3) / rz, 4)]
             }
         except:
             all_beams_positions[label] = {
                 "guid": node, "module": assignment.get(node, "?"),
                 "midpoint": [round(px, 4), round(py, 4), round(pz, 4)],
-                "midpoint_normalized": [round((px - min_x3) / range_x3, 4), round((py - min_y3) / range_y3, 4), round((pz - min_z3) / range_z3, 4)]
+                "midpoint_normalized": [round((px - min_x3) / rx, 4), round((py - min_y3) / ry, 4), round((pz - min_z3) / rz, 4)]
             }
 
     # =========================
-    # 11 & 12. EXPORT CONDIZIONALE SU RICHIESTA
+    # 11 & 12. EXPORT DINAMICO CON CARTELLA DA GRASSHOPPER
     # =========================
-    if RunExport:
-        output_folder = "/Users/Ra/Desktop/web_data/beams"
+    if RunExport and OutputFolder:
+        output_folder = str(OutputFolder)
         global_structure_path = os.path.join(output_folder, "structure.json")
-
-        json_files_created = []
-        stl_files_created = []
-        stl_errors = []
+        json_files_created, stl_files_created, stl_errors = [], [], []
 
         for k in labels_keys:
-            nodes_in_module = ordered_by_module.get(k, [])
-            for node in nodes_in_module:
+            for node in ordered_by_module.get(k, []):
                 name = beam_label_by_guid.get(node, "?")
                 beam = timber_model.get_element(node)
-
                 try: length = beam.centerline.length
                 except: length = 0.0
 
@@ -654,7 +534,7 @@ def run_numbering(timber_model, Index, RunExport):
         if stl_errors: json_export_out += "\n" + "\n".join(stl_errors[:5])
 
     # =========================
-    # 13. RETURN ORDINATO (TUPLA FISSA 0-11)
+    # 13. RETURN FINALE MODIFICATO (9 USCITE TOTALI)
     # =========================
     return (
         debug_out,          # 0
@@ -665,8 +545,5 @@ def run_numbering(timber_model, Index, RunExport):
         C_geom_out,         # 5
         D_geom_out,         # 6
         E_geom_out,         # 7
-        F_geom_out,         # 8
-        joint_points_out,   # 9
-        joint_labels_out,   # 10
-        joint_textdots_out  # 11
+        F_geom_out          # 8
     )
