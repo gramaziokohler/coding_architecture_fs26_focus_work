@@ -437,16 +437,12 @@ class DrillingProcessor:
         final_screw_length = max(item["req_len"] for item in calculated)
 
         hw_lines = []
-        cnc_lines = []
         for item in calculated:
             head = item["head"]
             final_tail = head + screw_dir * final_screw_length
             hw_lines.append(Line(head, final_tail))
-            cnc_head = head - screw_dir * 0.010
-            cnc_tail = final_tail + screw_dir * 0.010
-            cnc_lines.append(Line(cnc_head, cnc_tail))
 
-        return self._generate_features(cnc_lines, hw_lines, abut_beam, cont_beam, joint_label, final_screw_length)
+        return self._generate_features(hw_lines, abut_beam, cont_beam, joint_label, final_screw_length)
     
     def _apply_standard_butt_drilling(self, joint):
         elements = [joint.main_beam, joint.cross_beam]
@@ -492,20 +488,15 @@ class DrillingProcessor:
         hw_line_1 = Line(start_pt + offset_vec, end_pt + offset_vec)
         hw_line_2 = Line(start_pt - offset_vec, end_pt - offset_vec)
         
-        extension = 0.025
-        cnc_line_1 = Line(hw_line_1.start - (dir_into_abut * extension), hw_line_1.end + (dir_into_abut * extension))
-        cnc_line_2 = Line(hw_line_2.start - (dir_into_abut * extension), hw_line_2.end + (dir_into_abut * extension))
-        
         cat_a = abut_beam.attributes.get("category", "inner")
         cat_c = cont_beam.attributes.get("category", "inner")
         joint_label = "TButtJoint - arch" if cat_a == "arch" or cat_c == "arch" else "TButtJoint - inner"
         
         self._generate_features(
-            [cnc_line_1, cnc_line_2], 
-            [hw_line_1, hw_line_2], 
-            abut_beam, 
-            cont_beam, 
-            joint_label, 
+            [hw_line_1, hw_line_2],
+            abut_beam,
+            cont_beam,
+            joint_label,
             req_screw_length
         )
 
@@ -551,20 +542,9 @@ class DrillingProcessor:
         hw_line_1 = Line(hw_start_1, hw_end_1)
         hw_line_2 = Line(hw_start_2, hw_end_2)
         
-        cnc_overhang = 0.250 
-        start_offset = (true_total_thickness / 2.0) + cnc_overhang
-        
-        cnc_start_1 = center_1 - (screw_dir * start_offset)
-        cnc_end_1 = center_1 + (screw_dir * start_offset)
-        cnc_start_2 = center_2 - (screw_dir * start_offset)
-        cnc_end_2 = center_2 + (screw_dir * start_offset)
-        
-        cnc_line_1 = Line(cnc_start_1, cnc_end_1)
-        cnc_line_2 = Line(cnc_start_2, cnc_end_2)
-        
-        return self._generate_features([cnc_line_1, cnc_line_2], [hw_line_1, hw_line_2], beam_a, beam_b, joint_label, req_screw_length)
+        return self._generate_features([hw_line_1, hw_line_2], beam_a, beam_b, joint_label, req_screw_length)
 
-    def _generate_features(self, cnc_lines, hw_lines, beam_1, beam_2, joint_label, req_screw_length): 
+    def _generate_features(self, hw_lines, beam_1, beam_2, joint_label, req_screw_length):
         success = False
         
         if joint_label not in self.hardware_screws_by_type:
@@ -582,20 +562,19 @@ class DrillingProcessor:
         else:
             assigned_len = "Oversized"
             
-        for i in range(len(cnc_lines)):
-            cnc_line = cnc_lines[i]
+        for i in range(len(hw_lines)):
             hw_line = hw_lines[i]
             line_added_to_any = False
             
             for beam in [beam_1, beam_2]:
                 try:
-                    drill = Drilling.from_line_and_element(cnc_line, beam, diameter=self.screw_diameter)
+                    drill = Drilling.from_line_and_element(hw_line, beam, diameter=self.screw_diameter)
                     if self.max_drilling_depth is not None:
                         try:
                             ref_side = beam.side_as_surface(drill.ref_side_index)
-                            drill.depth = drill._calculate_depth(cnc_line, ref_side)
+                            drill.depth = drill._calculate_depth(hw_line, ref_side)
                         except Exception:
-                            drill.depth = cnc_line.length
+                            drill.depth = hw_line.length
                         drill.depth_limited = True
                         if drill.depth > self.max_drilling_depth:
                             drill.depth = self.max_drilling_depth
