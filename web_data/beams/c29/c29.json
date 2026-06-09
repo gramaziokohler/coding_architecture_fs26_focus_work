@@ -32,10 +32,10 @@
   "connected_beams": [
     "a26",
     "a28",
-    "c10",
     "c30",
-    "c31",
-    "c9"
+    "c9",
+    "c10",
+    "c31"
   ],
   "global_position": {
     "centerline_start": [
@@ -61,50 +61,18 @@
   },
   "joints": {
     "all": [
-      "a26-c29",
-      "a28-c29",
-      "c29-c30",
-      "c29-c9",
-      "c10-c29",
-      "c29-c31"
+      "279",
+      "281",
+      "282",
+      "284",
+      "285",
+      "289"
     ],
     "xlap": [],
     "tbutt": [],
     "lmiter": [
-      "a26-c29",
-      "c29-c31"
-    ],
-    "details": [
-      {
-        "id": "a26-c29",
-        "type": "LMiterJoint",
-        "kind": "lmiter"
-      },
-      {
-        "id": "a28-c29",
-        "type": "PreferredFaceTButtJoint",
-        "kind": "other"
-      },
-      {
-        "id": "c29-c30",
-        "type": "PreferredFaceTButtJoint",
-        "kind": "other"
-      },
-      {
-        "id": "c29-c9",
-        "type": "PreferredFaceTButtJoint",
-        "kind": "other"
-      },
-      {
-        "id": "c10-c29",
-        "type": "PreferredFaceTButtJoint",
-        "kind": "other"
-      },
-      {
-        "id": "c29-c31",
-        "type": "LMiterJoint",
-        "kind": "lmiter"
-      }
+      "279",
+      "289"
     ]
   },
   "3d_model": "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data/beams/c29/c29.stl"

@@ -30,10 +30,10 @@
     ]
   },
   "connected_beams": [
-    "f2",
-    "f28",
     "f3",
-    "f4"
+    "f2",
+    "f4",
+    "f28"
   ],
   "global_position": {
     "centerline_start": [
@@ -59,42 +59,20 @@
   },
   "joints": {
     "all": [
-      "f1-f4",
-      "f1-f2",
-      "f1-f3",
-      "f1-f28"
+      "230",
+      "212",
+      "211",
+      "306"
     ],
     "xlap": [
-      "f1-f4",
-      "f1-f3"
+      "230",
+      "211"
     ],
     "tbutt": [
-      "f1-f2",
-      "f1-f28"
+      "212",
+      "306"
     ],
-    "lmiter": [],
-    "details": [
-      {
-        "id": "f1-f4",
-        "type": "XLapJoint",
-        "kind": "xlap"
-      },
-      {
-        "id": "f1-f2",
-        "type": "TButtJoint",
-        "kind": "tbutt"
-      },
-      {
-        "id": "f1-f3",
-        "type": "XLapJoint",
-        "kind": "xlap"
-      },
-      {
-        "id": "f1-f28",
-        "type": "TButtJoint",
-        "kind": "tbutt"
-      }
-    ]
+    "lmiter": []
   },
   "3d_model": "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data/beams/f1/f1.stl"
 }

@@ -30,12 +30,12 @@
     ]
   },
   "connected_beams": [
+    "e35",
+    "e5",
+    "c31",
     "c13",
     "c14",
-    "c31",
-    "e34",
-    "e35",
-    "e5"
+    "e34"
   ],
   "global_position": {
     "centerline_start": [
@@ -61,50 +61,18 @@
   },
   "joints": {
     "all": [
-      "c31-e36",
-      "c13-e36",
-      "c14-e36",
-      "e34-e36",
-      "e35-e36",
-      "e36-e5"
+      "297",
+      "298",
+      "300",
+      "302",
+      "181",
+      "182"
     ],
     "xlap": [],
     "tbutt": [],
     "lmiter": [
-      "c31-e36",
-      "e36-e5"
-    ],
-    "details": [
-      {
-        "id": "c31-e36",
-        "type": "LMiterJoint",
-        "kind": "lmiter"
-      },
-      {
-        "id": "c13-e36",
-        "type": "PreferredFaceTButtJoint",
-        "kind": "other"
-      },
-      {
-        "id": "c14-e36",
-        "type": "PreferredFaceTButtJoint",
-        "kind": "other"
-      },
-      {
-        "id": "e34-e36",
-        "type": "PreferredFaceTButtJoint",
-        "kind": "other"
-      },
-      {
-        "id": "e35-e36",
-        "type": "PreferredFaceTButtJoint",
-        "kind": "other"
-      },
-      {
-        "id": "e36-e5",
-        "type": "LMiterJoint",
-        "kind": "lmiter"
-      }
+      "297",
+      "182"
     ]
   },
   "3d_model": "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data/beams/e36/e36.stl"

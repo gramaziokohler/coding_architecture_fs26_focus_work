@@ -30,9 +30,9 @@
     ]
   },
   "connected_beams": [
+    "e33",
     "e30",
     "e32",
-    "e33",
     "e36"
   ],
   "global_position": {
@@ -59,41 +59,19 @@
   },
   "joints": {
     "all": [
-      "e32-e34",
-      "e30-e34",
-      "e33-e34",
-      "e34-e36"
+      "199",
+      "194",
+      "193",
+      "302"
     ],
     "xlap": [
-      "e32-e34",
-      "e33-e34"
+      "199",
+      "193"
     ],
     "tbutt": [
-      "e30-e34"
+      "194"
     ],
-    "lmiter": [],
-    "details": [
-      {
-        "id": "e32-e34",
-        "type": "XLapJoint",
-        "kind": "xlap"
-      },
-      {
-        "id": "e30-e34",
-        "type": "TButtJoint",
-        "kind": "tbutt"
-      },
-      {
-        "id": "e33-e34",
-        "type": "XLapJoint",
-        "kind": "xlap"
-      },
-      {
-        "id": "e34-e36",
-        "type": "PreferredFaceTButtJoint",
-        "kind": "other"
-      }
-    ]
+    "lmiter": []
   },
   "3d_model": "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data/beams/e34/e34.stl"
 }

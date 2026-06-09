@@ -30,8 +30,8 @@
     ]
   },
   "connected_beams": [
-    "a11",
     "a18",
+    "a11",
     "a19"
   ],
   "global_position": {
@@ -58,33 +58,16 @@
   },
   "joints": {
     "all": [
-      "a17-a18",
-      "a11-a17",
-      "a17-a19"
+      "245",
+      "252",
+      "258"
     ],
     "xlap": [],
     "tbutt": [
-      "a11-a17",
-      "a17-a19"
+      "252",
+      "258"
     ],
-    "lmiter": [],
-    "details": [
-      {
-        "id": "a17-a18",
-        "type": "PreferredFaceTButtJoint",
-        "kind": "other"
-      },
-      {
-        "id": "a11-a17",
-        "type": "TButtJoint",
-        "kind": "tbutt"
-      },
-      {
-        "id": "a17-a19",
-        "type": "TButtJoint",
-        "kind": "tbutt"
-      }
-    ]
+    "lmiter": []
   },
   "3d_model": "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data/beams/a17/a17.stl"
 }

@@ -30,8 +30,8 @@
     ]
   },
   "connected_beams": [
-    "e13",
     "e15",
+    "e13",
     "e17"
   ],
   "global_position": {
@@ -58,35 +58,18 @@
   },
   "joints": {
     "all": [
-      "e15-e16",
-      "e13-e16",
-      "e16-e17"
+      "318",
+      "322",
+      "329"
     ],
     "xlap": [
-      "e15-e16"
+      "318"
     ],
     "tbutt": [
-      "e13-e16",
-      "e16-e17"
+      "322",
+      "329"
     ],
-    "lmiter": [],
-    "details": [
-      {
-        "id": "e15-e16",
-        "type": "XLapJoint",
-        "kind": "xlap"
-      },
-      {
-        "id": "e13-e16",
-        "type": "TButtJoint",
-        "kind": "tbutt"
-      },
-      {
-        "id": "e16-e17",
-        "type": "TButtJoint",
-        "kind": "tbutt"
-      }
-    ]
+    "lmiter": []
   },
   "3d_model": "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data/beams/e16/e16.stl"
 }

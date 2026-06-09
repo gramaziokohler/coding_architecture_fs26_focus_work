@@ -30,8 +30,8 @@
     ]
   },
   "connected_beams": [
-    "f24",
     "f27",
+    "f24",
     "f28",
     "f3"
   ],
@@ -59,42 +59,20 @@
   },
   "joints": {
     "all": [
-      "f27-f29",
-      "f24-f29",
-      "f28-f29",
-      "f29-f3"
+      "195",
+      "207",
+      "208",
+      "215"
     ],
     "xlap": [
-      "f27-f29",
-      "f28-f29"
+      "195",
+      "208"
     ],
     "tbutt": [
-      "f24-f29",
-      "f29-f3"
+      "207",
+      "215"
     ],
-    "lmiter": [],
-    "details": [
-      {
-        "id": "f27-f29",
-        "type": "XLapJoint",
-        "kind": "xlap"
-      },
-      {
-        "id": "f24-f29",
-        "type": "TButtJoint",
-        "kind": "tbutt"
-      },
-      {
-        "id": "f28-f29",
-        "type": "XLapJoint",
-        "kind": "xlap"
-      },
-      {
-        "id": "f29-f3",
-        "type": "TButtJoint",
-        "kind": "tbutt"
-      }
-    ]
+    "lmiter": []
   },
   "3d_model": "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data/beams/f29/f29.stl"
 }

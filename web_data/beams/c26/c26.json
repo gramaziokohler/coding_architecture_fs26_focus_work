@@ -30,8 +30,8 @@
     ]
   },
   "connected_beams": [
-    "c23",
     "c27",
+    "c23",
     "d16",
     "d9"
   ],
@@ -59,42 +59,20 @@
   },
   "joints": {
     "all": [
-      "c26-c27",
-      "c23-c26",
-      "c26-d16",
-      "c26-d9"
+      "102",
+      "111",
+      "112",
+      "125"
     ],
     "xlap": [
-      "c26-c27",
-      "c26-d16"
+      "102",
+      "112"
     ],
     "tbutt": [
-      "c23-c26",
-      "c26-d9"
+      "111",
+      "125"
     ],
-    "lmiter": [],
-    "details": [
-      {
-        "id": "c26-c27",
-        "type": "XLapJoint",
-        "kind": "xlap"
-      },
-      {
-        "id": "c23-c26",
-        "type": "TButtJoint",
-        "kind": "tbutt"
-      },
-      {
-        "id": "c26-d16",
-        "type": "XLapJoint",
-        "kind": "xlap"
-      },
-      {
-        "id": "c26-d9",
-        "type": "TButtJoint",
-        "kind": "tbutt"
-      }
-    ]
+    "lmiter": []
   },
   "3d_model": "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data/beams/c26/c26.stl"
 }
