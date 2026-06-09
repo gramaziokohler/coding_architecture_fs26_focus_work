@@ -46,6 +46,9 @@ class PreferredFaceTButtJoint(TButtJoint):
         cross_beam_ref_side_index=None,
         **kwargs
     ):
+        if cross_beam_ref_side_index is None:
+            cross_beam_ref_side_index = kwargs.pop("forced_cross_beam_ref_side_index", None)
+
         super(PreferredFaceTButtJoint, self).__init__(
             main_beam=main_beam,
             cross_beam=cross_beam,
