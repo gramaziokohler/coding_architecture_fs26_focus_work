@@ -4,7 +4,8 @@
   "module": "A",
   "width (m)": 0.12,
   "height (m)": 0.14,
-  "length (m)": 0.95,
+  "length (m)": 0.9538,
+  "volume (cm3)": 16024.2,
   "volume (cm\u00b3)": 16024.2,
   "weight (kg)": 8.01,
   "local_frame": {
@@ -33,7 +34,7 @@
     "a14",
     "a17",
     "a19",
-    "b4"
+    "b11"
   ],
   "global_position": {
     "centerline_start": [
@@ -73,28 +74,66 @@
       "244",
       "250"
     ],
+    "other": [],
     "details": [
       {
         "id": "244",
         "type": "LMiterJoint",
-        "kind": "lmiter"
+        "kind": "lmiter",
+        "connected_beams": [
+          "a14",
+          "a18"
+        ],
+        "location": [
+          -0.8438,
+          -0.2012,
+          0.0
+        ]
       },
       {
         "id": "245",
         "type": "PreferredFaceTButtJoint",
-        "kind": "tbutt"
+        "kind": "tbutt",
+        "connected_beams": [
+          "a17",
+          "a18"
+        ],
+        "location": [
+          -0.8177,
+          0.0322,
+          0.0138
+        ]
       },
       {
         "id": "249",
         "type": "PreferredFaceTButtJoint",
-        "kind": "tbutt"
+        "kind": "tbutt",
+        "connected_beams": [
+          "a18",
+          "a19"
+        ],
+        "location": [
+          -0.727,
+          0.5888,
+          0.0154
+        ]
       },
       {
         "id": "250",
         "type": "LMiterJoint",
-        "kind": "lmiter"
+        "kind": "lmiter",
+        "connected_beams": [
+          "a18",
+          "b11"
+        ],
+        "location": [
+          -0.6888,
+          0.7399,
+          0.0
+        ]
       }
     ]
   },
+  "processing": [],
   "3d_model": "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data/beams/a18/a18.stl"
 }

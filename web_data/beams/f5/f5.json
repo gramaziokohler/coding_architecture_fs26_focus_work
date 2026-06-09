@@ -4,7 +4,8 @@
   "module": "F",
   "width (m)": 0.08,
   "height (m)": 0.1,
-  "length (m)": 1.38,
+  "length (m)": 1.3788,
+  "volume (cm3)": 11030.23,
   "volume (cm\u00b3)": 11030.23,
   "weight (kg)": 5.52,
   "local_frame": {
@@ -70,23 +71,52 @@
       "234",
       "315"
     ],
+    "other": [],
     "details": [
       {
         "id": "234",
         "type": "LMiterJoint",
-        "kind": "lmiter"
+        "kind": "lmiter",
+        "connected_beams": [
+          "f31",
+          "f5"
+        ],
+        "location": [
+          4.1436,
+          2.816,
+          1.7591
+        ]
       },
       {
         "id": "313",
         "type": "PreferredFaceTButtJoint",
-        "kind": "tbutt"
+        "kind": "tbutt",
+        "connected_beams": [
+          "f2",
+          "f5"
+        ],
+        "location": [
+          4.9967,
+          2.3515,
+          1.0502
+        ]
       },
       {
         "id": "315",
         "type": "LMiterJoint",
-        "kind": "lmiter"
+        "kind": "lmiter",
+        "connected_beams": [
+          "f17",
+          "f5"
+        ],
+        "location": [
+          5.1169,
+          2.286,
+          0.9388
+        ]
       }
     ]
   },
+  "processing": [],
   "3d_model": "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data/beams/f5/f5.stl"
 }

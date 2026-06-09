@@ -4,7 +4,8 @@
   "module": "F",
   "width (m)": 0.06,
   "height (m)": 0.08,
-  "length (m)": 1.26,
+  "length (m)": 1.2569,
+  "volume (cm3)": 6033.23,
   "volume (cm\u00b3)": 6033.23,
   "weight (kg)": 3.02,
   "local_frame": {
@@ -73,28 +74,66 @@
       "306"
     ],
     "lmiter": [],
+    "other": [],
     "details": [
       {
         "id": "230",
         "type": "XLapJoint",
-        "kind": "xlap"
+        "kind": "xlap",
+        "connected_beams": [
+          "f1",
+          "f4"
+        ],
+        "location": [
+          5.0189,
+          1.9801,
+          0.9784
+        ]
       },
       {
         "id": "212",
         "type": "TButtJoint",
-        "kind": "tbutt"
+        "kind": "tbutt",
+        "connected_beams": [
+          "f1",
+          "f2"
+        ],
+        "location": [
+          4.7689,
+          2.0809,
+          1.1798
+        ]
       },
       {
         "id": "211",
         "type": "XLapJoint",
-        "kind": "xlap"
+        "kind": "xlap",
+        "connected_beams": [
+          "f1",
+          "f3"
+        ],
+        "location": [
+          4.6562,
+          2.1298,
+          1.269
+        ]
       },
       {
         "id": "306",
         "type": "TButtJoint",
-        "kind": "tbutt"
+        "kind": "tbutt",
+        "connected_beams": [
+          "f1",
+          "f28"
+        ],
+        "location": [
+          4.27,
+          2.2961,
+          1.5645
+        ]
       }
     ]
   },
+  "processing": [],
   "3d_model": "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data/beams/f1/f1.stl"
 }

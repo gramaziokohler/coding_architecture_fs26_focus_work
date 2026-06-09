@@ -1,0 +1,139 @@
+{
+  "beam ID": "e28",
+  "name": "E28",
+  "module": "E",
+  "width (m)": 0.06,
+  "height (m)": 0.08,
+  "length (m)": 1.0278,
+  "volume (cm3)": 4933.6,
+  "volume (cm\u00b3)": 4933.6,
+  "weight (kg)": 2.47,
+  "local_frame": {
+    "origin": [
+      3.8119,
+      0.4249,
+      1.737
+    ],
+    "x_axis": [
+      0.4868,
+      -0.8589,
+      -0.1588
+    ],
+    "y_axis": [
+      0.0783,
+      -0.1381,
+      0.9873
+    ],
+    "z_axis": [
+      -0.87,
+      -0.4931,
+      0.0
+    ]
+  },
+  "connected_beams": [
+    "c25",
+    "e26",
+    "e27",
+    "f23"
+  ],
+  "global_position": {
+    "centerline_start": [
+      3.5617,
+      0.8663,
+      1.8186
+    ],
+    "centerline_end": [
+      4.0621,
+      -0.0166,
+      1.6554
+    ],
+    "midpoint": [
+      3.8119,
+      0.4249,
+      1.737
+    ],
+    "midpoint_normalized": [
+      0.7037,
+      0.458,
+      0.6297
+    ]
+  },
+  "joints": {
+    "all": [
+      "171",
+      "177",
+      "178",
+      "188"
+    ],
+    "xlap": [
+      "171",
+      "178"
+    ],
+    "tbutt": [
+      "177",
+      "188"
+    ],
+    "lmiter": [],
+    "other": [],
+    "details": [
+      {
+        "id": "171",
+        "type": "XLapJoint",
+        "kind": "xlap",
+        "connected_beams": [
+          "e28",
+          "f23"
+        ],
+        "location": [
+          3.6683,
+          0.6839,
+          1.7795
+        ]
+      },
+      {
+        "id": "177",
+        "type": "TButtJoint",
+        "kind": "tbutt",
+        "connected_beams": [
+          "c25",
+          "e28"
+        ],
+        "location": [
+          3.8082,
+          0.4396,
+          1.7378
+        ]
+      },
+      {
+        "id": "178",
+        "type": "XLapJoint",
+        "kind": "xlap",
+        "connected_beams": [
+          "e27",
+          "e28"
+        ],
+        "location": [
+          3.8691,
+          0.3419,
+          1.7141
+        ]
+      },
+      {
+        "id": "188",
+        "type": "TButtJoint",
+        "kind": "tbutt",
+        "connected_beams": [
+          "e26",
+          "e28"
+        ],
+        "location": [
+          4.0615,
+          -0.0088,
+          1.6545
+        ]
+      }
+    ]
+  },
+  "processing": [],
+  "3d_model": "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data/beams/e28/e28.stl"
+}
