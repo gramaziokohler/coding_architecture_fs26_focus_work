@@ -1,7 +1,10 @@
 # r: compas==2.15.1,timber_design==0.2.0,compas_fab==1.1.4
 # venv: ca-fs26-focus-work
 
+import json
+
 from compas.data import json_dump
+from compas.data.encoders import DataEncoder
 
 
 ghenv.Component.Message = "Export TimberModel"
@@ -116,6 +119,72 @@ def mark_standalone_inner_jack_rafter_cut_features(model):
     return marked
 
 
+def collect_standalone_inner_jack_rafter_cut_payloads(model):
+    payloads = []
+
+    for beam in iter_model_beams(model):
+        attributes = getattr(beam, "attributes", None) or {}
+        if not attributes.get("inner_jack_rafter_cut"):
+            continue
+
+        beam_guid = str(getattr(beam, "guid", ""))
+        if not beam_guid:
+            continue
+
+        for feature in getattr(beam, "features", None) or []:
+            if type(feature).__name__ != "JackRafterCut":
+                continue
+
+            mark_feature_as_standalone(feature)
+            payload = json.loads(json.dumps(feature, cls=DataEncoder))
+            payloads.append((beam_guid, payload))
+
+    return payloads
+
+
+def inject_standalone_inner_jack_rafter_cuts(path, payloads):
+    if not payloads:
+        return 0
+
+    with open(path, "r") as fp:
+        data = json.load(fp)
+
+    elements = data.get("data", {}).get("elements", {})
+    injected = 0
+
+    for beam_guid, payload in payloads:
+        element = elements.get(beam_guid)
+
+        if element is None:
+            for candidate in elements.values():
+                candidate_data = candidate.get("data", {})
+                if str(candidate_data.get("guid", "")) == beam_guid:
+                    element = candidate
+                    break
+
+        if element is None:
+            continue
+
+        element_data = element.setdefault("data", {})
+        features = element_data.setdefault("features", [])
+
+        if any(
+            feature.get("dtype") == payload.get("dtype")
+            and feature.get("guid") == payload.get("guid")
+            for feature in features
+            if isinstance(feature, dict)
+        ):
+            continue
+
+        features.append(payload)
+        injected += 1
+
+    with open(path, "w") as fp:
+        json.dump(data, fp)
+
+    return injected
+
+
 def collect_joint_feature_ids(model):
     feature_ids = set()
 
@@ -224,6 +293,7 @@ export_message = "Check 'run' state and ensure 'path' is a complete file path."
 removed_attributes_count = 0
 removed_features_count = 0
 marked_standalone_jack_rafter_count = 0
+injected_standalone_jack_rafter_count = 0
 
 if run and path:
     if not path.lower().endswith(".json"):
@@ -232,11 +302,16 @@ if run and path:
     removed_attributes = strip_temporary_export_attributes(model)
     removed_attributes_count = len(removed_attributes)
     marked_standalone_jack_rafter_count = mark_standalone_inner_jack_rafter_cut_features(model)
+    standalone_jack_rafter_payloads = collect_standalone_inner_jack_rafter_cut_payloads(model)
     removed_features = strip_temporary_joinery_features(model)
     removed_features_count = len(removed_features)
 
     try:
         json_dump(model, path)
+        injected_standalone_jack_rafter_count = inject_standalone_inner_jack_rafter_cuts(
+            path,
+            standalone_jack_rafter_payloads,
+        )
         export_message = "Model successfully saved to: {}".format(path)
     except Exception as error:
         print("Model export failed: {}".format(error))
@@ -256,3 +331,5 @@ if removed_features_count:
     print("Removed {} generated joint-owned features for export only.".format(removed_features_count))
 if marked_standalone_jack_rafter_count:
     print("Marked {} inner JackRafterCut features as standalone for export.".format(marked_standalone_jack_rafter_count))
+if injected_standalone_jack_rafter_count:
+    print("Injected {} inner JackRafterCut features into exported JSON.".format(injected_standalone_jack_rafter_count))
