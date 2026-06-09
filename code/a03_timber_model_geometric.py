@@ -13,6 +13,7 @@ from compas_timber.connections import (
 )
 from compas_timber.elements import Beam
 from a03_preferred_face_tbutt_joint import PreferredFaceTButtJoint
+from a03_cutoff_l_lap_joint import CutoffLLapJoint
 from compas_timber.model import TimberModel
 from compas_timber.fabrication import JackRafterCut
 from compas_rhino.conversions import plane_to_rhino
@@ -169,6 +170,8 @@ class GeometricTimberModelCreator:
         cutting_plane_inset_distance: float = 0.0,
         arch_A_inner_cross_beam_ref_side_index: int = None,
         arch_B_inner_cross_beam_ref_side_index: int = None,
+        use_lap_for_arch_l_joints: bool = False,
+        use_lap_for_base_l_joints: bool = False,
     ):
         self.rf_system = rf_system
         self.timber_model = TimberModel()
@@ -208,6 +211,8 @@ class GeometricTimberModelCreator:
         self.cutting_plane_inset_distance = float(cutting_plane_inset_distance or 0.0)
         self.arch_A_inner_cross_beam_ref_side_index = arch_A_inner_cross_beam_ref_side_index
         self.arch_B_inner_cross_beam_ref_side_index = arch_B_inner_cross_beam_ref_side_index
+        self.use_lap_for_arch_l_joints = use_lap_for_arch_l_joints
+        self.use_lap_for_base_l_joints = use_lap_for_base_l_joints
 
     @property
     def jack_rafter_cut_features_inner_beams(self):
@@ -619,6 +624,11 @@ class GeometricTimberModelCreator:
                     base_b = main_beam if cat_main == "base" else cross_beam
                     arch_b = cross_beam if cat_main == "base" else main_beam
                     return PreferredFaceTButtJoint, [arch_b, base_b]
+                is_arch_joint = is_arch_main and is_arch_cross
+                is_base_joint = cat_main == "base" and cat_cross == "base"
+                if (is_arch_joint and self.use_lap_for_arch_l_joints) or \
+                   (is_base_joint and self.use_lap_for_base_l_joints):
+                    return CutoffLLapJoint, [main_beam, cross_beam]
                 return LMiterJoint, [main_beam, cross_beam]
             return None, None
 
