@@ -4,88 +4,75 @@
   "module": "E",
   "width (m)": 0.06,
   "height (m)": 0.08,
-  "length (m)": 0.86,
-  "volume (cm\u00b3)": 4129.85,
-  "weight (kg)": 2.06,
+  "length (m)": 0.93,
+  "volume (cm\u00b3)": 4473.78,
+  "weight (kg)": 2.24,
   "local_frame": {
     "origin": [
-      5.7462,
-      -0.497,
-      0.2495
+      4.9353,
+      0.5091,
+      0.9315
     ],
     "x_axis": [
-      -0.3657,
-      -0.7189,
-      0.5912
+      -0.4566,
+      -0.7558,
+      0.4693
     ],
     "y_axis": [
-      0.268,
-      0.527,
-      0.8065
+      0.2427,
+      0.4017,
+      0.883
     ],
     "z_axis": [
-      -0.8913,
-      0.4534,
+      -0.8559,
+      0.5171,
       0.0
     ]
   },
   "connected_beams": [
-    "e11",
+    "e10",
     "e13",
-    "e14"
+    "e14",
+    "f10"
   ],
   "global_position": {
     "centerline_start": [
-      5.9035,
-      -0.1877,
-      -0.0048
+      5.1481,
+      0.8613,
+      0.7127
     ],
     "centerline_end": [
-      5.5889,
-      -0.8062,
-      0.5038
+      4.7225,
+      0.1569,
+      1.1502
     ],
     "midpoint": [
-      5.7462,
-      -0.497,
-      0.2495
+      4.9353,
+      0.5091,
+      0.9315
     ],
     "midpoint_normalized": [
-      0.981,
-      0.2879,
-      0.0904
+      0.8647,
+      0.4735,
+      0.3377
     ]
   },
   "joints": {
     "all": [
-      "339",
-      "330",
-      "326"
+      "05",
+      "222",
+      "221",
+      "02"
     ],
-    "xlap": [],
+    "xlap": [
+      "05",
+      "221"
+    ],
     "tbutt": [
-      "339",
-      "330",
-      "326"
+      "222",
+      "02"
     ],
-    "lmiter": [],
-    "details": [
-      {
-        "id": "339",
-        "type": "PreferredFaceTButtJoint",
-        "kind": "tbutt"
-      },
-      {
-        "id": "330",
-        "type": "TButtJoint",
-        "kind": "tbutt"
-      },
-      {
-        "id": "326",
-        "type": "PreferredFaceTButtJoint",
-        "kind": "tbutt"
-      }
-    ]
+    "lmiter": []
   },
-  "3d_model": "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data/beams/e12/e12.stl"
+  "3d_model": "beams/e12/e12.stl"
 }

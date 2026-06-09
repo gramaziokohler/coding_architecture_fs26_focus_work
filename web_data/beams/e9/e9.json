@@ -2,99 +2,77 @@
   "beam ID": "e9",
   "name": "E9",
   "module": "E",
-  "width (m)": 0.12,
-  "height (m)": 0.14,
-  "length (m)": 0.56,
-  "volume (cm\u00b3)": 9440.95,
-  "weight (kg)": 4.72,
+  "width (m)": 0.06,
+  "height (m)": 0.08,
+  "length (m)": 0.99,
+  "volume (cm\u00b3)": 4757.92,
+  "weight (kg)": 2.38,
   "local_frame": {
     "origin": [
-      5.8126,
-      0.2493,
-      0.0
+      4.8989,
+      0.0921,
+      1.0045
     ],
     "x_axis": [
-      -0.0476,
-      0.9989,
-      0.0
+      0.448,
+      0.7438,
+      -0.496
     ],
     "y_axis": [
-      0.0,
-      0.0,
-      1.0
+      0.2559,
+      0.4249,
+      0.8683
     ],
     "z_axis": [
-      0.9989,
-      0.0476,
-      -0.0
+      0.8566,
+      -0.516,
+      0.0
     ]
   },
   "connected_beams": [
     "e10",
+    "e11",
     "e13",
-    "e8",
-    "f22"
+    "e8"
   ],
   "global_position": {
     "centerline_start": [
-      5.826,
-      -0.0314,
-      0.0
+      4.6769,
+      -0.2766,
+      1.2504
     ],
     "centerline_end": [
-      5.7992,
-      0.5299,
-      0.0
+      5.121,
+      0.4607,
+      0.7587
     ],
     "midpoint": [
-      5.8126,
-      0.2493,
-      0.0
+      4.8989,
+      0.0921,
+      1.0045
     ],
     "midpoint_normalized": [
-      0.9905,
-      0.4256,
-      0.0
+      0.8595,
+      0.3966,
+      0.3642
     ]
   },
   "joints": {
     "all": [
-      "335",
-      "337",
-      "333",
-      "331"
+      "04",
+      "217",
+      "218",
+      "07"
     ],
-    "xlap": [],
+    "xlap": [
+      "04",
+      "218"
+    ],
     "tbutt": [
-      "337",
-      "333"
+      "217",
+      "07"
     ],
-    "lmiter": [
-      "335",
-      "331"
-    ],
-    "details": [
-      {
-        "id": "335",
-        "type": "LMiterJoint",
-        "kind": "lmiter"
-      },
-      {
-        "id": "337",
-        "type": "PreferredFaceTButtJoint",
-        "kind": "tbutt"
-      },
-      {
-        "id": "333",
-        "type": "PreferredFaceTButtJoint",
-        "kind": "tbutt"
-      },
-      {
-        "id": "331",
-        "type": "LMiterJoint",
-        "kind": "lmiter"
-      }
-    ]
+    "lmiter": []
   },
-  "3d_model": "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data/beams/e9/e9.stl"
+  "3d_model": "beams/e9/e9.stl"
 }

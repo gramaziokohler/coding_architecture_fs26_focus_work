@@ -2,99 +2,74 @@
   "beam ID": "b11",
   "name": "B11",
   "module": "B",
-  "width (m)": 0.06,
-  "height (m)": 0.08,
-  "length (m)": 1.13,
-  "volume (cm\u00b3)": 5403.76,
-  "weight (kg)": 2.7,
+  "width (m)": 0.12,
+  "height (m)": 0.14,
+  "length (m)": 1.0,
+  "volume (cm\u00b3)": 16784.33,
+  "weight (kg)": 8.39,
   "local_frame": {
     "origin": [
-      0.6246,
-      2.752,
-      1.5328
+      -0.7496,
+      1.2357,
+      0.0
     ],
     "x_axis": [
-      -0.7935,
-      -0.1418,
-      -0.5918
+      -0.1216,
+      0.9926,
+      0.0
     ],
     "y_axis": [
-      -0.5826,
-      -0.1041,
-      0.8061
+      0.0,
+      0.0,
+      1.0
     ],
     "z_axis": [
-      -0.1759,
-      0.9844,
-      0.0
+      0.9926,
+      0.1216,
+      -0.0
     ]
   },
   "connected_beams": [
-    "b12",
-    "b13",
-    "b14",
+    "a18",
+    "b10",
+    "b26",
     "b8"
   ],
   "global_position": {
     "centerline_start": [
-      1.0712,
-      2.8318,
-      1.866
+      -0.6888,
+      0.7399,
+      0.0
     ],
     "centerline_end": [
-      0.1779,
-      2.6722,
-      1.1997
+      -0.8103,
+      1.7316,
+      0.0
     ],
     "midpoint": [
-      0.6246,
-      2.752,
-      1.5328
+      -0.7496,
+      1.2357,
+      0.0
     ],
     "midpoint_normalized": [
-      0.2469,
-      0.8875,
-      0.5557
+      0.0499,
+      0.6077,
+      0.0
     ]
   },
   "joints": {
     "all": [
-      "70",
-      "54",
-      "53",
-      "274"
+      "250",
+      "248",
+      "247",
+      "246"
     ],
-    "xlap": [
-      "70",
-      "53"
-    ],
-    "tbutt": [
-      "54",
-      "274"
-    ],
-    "lmiter": [],
-    "details": [
-      {
-        "id": "70",
-        "type": "XLapJoint",
-        "kind": "xlap"
-      },
-      {
-        "id": "54",
-        "type": "TButtJoint",
-        "kind": "tbutt"
-      },
-      {
-        "id": "53",
-        "type": "XLapJoint",
-        "kind": "xlap"
-      },
-      {
-        "id": "274",
-        "type": "TButtJoint",
-        "kind": "tbutt"
-      }
+    "xlap": [],
+    "tbutt": [],
+    "lmiter": [
+      "250",
+      "246"
     ]
   },
-  "3d_model": "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data/beams/b11/b11.stl"
+  "3d_model": "beams/b11/b11.stl"
 }

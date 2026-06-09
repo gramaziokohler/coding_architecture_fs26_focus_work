@@ -2,99 +2,73 @@
   "beam ID": "e23",
   "name": "E23",
   "module": "E",
-  "width (m)": 0.06,
-  "height (m)": 0.08,
-  "length (m)": 0.83,
-  "volume (cm\u00b3)": 3971.61,
-  "weight (kg)": 1.99,
+  "width (m)": 0.08,
+  "height (m)": 0.1,
+  "length (m)": 1.49,
+  "volume (cm\u00b3)": 11946.44,
+  "weight (kg)": 5.97,
   "local_frame": {
     "origin": [
-      4.2175,
-      -0.9042,
-      1.7543
+      5.5303,
+      -0.8451,
+      0.5539
     ],
     "x_axis": [
-      -0.5567,
-      0.8168,
-      0.1514
+      0.5587,
+      0.3708,
+      -0.7419
     ],
     "y_axis": [
-      0.0853,
-      -0.1251,
-      0.9885
+      0.6181,
+      0.4102,
+      0.6705
     ],
     "z_axis": [
-      0.8263,
-      0.5632,
-      -0.0
+      0.553,
+      -0.8332,
+      0.0
     ]
   },
   "connected_beams": [
-    "d19",
+    "e21",
     "e22",
-    "e24",
-    "e25"
+    "e4",
+    "e5"
   ],
   "global_position": {
     "centerline_start": [
-      4.4478,
-      -1.2422,
-      1.6917
+      5.1132,
+      -1.122,
+      1.1079
     ],
     "centerline_end": [
-      3.9872,
-      -0.5663,
-      1.817
+      5.9475,
+      -0.5683,
+      0.0
     ],
     "midpoint": [
-      4.2175,
-      -0.9042,
-      1.7543
+      5.5303,
+      -0.8451,
+      0.5539
     ],
     "midpoint_normalized": [
-      0.7619,
-      0.2127,
-      0.636
+      0.95,
+      0.2236,
+      0.2008
     ]
   },
   "joints": {
     "all": [
-      "307",
-      "200",
-      "199",
-      "183"
+      "314",
+      "316",
+      "326",
+      "342"
     ],
-    "xlap": [
-      "307",
-      "199"
-    ],
-    "tbutt": [
-      "200",
-      "183"
-    ],
-    "lmiter": [],
-    "details": [
-      {
-        "id": "307",
-        "type": "XLapJoint",
-        "kind": "xlap"
-      },
-      {
-        "id": "200",
-        "type": "TButtJoint",
-        "kind": "tbutt"
-      },
-      {
-        "id": "199",
-        "type": "XLapJoint",
-        "kind": "xlap"
-      },
-      {
-        "id": "183",
-        "type": "TButtJoint",
-        "kind": "tbutt"
-      }
+    "xlap": [],
+    "tbutt": [],
+    "lmiter": [
+      "314"
     ]
   },
-  "3d_model": "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data/beams/e23/e23.stl"
+  "3d_model": "beams/e23/e23.stl"
 }

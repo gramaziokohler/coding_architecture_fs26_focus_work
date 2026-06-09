@@ -2,107 +2,77 @@
   "beam ID": "d18",
   "name": "D18",
   "module": "D",
-  "width (m)": 0.08,
-  "height (m)": 0.1,
-  "length (m)": 1.26,
-  "volume (cm\u00b3)": 10072.54,
-  "weight (kg)": 5.04,
+  "width (m)": 0.06,
+  "height (m)": 0.08,
+  "length (m)": 1.11,
+  "volume (cm\u00b3)": 5334.76,
+  "weight (kg)": 2.67,
   "local_frame": {
     "origin": [
-      1.3032,
-      3.3615,
-      2.0365
+      3.263,
+      0.7437,
+      1.936
     ],
     "x_axis": [
-      0.9158,
-      0.0547,
-      0.3979
+      -0.4351,
+      0.8966,
+      0.0825
     ],
     "y_axis": [
-      -0.3972,
-      -0.0237,
-      0.9174
+      0.036,
+      -0.0743,
+      0.9966
     ],
     "z_axis": [
-      0.0596,
-      -0.9982,
-      0.0
+      0.8997,
+      0.4366,
+      -0.0
     ]
   },
   "connected_beams": [
-    "b10",
-    "b12",
-    "b14",
-    "d13",
-    "d17"
+    "c24",
+    "c25",
+    "d11",
+    "f23"
   ],
   "global_position": {
     "centerline_start": [
-      0.7267,
-      3.3271,
-      1.786
+      3.5048,
+      0.2455,
+      1.8901
     ],
     "centerline_end": [
-      1.8798,
-      3.3959,
-      2.287
+      3.0213,
+      1.242,
+      1.9819
     ],
     "midpoint": [
-      1.3032,
-      3.3615,
-      2.0365
+      3.263,
+      0.7437,
+      1.936
     ],
     "midpoint_normalized": [
-      0.3442,
-      1.0,
-      0.7383
+      0.6251,
+      0.5169,
+      0.7018
     ]
   },
   "joints": {
     "all": [
-      "59",
-      "60",
-      "283",
-      "286",
-      "290"
+      "166",
+      "162",
+      "161",
+      "153"
     ],
-    "xlap": [],
+    "xlap": [
+      "166",
+      "161"
+    ],
     "tbutt": [
-      "60",
-      "283",
-      "286"
+      "162",
+      "153"
     ],
-    "lmiter": [
-      "59",
-      "290"
-    ],
-    "details": [
-      {
-        "id": "59",
-        "type": "LMiterJoint",
-        "kind": "lmiter"
-      },
-      {
-        "id": "60",
-        "type": "PreferredFaceTButtJoint",
-        "kind": "tbutt"
-      },
-      {
-        "id": "283",
-        "type": "PreferredFaceTButtJoint",
-        "kind": "tbutt"
-      },
-      {
-        "id": "286",
-        "type": "PreferredFaceTButtJoint",
-        "kind": "tbutt"
-      },
-      {
-        "id": "290",
-        "type": "LMiterJoint",
-        "kind": "lmiter"
-      }
-    ]
+    "lmiter": []
   },
-  "3d_model": "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data/beams/d18/d18.stl"
+  "3d_model": "beams/d18/d18.stl"
 }

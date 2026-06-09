@@ -4,89 +4,75 @@
   "module": "B",
   "width (m)": 0.06,
   "height (m)": 0.08,
-  "length (m)": 1.16,
-  "volume (cm\u00b3)": 5553.09,
-  "weight (kg)": 2.78,
+  "length (m)": 1.04,
+  "volume (cm\u00b3)": 4989.08,
+  "weight (kg)": 2.49,
   "local_frame": {
     "origin": [
-      -0.4028,
-      0.8444,
-      0.3866
+      0.1844,
+      1.2516,
+      0.9396
     ],
     "x_axis": [
-      -0.4574,
-      0.7964,
-      -0.3957
+      -0.3715,
+      -0.8562,
+      -0.3591
     ],
     "y_axis": [
-      -0.1971,
-      0.3431,
-      0.9184
+      -0.143,
+      -0.3294,
+      0.9333
     ],
     "z_axis": [
-      0.8672,
-      0.498,
-      -0.0
+      -0.9174,
+      0.3981,
+      0.0
     ]
   },
   "connected_beams": [
-    "a19",
-    "a36",
-    "b3"
+    "b2",
+    "b4",
+    "b6",
+    "b7"
   ],
   "global_position": {
     "centerline_start": [
-      -0.1382,
-      0.3837,
-      0.6155
+      0.3775,
+      1.6966,
+      1.1262
     ],
     "centerline_end": [
-      -0.6673,
-      1.3051,
-      0.1578
+      -0.0086,
+      0.8067,
+      0.7529
     ],
     "midpoint": [
-      -0.4028,
-      0.8444,
-      0.3866
+      0.1844,
+      1.2516,
+      0.9396
     ],
     "midpoint_normalized": [
-      0.0996,
-      0.5354,
-      0.1402
+      0.1838,
+      0.6106,
+      0.3406
     ]
   },
   "joints": {
     "all": [
-      "265",
-      "260",
-      "251"
+      "43",
+      "40",
+      "39",
+      "24"
     ],
     "xlap": [
-      "265"
+      "43",
+      "39"
     ],
     "tbutt": [
-      "260",
-      "251"
+      "40",
+      "24"
     ],
-    "lmiter": [],
-    "details": [
-      {
-        "id": "265",
-        "type": "XLapJoint",
-        "kind": "xlap"
-      },
-      {
-        "id": "260",
-        "type": "TButtJoint",
-        "kind": "tbutt"
-      },
-      {
-        "id": "251",
-        "type": "TButtJoint",
-        "kind": "tbutt"
-      }
-    ]
+    "lmiter": []
   },
-  "3d_model": "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data/beams/b5/b5.stl"
+  "3d_model": "beams/b5/b5.stl"
 }

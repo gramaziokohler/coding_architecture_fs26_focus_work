@@ -44,6 +44,8 @@ if 'rhino_points' not in dir():                            rhino_points = None
 if 'cutting_plane_inset_distance' not in dir():            cutting_plane_inset_distance = 0.0
 if 'arch_A_inner_cross_beam_ref_side_index' not in dir():  arch_A_inner_cross_beam_ref_side_index = None
 if 'arch_B_inner_cross_beam_ref_side_index' not in dir():  arch_B_inner_cross_beam_ref_side_index = None
+if 'use_lap_for_arch_l_joints' not in dir():               use_lap_for_arch_l_joints = False
+if 'use_lap_for_base_l_joints' not in dir():               use_lap_for_base_l_joints = False
 
 # ---------------- RF SYSTEM WRAPPING --------------
 
@@ -109,6 +111,8 @@ creator = GeometricTimberModelCreator(
     cutting_plane_inset_distance=float(cutting_plane_inset_distance),
     arch_A_inner_cross_beam_ref_side_index=int(arch_A_inner_cross_beam_ref_side_index) if arch_A_inner_cross_beam_ref_side_index is not None else None,
     arch_B_inner_cross_beam_ref_side_index=int(arch_B_inner_cross_beam_ref_side_index) if arch_B_inner_cross_beam_ref_side_index is not None else None,
+    use_lap_for_arch_l_joints=bool(use_lap_for_arch_l_joints),
+    use_lap_for_base_l_joints=bool(use_lap_for_base_l_joints),
 )
 
 timber_model = creator.create_timber_model(process_joinery)

@@ -4,80 +4,67 @@
   "module": "D",
   "width (m)": 0.06,
   "height (m)": 0.08,
-  "length (m)": 0.43,
-  "volume (cm\u00b3)": 2073.62,
-  "weight (kg)": 1.04,
+  "length (m)": 0.53,
+  "volume (cm\u00b3)": 2550.61,
+  "weight (kg)": 1.28,
   "local_frame": {
     "origin": [
-      5.0768,
-      -0.9099,
-      1.0786
+      2.8404,
+      2.9875,
+      2.239
     ],
     "x_axis": [
-      -0.6548,
-      0.6593,
-      0.3696
+      -0.2102,
+      -0.9537,
+      -0.2152
     ],
     "y_axis": [
-      0.2605,
-      -0.2623,
-      0.9292
+      -0.0463,
+      -0.2102,
+      0.9766
     ],
     "z_axis": [
-      0.7095,
-      0.7047,
-      -0.0
+      -0.9765,
+      0.2153,
+      0.0
     ]
   },
   "connected_beams": [
     "d21",
-    "e14"
+    "d23"
   ],
   "global_position": {
     "centerline_start": [
-      5.2182,
-      -1.0523,
-      0.9987
+      2.8962,
+      3.2409,
+      2.2962
     ],
     "centerline_end": [
-      4.9353,
-      -0.7675,
-      1.1584
+      2.7845,
+      2.7341,
+      2.1818
     ],
     "midpoint": [
-      5.0768,
-      -0.9099,
-      1.0786
+      2.8404,
+      2.9875,
+      2.239
     ],
     "midpoint_normalized": [
-      0.885,
-      0.2117,
-      0.391
+      0.5645,
+      0.931,
+      0.8117
     ]
   },
   "joints": {
     "all": [
-      "316",
-      "227"
+      "232",
+      "130"
     ],
     "xlap": [],
     "tbutt": [
-      "316",
-      "227"
+      "130"
     ],
-    "lmiter": [],
-    "details": [
-      {
-        "id": "316",
-        "type": "PreferredFaceTButtJoint",
-        "kind": "tbutt"
-      },
-      {
-        "id": "227",
-        "type": "TButtJoint",
-        "kind": "tbutt"
-      }
-    ]
+    "lmiter": []
   },
-  "3d_model": "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data/beams/d22/d22.stl"
+  "3d_model": "beams/d22/d22.stl"
 }

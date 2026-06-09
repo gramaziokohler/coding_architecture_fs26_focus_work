@@ -2,91 +2,72 @@
   "beam ID": "b10",
   "name": "B10",
   "module": "B",
-  "width (m)": 0.08,
-  "height (m)": 0.1,
-  "length (m)": 1.37,
-  "volume (cm\u00b3)": 10929.13,
-  "weight (kg)": 5.46,
+  "width (m)": 0.06,
+  "height (m)": 0.08,
+  "length (m)": 0.73,
+  "volume (cm\u00b3)": 3514.79,
+  "weight (kg)": 1.76,
   "local_frame": {
     "origin": [
-      0.1973,
-      3.208,
-      1.3711
+      -0.638,
+      1.3359,
+      0.1723
     ],
     "x_axis": [
-      0.7751,
-      0.1743,
-      0.6074
+      0.3147,
+      0.8578,
+      0.4064
     ],
     "y_axis": [
-      -0.5926,
-      -0.1333,
-      0.7944
+      -0.14,
+      -0.3815,
+      0.9137
     ],
     "z_axis": [
-      0.2194,
-      -0.9756,
+      0.9388,
+      -0.3445,
       0.0
     ]
   },
   "connected_beams": [
-    "b20",
-    "b8",
-    "d18"
+    "b11",
+    "b12",
+    "b8"
   ],
   "global_position": {
     "centerline_start": [
-      -0.3321,
-      3.0889,
-      0.9563
+      -0.7532,
+      1.0218,
+      0.0236
     ],
     "centerline_end": [
-      0.7267,
-      3.3271,
-      1.786
+      -0.5228,
+      1.6499,
+      0.3211
     ],
     "midpoint": [
-      0.1973,
-      3.208,
-      1.3711
+      -0.638,
+      1.3359,
+      0.1723
     ],
     "midpoint_normalized": [
-      0.1856,
-      0.9717,
-      0.4971
+      0.0659,
+      0.6261,
+      0.0625
     ]
   },
   "joints": {
     "all": [
-      "262",
-      "268",
-      "59"
+      "248",
+      "251",
+      "256"
     ],
     "xlap": [],
     "tbutt": [
-      "268"
+      "251",
+      "256"
     ],
-    "lmiter": [
-      "262",
-      "59"
-    ],
-    "details": [
-      {
-        "id": "262",
-        "type": "LMiterJoint",
-        "kind": "lmiter"
-      },
-      {
-        "id": "268",
-        "type": "PreferredFaceTButtJoint",
-        "kind": "tbutt"
-      },
-      {
-        "id": "59",
-        "type": "LMiterJoint",
-        "kind": "lmiter"
-      }
-    ]
+    "lmiter": []
   },
-  "3d_model": "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data/beams/b10/b10.stl"
+  "3d_model": "beams/b10/b10.stl"
 }

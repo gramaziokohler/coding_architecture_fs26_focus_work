@@ -4,89 +4,75 @@
   "module": "B",
   "width (m)": 0.06,
   "height (m)": 0.08,
-  "length (m)": 1.25,
-  "volume (cm\u00b3)": 6004.2,
-  "weight (kg)": 3.0,
+  "length (m)": 1.18,
+  "volume (cm\u00b3)": 5642.45,
+  "weight (kg)": 2.82,
   "local_frame": {
     "origin": [
-      -0.6024,
-      1.9602,
-      0.3373
+      -0.0845,
+      1.7498,
+      0.7568
     ],
     "x_axis": [
-      -0.5955,
-      0.7419,
-      -0.3082
+      0.49,
+      -0.8026,
+      0.3401
     ],
     "y_axis": [
-      -0.1929,
-      0.2403,
-      0.9513
+      -0.1772,
+      0.2903,
+      0.9404
     ],
     "z_axis": [
-      0.7798,
-      0.626,
-      -0.0
+      -0.8535,
+      -0.5211,
+      0.0
     ]
   },
   "connected_beams": [
-    "a32",
     "b1",
-    "b18"
+    "b3",
+    "b5",
+    "b8"
   ],
   "global_position": {
     "centerline_start": [
-      -0.2299,
-      1.4962,
-      0.53
+      -0.3725,
+      2.2215,
+      0.557
     ],
     "centerline_end": [
-      -0.9748,
-      2.4242,
-      0.1445
+      0.2035,
+      1.278,
+      0.9567
     ],
     "midpoint": [
-      -0.6024,
-      1.9602,
-      0.3373
+      -0.0845,
+      1.7498,
+      0.7568
     ],
     "midpoint_normalized": [
-      0.071,
-      0.7414,
-      0.1223
+      0.1452,
+      0.7025,
+      0.2744
     ]
   },
   "joints": {
     "all": [
-      "261",
-      "253",
-      "239"
+      "21",
+      "25",
+      "26",
+      "40"
     ],
     "xlap": [
-      "261"
+      "21",
+      "26"
     ],
     "tbutt": [
-      "253",
-      "239"
+      "25",
+      "40"
     ],
-    "lmiter": [],
-    "details": [
-      {
-        "id": "261",
-        "type": "XLapJoint",
-        "kind": "xlap"
-      },
-      {
-        "id": "253",
-        "type": "TButtJoint",
-        "kind": "tbutt"
-      },
-      {
-        "id": "239",
-        "type": "TButtJoint",
-        "kind": "tbutt"
-      }
-    ]
+    "lmiter": []
   },
-  "3d_model": "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data/beams/b2/b2.stl"
+  "3d_model": "beams/b2/b2.stl"
 }

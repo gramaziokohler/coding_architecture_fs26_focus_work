@@ -4,97 +4,75 @@
   "module": "C",
   "width (m)": 0.06,
   "height (m)": 0.08,
-  "length (m)": 1.2,
-  "volume (cm\u00b3)": 5748.77,
-  "weight (kg)": 2.87,
+  "length (m)": 1.28,
+  "volume (cm\u00b3)": 6139.5,
+  "weight (kg)": 3.07,
   "local_frame": {
     "origin": [
-      2.0275,
-      0.6196,
-      1.9966
+      3.2319,
+      -0.828,
+      2.23
     ],
     "x_axis": [
-      0.4458,
-      0.8946,
-      0.0303
+      0.8947,
+      0.1569,
+      -0.4182
     ],
     "y_axis": [
-      -0.0135,
-      -0.0271,
-      0.9995
+      0.4119,
+      0.0723,
+      0.9084
     ],
     "z_axis": [
-      0.895,
-      -0.446,
+      0.1728,
+      -0.985,
       0.0
     ]
   },
   "connected_beams": [
     "c12",
     "c16",
-    "c29",
-    "d6"
+    "c17",
+    "e30"
   ],
   "global_position": {
     "centerline_start": [
-      1.7606,
-      0.0839,
-      1.9784
+      2.6597,
+      -0.9284,
+      2.4975
     ],
     "centerline_end": [
-      2.2945,
-      1.1553,
-      2.0147
+      3.8041,
+      -0.7276,
+      1.9626
     ],
     "midpoint": [
-      2.0275,
-      0.6196,
-      1.9966
+      3.2319,
+      -0.828,
+      2.23
     ],
     "midpoint_normalized": [
-      0.448,
-      0.4939,
-      0.7238
+      0.6206,
+      0.2268,
+      0.8084
     ]
   },
   "joints": {
     "all": [
-      "102",
-      "111",
-      "112",
-      "125"
+      "147",
+      "163",
+      "164",
+      "175"
     ],
     "xlap": [
-      "102",
-      "112"
+      "147",
+      "164"
     ],
     "tbutt": [
-      "111",
-      "125"
+      "163",
+      "175"
     ],
-    "lmiter": [],
-    "details": [
-      {
-        "id": "102",
-        "type": "XLapJoint",
-        "kind": "xlap"
-      },
-      {
-        "id": "111",
-        "type": "TButtJoint",
-        "kind": "tbutt"
-      },
-      {
-        "id": "112",
-        "type": "XLapJoint",
-        "kind": "xlap"
-      },
-      {
-        "id": "125",
-        "type": "TButtJoint",
-        "kind": "tbutt"
-      }
-    ]
+    "lmiter": []
   },
-  "3d_model": "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data/beams/c15/c15.stl"
+  "3d_model": "beams/c15/c15.stl"
 }

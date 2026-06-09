@@ -60,12 +60,12 @@ class CutoffLLapJoint(LLapJoint):
         beam_b=None,
         flip_lap_side=False,
         cut_plane_bias=0.5,
-        cutoff_offset=0.0,
+        cutoff_offset=0.04,
         cutoff_offset_a=None,
         cutoff_offset_b=None,
         limit_lap_removal=True,
         invert_lap_removal_plane=False,
-        extend_lap_removal_to_inner_edge=False,
+        extend_lap_removal_to_inner_edge=True,
         **kwargs
     ):
         super(CutoffLLapJoint, self).__init__(
