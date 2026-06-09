@@ -2,77 +2,91 @@
   "beam ID": "e13",
   "name": "E13",
   "module": "E",
-  "width (m)": 0.06,
-  "height (m)": 0.08,
-  "length (m)": 1.23,
-  "volume (cm\u00b3)": 5907.33,
-  "weight (kg)": 2.95,
+  "width (m)": 0.12,
+  "height (m)": 0.14,
+  "length (m)": 0.76,
+  "volume (cm\u00b3)": 12723.2,
+  "weight (kg)": 6.36,
   "local_frame": {
     "origin": [
-      5.1094,
-      0.4531,
-      0.7712
+      5.879,
+      -0.4063,
+      0.0
     ],
     "x_axis": [
-      0.6867,
-      0.018,
-      -0.7268
+      -0.14,
+      0.9901,
+      0.0
     ],
     "y_axis": [
-      0.7265,
-      0.019,
-      0.6869
+      0.0,
+      0.0,
+      1.0
     ],
     "z_axis": [
-      0.0262,
-      -0.9997,
-      0.0
+      0.9901,
+      0.14,
+      -0.0
     ]
   },
   "connected_beams": [
-    "e9",
-    "e14",
     "e12",
-    "e16"
+    "e14",
+    "e9"
   ],
   "global_position": {
     "centerline_start": [
-      4.6869,
-      0.442,
-      1.2184
+      5.932,
+      -0.7813,
+      0.0
     ],
     "centerline_end": [
-      5.5319,
-      0.4642,
-      0.324
+      5.826,
+      -0.0314,
+      0.0
     ],
     "midpoint": [
-      5.1094,
-      0.4531,
-      0.7712
+      5.879,
+      -0.4063,
+      0.0
     ],
     "midpoint_normalized": [
-      0.8897,
-      0.4632,
-      0.2796
+      1.0,
+      0.3046,
+      0.0
     ]
   },
   "joints": {
     "all": [
-      "221",
-      "07",
-      "08",
-      "322"
+      "342",
+      "339",
+      "335"
     ],
-    "xlap": [
-      "221",
-      "08"
-    ],
+    "xlap": [],
     "tbutt": [
-      "07",
-      "322"
+      "342",
+      "339"
     ],
-    "lmiter": []
+    "lmiter": [
+      "335"
+    ],
+    "details": [
+      {
+        "id": "342",
+        "type": "PreferredFaceTButtJoint",
+        "kind": "tbutt"
+      },
+      {
+        "id": "339",
+        "type": "PreferredFaceTButtJoint",
+        "kind": "tbutt"
+      },
+      {
+        "id": "335",
+        "type": "LMiterJoint",
+        "kind": "lmiter"
+      }
+    ]
   },
   "3d_model": "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data/beams/e13/e13.stl"
 }

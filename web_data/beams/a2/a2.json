@@ -30,10 +30,10 @@
     ]
   },
   "connected_beams": [
-    "a3",
-    "a12",
     "a1",
-    "a25"
+    "a12",
+    "a25",
+    "a3"
   ],
   "global_position": {
     "centerline_start": [
@@ -72,7 +72,29 @@
       "267",
       "271"
     ],
-    "lmiter": []
+    "lmiter": [],
+    "details": [
+      {
+        "id": "263",
+        "type": "XLapJoint",
+        "kind": "xlap"
+      },
+      {
+        "id": "267",
+        "type": "TButtJoint",
+        "kind": "tbutt"
+      },
+      {
+        "id": "269",
+        "type": "XLapJoint",
+        "kind": "xlap"
+      },
+      {
+        "id": "271",
+        "type": "TButtJoint",
+        "kind": "tbutt"
+      }
+    ]
   },
   "3d_model": "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data/beams/a2/a2.stl"
 }

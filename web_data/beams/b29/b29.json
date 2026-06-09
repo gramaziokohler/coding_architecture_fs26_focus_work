@@ -1,0 +1,100 @@
+{
+  "beam ID": "b29",
+  "name": "B29",
+  "module": "B",
+  "width (m)": 0.06,
+  "height (m)": 0.08,
+  "length (m)": 1.46,
+  "volume (cm\u00b3)": 7007.88,
+  "weight (kg)": 3.5,
+  "local_frame": {
+    "origin": [
+      1.8369,
+      -1.4869,
+      2.4765
+    ],
+    "x_axis": [
+      -0.644,
+      -0.7524,
+      0.1383
+    ],
+    "y_axis": [
+      0.0899,
+      0.1051,
+      0.9904
+    ],
+    "z_axis": [
+      -0.7597,
+      0.6502,
+      0.0
+    ]
+  },
+  "connected_beams": [
+    "b22",
+    "b27",
+    "b28",
+    "c18"
+  ],
+  "global_position": {
+    "centerline_start": [
+      2.307,
+      -0.9376,
+      2.3755
+    ],
+    "centerline_end": [
+      1.3668,
+      -2.0361,
+      2.5774
+    ],
+    "midpoint": [
+      1.8369,
+      -1.4869,
+      2.4765
+    ],
+    "midpoint_normalized": [
+      0.4206,
+      0.1052,
+      0.8977
+    ]
+  },
+  "joints": {
+    "all": [
+      "115",
+      "291",
+      "287",
+      "284"
+    ],
+    "xlap": [
+      "115",
+      "287"
+    ],
+    "tbutt": [
+      "291",
+      "284"
+    ],
+    "lmiter": [],
+    "details": [
+      {
+        "id": "115",
+        "type": "XLapJoint",
+        "kind": "xlap"
+      },
+      {
+        "id": "291",
+        "type": "TButtJoint",
+        "kind": "tbutt"
+      },
+      {
+        "id": "287",
+        "type": "XLapJoint",
+        "kind": "xlap"
+      },
+      {
+        "id": "284",
+        "type": "PreferredFaceTButtJoint",
+        "kind": "tbutt"
+      }
+    ]
+  },
+  "3d_model": "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data/beams/b29/b29.stl"
+}

@@ -4,75 +4,88 @@
   "module": "E",
   "width (m)": 0.06,
   "height (m)": 0.08,
-  "length (m)": 0.84,
-  "volume (cm\u00b3)": 4030.8,
-  "weight (kg)": 2.02,
+  "length (m)": 0.63,
+  "volume (cm\u00b3)": 3026.21,
+  "weight (kg)": 1.51,
   "local_frame": {
     "origin": [
-      5.1345,
-      -0.1911,
-      0.8253
+      5.6872,
+      0.1878,
+      0.1799
     ],
     "x_axis": [
-      -0.57,
-      0.6989,
-      0.432
+      -0.5294,
+      -0.6278,
+      0.5706
     ],
     "y_axis": [
-      0.2731,
-      -0.3348,
-      0.9019
+      0.3678,
+      0.4362,
+      0.8212
     ],
     "z_axis": [
-      0.7749,
-      0.6321,
-      -0.0
+      -0.7645,
+      0.6447,
+      0.0
     ]
   },
   "connected_beams": [
-    "e6",
-    "e19",
+    "e10",
     "e7",
     "e9"
   ],
   "global_position": {
     "centerline_start": [
-      5.3739,
-      -0.4845,
-      0.6439
+      5.854,
+      0.3857,
+      0.0
     ],
     "centerline_end": [
-      4.8952,
-      0.1023,
-      1.0067
+      5.5203,
+      -0.0101,
+      0.3597
     ],
     "midpoint": [
-      5.1345,
-      -0.1911,
-      0.8253
+      5.6872,
+      0.1878,
+      0.1799
     ],
     "midpoint_normalized": [
-      0.8933,
-      0.3443,
-      0.2992
+      0.9725,
+      0.4143,
+      0.0652
     ]
   },
   "joints": {
     "all": [
-      "12",
-      "10",
-      "09",
-      "217"
+      "333",
+      "329",
+      "323"
     ],
-    "xlap": [
-      "12",
-      "09"
-    ],
+    "xlap": [],
     "tbutt": [
-      "10",
-      "217"
+      "333",
+      "329",
+      "323"
     ],
-    "lmiter": []
+    "lmiter": [],
+    "details": [
+      {
+        "id": "333",
+        "type": "PreferredFaceTButtJoint",
+        "kind": "tbutt"
+      },
+      {
+        "id": "329",
+        "type": "TButtJoint",
+        "kind": "tbutt"
+      },
+      {
+        "id": "323",
+        "type": "TButtJoint",
+        "kind": "tbutt"
+      }
+    ]
   },
   "3d_model": "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data/beams/e8/e8.stl"
 }

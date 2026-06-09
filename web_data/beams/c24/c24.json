@@ -4,75 +4,97 @@
   "module": "C",
   "width (m)": 0.06,
   "height (m)": 0.08,
-  "length (m)": 1.12,
-  "volume (cm\u00b3)": 5357.4,
-  "weight (kg)": 2.68,
+  "length (m)": 1.22,
+  "volume (cm\u00b3)": 5845.91,
+  "weight (kg)": 2.92,
   "local_frame": {
     "origin": [
-      3.0606,
-      0.5208,
-      2.0075
+      1.226,
+      2.1545,
+      1.7478
     ],
     "x_axis": [
-      -0.4599,
-      -0.8661,
-      0.1961
+      -0.5401,
+      0.8336,
+      -0.1159
     ],
     "y_axis": [
-      0.092,
-      0.1732,
-      0.9806
+      -0.063,
+      0.0973,
+      0.9933
     ],
     "z_axis": [
-      -0.8832,
-      0.469,
-      0.0
+      0.8393,
+      0.5437,
+      -0.0
     ]
   },
   "connected_beams": [
-    "c20",
+    "b12",
+    "c23",
     "c25",
-    "d10",
-    "d18"
+    "c26"
   ],
   "global_position": {
     "centerline_start": [
-      3.3172,
-      1.0041,
-      1.8981
+      1.5549,
+      1.6468,
+      1.8184
     ],
     "centerline_end": [
-      2.804,
-      0.0375,
-      2.117
+      0.8971,
+      2.6621,
+      1.6772
     ],
     "midpoint": [
-      3.0606,
-      0.5208,
-      2.0075
+      1.226,
+      2.1545,
+      1.7478
     ],
     "midpoint_normalized": [
-      0.596,
-      0.4757,
-      0.7278
+      0.3331,
+      0.7772,
+      0.6336
     ]
   },
   "joints": {
     "all": [
-      "161",
-      "152",
-      "151",
-      "132"
+      "90",
+      "82",
+      "81",
+      "69"
     ],
     "xlap": [
-      "161",
-      "151"
+      "90",
+      "81"
     ],
     "tbutt": [
-      "152",
-      "132"
+      "82",
+      "69"
     ],
-    "lmiter": []
+    "lmiter": [],
+    "details": [
+      {
+        "id": "90",
+        "type": "XLapJoint",
+        "kind": "xlap"
+      },
+      {
+        "id": "82",
+        "type": "TButtJoint",
+        "kind": "tbutt"
+      },
+      {
+        "id": "81",
+        "type": "XLapJoint",
+        "kind": "xlap"
+      },
+      {
+        "id": "69",
+        "type": "TButtJoint",
+        "kind": "tbutt"
+      }
+    ]
   },
   "3d_model": "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data/beams/c24/c24.stl"
 }

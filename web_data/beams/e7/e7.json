@@ -4,75 +4,89 @@
   "module": "E",
   "width (m)": 0.06,
   "height (m)": 0.08,
-  "length (m)": 1.36,
-  "volume (cm\u00b3)": 6522.87,
-  "weight (kg)": 3.26,
+  "length (m)": 0.92,
+  "volume (cm\u00b3)": 4426.01,
+  "weight (kg)": 2.21,
   "local_frame": {
     "origin": [
-      5.1588,
-      -0.3598,
-      0.8228
+      5.476,
+      0.5277,
+      0.4
     ],
     "x_axis": [
-      0.6271,
-      0.2079,
-      -0.7507
+      0.5312,
+      -0.6266,
+      -0.5703
     ],
     "y_axis": [
-      0.7125,
-      0.2362,
-      0.6607
+      0.3688,
+      -0.435,
+      0.8215
     ],
     "z_axis": [
-      0.3146,
-      -0.9492,
+      -0.7628,
+      -0.6467,
       0.0
     ]
   },
   "connected_beams": [
-    "e3",
-    "e8",
+    "e4",
     "e6",
-    "e20"
+    "e8"
   ],
   "global_position": {
     "centerline_start": [
-      4.7327,
-      -0.5011,
-      1.3328
+      5.2311,
+      0.8166,
+      0.6629
     ],
     "centerline_end": [
-      5.5849,
-      -0.2186,
-      0.3127
+      5.7209,
+      0.2388,
+      0.1371
     ],
     "midpoint": [
-      5.1588,
-      -0.3598,
-      0.8228
+      5.476,
+      0.5277,
+      0.4
     ],
     "midpoint_normalized": [
-      0.8968,
-      0.3132,
-      0.2983
+      0.9422,
+      0.477,
+      0.145
     ]
   },
   "joints": {
     "all": [
-      "223",
-      "11",
-      "12",
-      "325"
+      "318",
+      "322",
+      "329"
     ],
     "xlap": [
-      "223",
-      "12"
+      "318"
     ],
     "tbutt": [
-      "11",
-      "325"
+      "322",
+      "329"
     ],
-    "lmiter": []
+    "lmiter": [],
+    "details": [
+      {
+        "id": "318",
+        "type": "XLapJoint",
+        "kind": "xlap"
+      },
+      {
+        "id": "322",
+        "type": "TButtJoint",
+        "kind": "tbutt"
+      },
+      {
+        "id": "329",
+        "type": "TButtJoint",
+        "kind": "tbutt"
+      }
+    ]
   },
   "3d_model": "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data/beams/e7/e7.stl"
 }

@@ -2,77 +2,82 @@
   "beam ID": "c20",
   "name": "C20",
   "module": "C",
-  "width (m)": 0.06,
-  "height (m)": 0.08,
-  "length (m)": 1.05,
-  "volume (cm\u00b3)": 5034.65,
-  "weight (kg)": 2.52,
+  "width (m)": 0.08,
+  "height (m)": 0.1,
+  "length (m)": 1.2,
+  "volume (cm\u00b3)": 9586.84,
+  "weight (kg)": 4.79,
   "local_frame": {
     "origin": [
-      2.7841,
-      0.0463,
-      2.115
+      2.3723,
+      -2.0567,
+      2.7586
     ],
     "x_axis": [
-      -1.0,
-      0.0062,
-      0.0003
+      0.9968,
+      0.0787,
+      -0.0111
     ],
     "y_axis": [
-      0.0003,
-      -0.0,
-      1.0
+      0.0111,
+      0.0009,
+      0.9999
     ],
     "z_axis": [
-      0.0062,
-      1.0,
-      -0.0
+      0.0787,
+      -0.9969,
+      0.0
     ]
   },
   "connected_beams": [
-    "c23",
-    "c19",
-    "c24",
-    "c18"
+    "c18",
+    "e27"
   ],
   "global_position": {
     "centerline_start": [
-      3.3085,
-      0.0431,
-      2.1149
+      1.775,
+      -2.1038,
+      2.7652
     ],
     "centerline_end": [
-      2.2597,
-      0.0496,
-      2.1152
+      2.9696,
+      -2.0095,
+      2.7519
     ],
     "midpoint": [
-      2.7841,
-      0.0463,
-      2.115
+      2.3723,
+      -2.0567,
+      2.7586
     ],
     "midpoint_normalized": [
-      0.5564,
-      0.3881,
-      0.7667
+      0.4974,
+      0.0,
+      1.0
     ]
   },
   "joints": {
     "all": [
-      "150",
-      "132",
-      "131",
-      "120"
+      "289",
+      "297"
     ],
-    "xlap": [
-      "150",
-      "131"
+    "xlap": [],
+    "tbutt": [],
+    "lmiter": [
+      "289",
+      "297"
     ],
-    "tbutt": [
-      "132",
-      "120"
-    ],
-    "lmiter": []
+    "details": [
+      {
+        "id": "289",
+        "type": "LMiterJoint",
+        "kind": "lmiter"
+      },
+      {
+        "id": "297",
+        "type": "LMiterJoint",
+        "kind": "lmiter"
+      }
+    ]
   },
   "3d_model": "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data/beams/c20/c20.stl"
 }

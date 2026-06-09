@@ -32,7 +32,7 @@
   "connected_beams": [
     "a16",
     "a24",
-    "c29"
+    "c18"
   ],
   "global_position": {
     "centerline_start": [
@@ -63,10 +63,29 @@
       "279"
     ],
     "xlap": [],
-    "tbutt": [],
+    "tbutt": [
+      "264"
+    ],
     "lmiter": [
       "259",
       "279"
+    ],
+    "details": [
+      {
+        "id": "259",
+        "type": "LMiterJoint",
+        "kind": "lmiter"
+      },
+      {
+        "id": "264",
+        "type": "PreferredFaceTButtJoint",
+        "kind": "tbutt"
+      },
+      {
+        "id": "279",
+        "type": "LMiterJoint",
+        "kind": "lmiter"
+      }
     ]
   },
   "3d_model": "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data/beams/a26/a26.stl"

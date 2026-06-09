@@ -30,10 +30,10 @@
     ]
   },
   "connected_beams": [
-    "f22",
     "f13",
     "f14",
-    "f17"
+    "f17",
+    "f22"
   ],
   "global_position": {
     "centerline_start": [
@@ -65,9 +65,35 @@
       "341"
     ],
     "xlap": [],
-    "tbutt": [],
+    "tbutt": [
+      "338",
+      "340",
+      "341"
+    ],
     "lmiter": [
       "334"
+    ],
+    "details": [
+      {
+        "id": "334",
+        "type": "LMiterJoint",
+        "kind": "lmiter"
+      },
+      {
+        "id": "338",
+        "type": "PreferredFaceTButtJoint",
+        "kind": "tbutt"
+      },
+      {
+        "id": "340",
+        "type": "PreferredFaceTButtJoint",
+        "kind": "tbutt"
+      },
+      {
+        "id": "341",
+        "type": "PreferredFaceTButtJoint",
+        "kind": "tbutt"
+      }
     ]
   },
   "3d_model": "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data/beams/f15/f15.stl"
