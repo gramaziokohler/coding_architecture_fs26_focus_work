@@ -4,14 +4,14 @@
   "module": "C",
   "width (m)": 0.06,
   "height (m)": 0.08,
-  "length (m)": 0.66,
-  "volume (cm\u00b3)": 3171.72,
+  "length (m)": 0.6608,
+  "volume (cm3)": 3171.72,
   "weight (kg)": 1.59,
   "local_frame": {
     "origin": [
-      3.1331,
-      -1.633,
-      2.5354
+      3.3227,
+      -1.8985,
+      2.5879
     ],
     "x_axis": [
       -0.5737,
@@ -19,14 +19,14 @@
       -0.1589
     ],
     "y_axis": [
-      -0.0923,
-      0.1293,
-      0.9873
+      0.781,
+      0.4782,
+      -0.4016
     ],
     "z_axis": [
-      0.8139,
-      0.5811,
-      -0.0
+      -0.2467,
+      -0.3545,
+      -0.9019
     ]
   },
   "connected_beams": [
@@ -35,14 +35,14 @@
   ],
   "global_position": {
     "centerline_start": [
-      3.3227,
-      -1.8985,
-      2.5879
+      3.5122,
+      -2.1639,
+      2.6404
     ],
     "centerline_end": [
-      2.9436,
-      -1.3675,
-      2.4829
+      3.1331,
+      -1.633,
+      2.5354
     ],
     "midpoint": [
       3.1331,
@@ -57,20 +57,15 @@
   },
   "joints": {
     "all": [
-      "300",
-      "143"
+      "143",
+      "300"
     ],
-    "xlap": [],
+    "xlap": "-",
     "tbutt": [
-      "143"
+      "143",
+      "300"
     ],
-    "lmiter": [],
-    "custom": [
-      {
-        "id": "300",
-        "type": "PreferredFaceTButtJoint"
-      }
-    ]
+    "lmiter": "-"
   },
   "3d_model": "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data/beams/c14/c14.stl"
 }

@@ -2,18 +2,15 @@ import os
 import sys
 import re
 import json
+import math
 import Rhino.Geometry as rg
 from collections import deque
 from compas.datastructures import Graph
 
 def run_numbering(timber_model, Index, RunExport, OutputFolder):
-    # =========================
-    # INSTANZIAZIONE OUTPUT PREDEFINITI
-    # =========================
     debug_out = ""
     info_out = ""
     json_export_out = "Export non avviato (RunExport è False)."
-
     A_geom_out, B_geom_out, C_geom_out = [], [], []
     D_geom_out, E_geom_out, F_geom_out = [], [], []
 
@@ -23,17 +20,93 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
         idx = 0
 
     # =========================
-    # TEST RAPIDO GEOMETRIA
+    # UTILITY VETTORI
+    # =========================
+    def vector_add(a, b): return [a[i] + b[i] for i in range(3)]
+    def vector_sub(a, b): return [a[i] - b[i] for i in range(3)]
+    def vector_scale(v, s): return [v[i] * s for i in range(3)]
+    def vector_cross(a, b):
+        return [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]]
+    def vector_length(v): return math.sqrt(sum(c*c for c in v))
+    def vector_normalize(v):
+        l = vector_length(v)
+        return [c/l for c in v] if l else [0.0, 0.0, 0.0]
+
+    # =========================
+    # FRAME PARSING (robusto, come nel secondo script)
+    # =========================
+    def get_beam_frame(beam):
+        """Legge beam.frame con fallback multipli, restituisce dict con origin/x_axis/y_axis/z_axis"""
+        try:
+            frame = beam.frame
+            # COMPAS Frame object
+            if hasattr(frame, 'point') and hasattr(frame, 'xaxis'):
+                origin = [float(frame.point.x), float(frame.point.y), float(frame.point.z)]
+                x_axis = vector_normalize([float(frame.xaxis.x), float(frame.xaxis.y), float(frame.xaxis.z)])
+                y_axis = vector_normalize([float(frame.yaxis.x), float(frame.yaxis.y), float(frame.yaxis.z)])
+                z_axis = vector_cross(x_axis, y_axis)
+                return {"origin": origin, "x_axis": x_axis, "y_axis": y_axis, "z_axis": z_axis}
+            # dict-like
+            if isinstance(frame, dict):
+                data = frame.get("data", frame)
+                origin = data.get("point") or data.get("origin")
+                x_axis = data.get("xaxis") or data.get("x_axis")
+                y_axis = data.get("yaxis") or data.get("y_axis")
+                if origin and x_axis and y_axis:
+                    x_axis = vector_normalize([float(v) for v in x_axis])
+                    y_axis = vector_normalize([float(v) for v in y_axis])
+                    z_axis = vector_cross(x_axis, y_axis)
+                    return {"origin": [float(v) for v in origin], "x_axis": x_axis, "y_axis": y_axis, "z_axis": z_axis}
+        except: pass
+
+        # Fallback: ricava il frame dalla centerline
+        try:
+            cl = beam.centerline
+            start = cl.start if hasattr(cl, 'start') else cl.point_at(0.0)
+            end = cl.end if hasattr(cl, 'end') else cl.point_at(1.0)
+            sx, sy, sz = float(start.x), float(start.y), float(start.z)
+            ex, ey, ez = float(end.x), float(end.y), float(end.z)
+            origin = [(sx+ex)/2, (sy+ey)/2, (sz+ez)/2]
+            x_axis = vector_normalize([ex-sx, ey-sy, ez-sz])
+            ref = [1.0, 0.0, 0.0] if abs(x_axis[2]) > 0.9 else [0.0, 0.0, 1.0]
+            z_axis = vector_normalize(vector_cross(x_axis, ref))
+            y_axis = vector_normalize(vector_cross(z_axis, x_axis))
+            return {"origin": origin, "x_axis": x_axis, "y_axis": y_axis, "z_axis": z_axis}
+        except: pass
+
+        return {"origin": [0,0,0], "x_axis": [1,0,0], "y_axis": [0,1,0], "z_axis": [0,0,1]}
+
+    def get_centerline_points(beam):
+        """Restituisce (start, end) come liste [x,y,z] usando frame+length o centerline"""
+        try:
+            frame = get_beam_frame(beam)
+            length = float(beam.length)
+            start = vector_sub(frame["origin"], vector_scale(frame["x_axis"], length / 2.0))
+            end = vector_add(frame["origin"], vector_scale(frame["x_axis"], length / 2.0))
+            return start, end
+        except: pass
+        try:
+            cl = beam.centerline
+            s = cl.start if hasattr(cl, 'start') else cl.point_at(0.0)
+            e = cl.end if hasattr(cl, 'end') else cl.point_at(1.0)
+            return [float(s.x), float(s.y), float(s.z)], [float(e.x), float(e.y), float(e.z)]
+        except:
+            return [0,0,0], [0,0,0]
+
+    # =========================
+    # TEST RAPIDO
     # =========================
     try:
         test_beam = list(timber_model.beams)[0]
-        g_obj = test_beam.geometry
-        debug_out = "TIPO: {}\nATTR: {}".format(
-            type(g_obj),
-            [a for a in dir(g_obj) if not a.startswith('_')]
+        fr = get_beam_frame(test_beam)
+        debug_out = "FRAME: origin={} x={} y={} z={}".format(
+            [round(v,3) for v in fr["origin"]],
+            [round(v,3) for v in fr["x_axis"]],
+            [round(v,3) for v in fr["y_axis"]],
+            [round(v,3) for v in fr["z_axis"]]
         )
     except Exception as e:
-        debug_out = "ERRORE TEST GEOMETRIA: {}".format(e)
+        debug_out = "ERRORE TEST: {}".format(e)
 
     # =========================
     # 1. COSTRUZIONE GRAFO
@@ -44,14 +117,10 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
         ea, eb = joint.elements
         pa = ea.centerline.midpoint
         pb = eb.centerline.midpoint
-
-        na = g.add_node(str(ea.guid), x=pa.x, y=pa.y, z=pa.z)
-        nb = g.add_node(str(eb.guid), x=pb.x, y=pb.y, z=pb.z)
+        na = g.add_node(str(ea.guid), x=float(pa.x), y=float(pa.y), z=float(pa.z))
+        nb = g.add_node(str(eb.guid), x=float(pb.x), y=float(pb.y), z=float(pb.z))
         g.add_edge(na, nb)
 
-    # =========================
-    # 2. DATI NODI & BOUNDING BOX
-    # =========================
     pts = {n: g.node_attributes(n, ['x', 'y', 'z']) for n in g.nodes()}
 
     min_x = min(p[0] for p in pts.values())
@@ -60,151 +129,75 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
     max_y = max(p[1] for p in pts.values())
 
     # =========================
-    # 3. GRIGLIA 3x2 = 6 MODULI
+    # 3. GRIGLIA 3x2
     # =========================
-    nx = 3
-    ny = 2
+    nx = 3; ny = 2
     dx = (max_x - min_x) / nx
     dy = (max_y - min_y) / ny
-
     cells = []
     for i in range(nx):
         for j in range(ny):
-            cx = min_x + dx * (i + 0.5)
-            cy = min_y + dy * (j + 0.5)
-            cells.append((cx, cy))
+            cells.append((min_x + dx*(i+0.5), min_y + dy*(j+0.5)))
 
     labels_keys = ["A", "B", "C", "D", "E", "F"]
 
-    # =========================
-    # 4. SEEDS
-    # =========================
-    def dist2(a, b):
-        return (a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2
+    def dist2(a, b): return (a[0]-b[0])**2 + (a[1]-b[1])**2
 
     seeds = {}
     for key, (cx, cy) in zip(labels_keys, cells):
-        seed = min(pts, key=lambda n: dist2(pts[n], (cx, cy)))
-        seeds[key] = seed
+        seeds[key] = min(pts, key=lambda n: dist2(pts[n], (cx, cy)))
 
-    # =========================
-    # 5. ASSEGNAZIONE SPAZIALE
-    # =========================
     assignment = {}
     groups = {k: [] for k in seeds}
-
     for node, p in pts.items():
-        best_k = None
-        best_d = 1e99
-        for k, seed in seeds.items():
-            sx, sy, _ = pts[seed]
-            d = dist2(p, (sx, sy))
-            if d < best_d:
-                best_d = d
-                best_k = k
+        best_k = min(seeds, key=lambda k: dist2(p, pts[seeds[k]]))
         assignment[node] = best_k
         groups[best_k].append(node)
 
     # =========================
-    # 6. CRESCITA COSTRUIBILE
+    # 6. CRESCITA CONNESSA
     # =========================
     def connected_growth(seed, group_nodes):
         group_set = set(group_nodes)
         visited = set([seed])
         order = [seed]
         frontier = [seed]
-
         while len(order) < len(group_set):
             best_candidate = None
             best_dist = 1e99
-
             for f in frontier:
                 for nbr in g.neighbors(f):
                     if nbr in group_set and nbr not in visited:
-                        px, py, pz = pts[f]
-                        nx2, ny2, nz2 = pts[nbr]
-                        d = (px - nx2) ** 2 + (py - ny2) ** 2 + (pz - nz2) ** 2
+                        px,py,pz = pts[f]; nx2,ny2,nz2 = pts[nbr]
+                        d = (px-nx2)**2+(py-ny2)**2+(pz-nz2)**2
                         if d < best_dist:
-                            best_dist = d
-                            best_candidate = nbr
-
+                            best_dist = d; best_candidate = nbr
             if best_candidate is None:
                 remaining = list(group_set - visited)
                 for r in remaining:
                     for v in visited:
-                        px, py, pz = pts[v]
-                        rx, ry, rz = pts[r]
-                        d = (px - rx) ** 2 + (py - ry) ** 2 + (pz - rz) ** 2
+                        px,py,pz = pts[v]; rx,ry,rz = pts[r]
+                        d = (px-rx)**2+(py-ry)**2+(pz-rz)**2
                         if d < best_dist:
-                            best_dist = d
-                            best_candidate = r
-
+                            best_dist = d; best_candidate = r
+            if best_candidate is None: break
             visited.add(best_candidate)
             order.append(best_candidate)
             frontier.append(best_candidate)
-
         return order
 
     # =========================
-    # 6B. FUNZIONI GEOMETRICHE PER METADATI
-    # =========================
-    def get_line_start(line):
-        if hasattr(line, "start"): return line.start
-        if hasattr(line, "start_point"): return line.start_point
-        if hasattr(line, "point_at"): return line.point_at(0.0)
-        return line[0]
-
-    def get_line_end(line):
-        if hasattr(line, "end"): return line.end
-        if hasattr(line, "end_point"): return line.end_point
-        if hasattr(line, "point_at"): return line.point_at(1.0)
-        return line[1]
-
-    def point_on_centerline(beam, t):
-        line = beam.centerline
-        try:
-            return line.point_at(t)
-        except:
-            a = get_line_start(line)
-            b = get_line_end(line)
-            return type(a)(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t, a.z + (b.z - a.z) * t)
-
-    def joint_point_from_beams(ea, eb):
-        best_pa, best_pb = None, None
-        best_d = 1e99
-        samples = 25
-        for i in range(samples + 1):
-            ta = float(i) / samples
-            pa = point_on_centerline(ea, ta)
-            for j in range(samples + 1):
-                tb = float(j) / samples
-                pb = point_on_centerline(eb, tb)
-                d = (pa.x - pb.x) ** 2 + (pa.y - pb.y) ** 2 + (pa.z - pb.z) ** 2
-                if d < best_d:
-                    best_d = d
-                    best_pa = pa
-                    best_pb = pb
-        return rg.Point3d((best_pa.x + best_pb.x) / 2.0, (best_pa.y + best_pb.y) / 2.0, (best_pa.z + best_pb.z) / 2.0)
-
-    def parameter_on_centerline(beam, point):
-        best_t = 0.0
-        best_d = 1e99
-        samples = 50
-        for i in range(samples + 1):
-            t = float(i) / samples
-            p = point_on_centerline(beam, t)
-            d = (p.x - point.X) ** 2 + (p.y - point.Y) ** 2 + (p.z - point.Z) ** 2
-            if d < best_d:
-                best_d = d
-                best_t = t
-        return best_t
-
-    # =========================
-    # 6C. FUNZIONI SEZIONE, ORIENTAMENTO E PESO
+    # SEZIONE E PESO
     # =========================
     def get_beam_section(beam):
-        for w_attr in ['width', 'w', 'b', 'breadth']:
-            for h_attr in ['height', 'h', 'd', 'depth']:
+        # Prima prova attributi diretti lunghezza/larghezza/altezza
+        try:
+            w = float(beam.width)
+            h = float(beam.height)
+            if w and h: return w, h
+        except: pass
+        for w_attr in ['width','w','b','breadth']:
+            for h_attr in ['height','h','d','depth']:
                 try:
                     w = getattr(beam, w_attr)
                     h = getattr(beam, h_attr)
@@ -212,168 +205,187 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
                 except: continue
         try:
             sec = beam.section
-            for w_attr in ['width', 'w', 'b', 'breadth']:
-                for h_attr in ['height', 'h', 'd', 'depth']:
+            for w_attr in ['width','w','b']:
+                for h_attr in ['height','h','d']:
                     try:
-                        w = getattr(sec, w_attr)
-                        h = getattr(sec, h_attr)
+                        w = getattr(sec, w_attr); h = getattr(sec, h_attr)
                         if w and h: return float(w), float(h)
                     except: continue
         except: pass
-        for container in ['blank', 'shape', 'profile']:
-            try:
-                obj = getattr(beam, container)
-                w = getattr(obj, 'xsize', None) or getattr(obj, 'width', None)
-                h = getattr(obj, 'ysize', None) or getattr(obj, 'height', None)
-                if w and h: return float(w), float(h)
-            except: continue
         return None, None
 
     def get_orientation_string(w, h):
         if w is None or h is None: return "?x?cm"
-        w_cm = round(w * 100) if w < 1 else round(w)
-        h_cm = round(h * 100) if h < 1 else round(h)
+        w_cm = round(w*100) if w < 1 else round(w)
+        h_cm = round(h*100) if h < 1 else round(h)
         return "{}x{}cm".format(int(w_cm), int(h_cm))
 
-    WOOD_DENSITY = 500  # kg/m3
+    WOOD_DENSITY = 500.0
     def get_beam_weight(beam, length):
         w, h = get_beam_section(beam)
         if w is None or h is None: return 0.0
-        w_m = w if w < 1 else w / 100.0
-        h_m = h if h < 1 else h / 100.0
-        volume = w_m * h_m * length
-        return volume * WOOD_DENSITY
+        w_m = w if w < 1 else w/100.0
+        h_m = h if h < 1 else h/100.0
+        return w_m * h_m * length * WOOD_DENSITY
 
     # =========================
-    # 6D. FUNZIONI STL
+    # STL
     # =========================
-    def compas_mesh_to_rg(compas_mesh):
-        rg_mesh = rg.Mesh()
-        vertices = list(compas_mesh.vertices())
-        vertex_map = {}
-        for i, v in enumerate(vertices):
-            try: x, y, z = compas_mesh.vertex_coordinates(v)
-            except:
-                pt = compas_mesh.vertex_attributes(v, ['x', 'y', 'z'])
-                x, y, z = pt
-            rg_mesh.Vertices.Add(x, y, z)
-            vertex_map[v] = i
-        for face in compas_mesh.faces():
-            fv = list(compas_mesh.face_vertices(face))
-            if len(fv) == 3:
-                rg_mesh.Faces.AddFace(vertex_map[fv[0]], vertex_map[fv[1]], vertex_map[fv[2]])
-            elif len(fv) == 4:
-                rg_mesh.Faces.AddFace(vertex_map[fv[0]], vertex_map[fv[1]], vertex_map[fv[2]], vertex_map[fv[3]])
-        rg_mesh.Normals.ComputeNormals()
-        rg_mesh.Compact()
-        return rg_mesh
+    def facet_normal(a, b, c):
+        return vector_normalize(vector_cross(vector_sub(b,a), vector_sub(c,a)))
 
-    def write_stl(rg_mesh, path):
-        lines = ["solid beam"]
-        rg_mesh.Normals.ComputeNormals()
-        for i in range(rg_mesh.Faces.Count):
-            face = rg_mesh.Faces[i]
-            verts = rg_mesh.Vertices
-            def write_tri(p0, p1, p2):
-                ux = p1.X - p0.X; uy = p1.Y - p0.Y; uz = p1.Z - p0.Z
-                vx = p2.X - p0.X; vy = p2.Y - p0.Y; vz = p2.Z - p0.Z
-                nx = uy * vz - uz * vy
-                ny = uz * vx - ux * vz
-                nz = ux * vy - uy * vx
-                length = (nx**2 + ny**2 + nz**2) ** 0.5
-                if length > 0: nx /= length; ny /= length; nz /= length
-                lines.append("  facet normal {} {} {}".format(nx, ny, nz))
-                lines.append("    outer loop\n      vertex {} {} {}\n      vertex {} {} {}\n      vertex {} {} {}\n    endloop\n  endfacet".format(
-                    p0.X, p0.Y, p0.Z, p1.X, p1.Y, p1.Z, p2.X, p2.Y, p2.Z))
-            if face.IsTriangle:
-                write_tri(verts[face.A], verts[face.B], verts[face.C])
-            else:
-                write_tri(verts[face.A], verts[face.B], verts[face.C])
-                write_tri(verts[face.A], verts[face.C], verts[face.D])
-        lines.append("endsolid beam")
-        with open(path, 'w') as f: f.write("\n".join(lines))
+    def beam_box_vertices(frame, length, width, height):
+        origin = frame["origin"]
+        ax = vector_scale(frame["x_axis"], length/2.0)
+        ay = vector_scale(frame["y_axis"], width/2.0)
+        az = vector_scale(frame["z_axis"], height/2.0)
+        verts = []
+        for sx in (-1,1):
+            for sy in (-1,1):
+                for sz in (-1,1):
+                    p = origin[:]
+                    p = vector_add(p, vector_scale(ax, sx))
+                    p = vector_add(p, vector_scale(ay, sy))
+                    p = vector_add(p, vector_scale(az, sz))
+                    verts.append(p)
+        return verts
 
-    def save_stl(geometry, beam_id, beam_folder):
+    def write_box_stl(path, name, vertices):
+        faces = [(0,2,3,1),(4,5,7,6),(0,1,5,4),(2,6,7,3),(0,4,6,2),(1,3,7,5)]
+        with open(path, 'w') as fp:
+            fp.write("solid {}\n".format(name))
+            for face in faces:
+                tris = [(face[0],face[1],face[2]),(face[0],face[2],face[3])]
+                for tri in tris:
+                    a,b,c = (vertices[i] for i in tri)
+                    n = facet_normal(a,b,c)
+                    fp.write("  facet normal {:.9g} {:.9g} {:.9g}\n".format(*n))
+                    fp.write("    outer loop\n")
+                    for v in (a,b,c):
+                        fp.write("      vertex {:.9g} {:.9g} {:.9g}\n".format(*v))
+                    fp.write("    endloop\n  endfacet\n")
+            fp.write("endsolid {}\n".format(name))
+
+    def geometry_to_mesh(geometry):
+        """Converte geometry COMPAS in (vertices, faces) se possibile"""
+        candidates = geometry if isinstance(geometry, (list,tuple)) else [geometry]
+        all_verts, all_faces = [], []
+        for candidate in candidates:
+            if candidate is None: continue
+            mesh = candidate
+            if hasattr(candidate, 'to_mesh'):
+                try: mesh = candidate.to_mesh()
+                except: continue
+            if hasattr(mesh, 'to_vertices_and_faces'):
+                try:
+                    verts, faces = mesh.to_vertices_and_faces()
+                    offset = len(all_verts)
+                    all_verts.extend([[float(c) for c in v] for v in verts])
+                    all_faces.extend([[int(i)+offset for i in f] for f in faces])
+                except: pass
+        return (all_verts, all_faces) if all_verts else None
+
+    def write_mesh_stl(path, name, vertices, faces):
+        with open(path, 'w') as fp:
+            fp.write("solid {}\n".format(name))
+            for face in faces:
+                # triangola
+                tris = [face] if len(face)==3 else [(face[0],face[i],face[i+1]) for i in range(1,len(face)-1)]
+                for tri in tris:
+                    a,b,c = ([float(c) for c in vertices[i]] for i in tri)
+                    n = facet_normal(a,b,c)
+                    fp.write("  facet normal {:.9g} {:.9g} {:.9g}\n".format(*n))
+                    fp.write("    outer loop\n")
+                    for v in (a,b,c):
+                        fp.write("      vertex {:.9g} {:.9g} {:.9g}\n".format(*v))
+                    fp.write("    endloop\n  endfacet\n")
+            fp.write("endsolid {}\n".format(name))
+
+    def save_stl(beam, beam_id, beam_folder, frame, w, h, length):
         stl_path = os.path.join(beam_folder, "{}.stl".format(beam_id))
-        if hasattr(geometry, 'to_stl'):
+        # Prova geometry COMPAS
+        mesh_data = geometry_to_mesh(beam.geometry)
+        if mesh_data:
+            write_mesh_stl(stl_path, beam_id, mesh_data[0], mesh_data[1])
+            return stl_path
+        # Prova native_brep -> mesh Rhino
+        geom = beam.geometry
+        native = None
+        if hasattr(geom, 'native_brep') and geom.native_brep:
+            native = geom.native_brep
+        elif isinstance(geom, rg.Brep):
+            native = geom
+        if native:
             try:
-                geometry.to_stl(stl_path)
-                if os.path.exists(stl_path): return stl_path
-            except: pass
-        if hasattr(geometry, 'native_brep') or isinstance(geometry, rg.Brep):
-            try:
-                native = geometry.native_brep if hasattr(geometry, 'native_brep') else geometry
-                meshp = rg.MeshingParameters.Default
-                meshes = rg.Mesh.CreateFromBrep(native, meshp)
+                meshes = rg.Mesh.CreateFromBrep(native, rg.MeshingParameters.Default)
                 if meshes:
                     joined = rg.Mesh()
                     for m in meshes: joined.Append(m)
-                    write_stl(joined, stl_path)
+                    verts = [[joined.Vertices[i].X, joined.Vertices[i].Y, joined.Vertices[i].Z] for i in range(joined.Vertices.Count)]
+                    faces = []
+                    for i in range(joined.Faces.Count):
+                        face = joined.Faces[i]
+                        if face.IsTriangle:
+                            faces.append([face.A, face.B, face.C])
+                        else:
+                            faces.append([face.A, face.B, face.C, face.D])
+                    write_mesh_stl(stl_path, beam_id, verts, faces)
                     return stl_path
             except: pass
+        # Fallback box
+        if w and h and length:
+            w_m = w if w < 1 else w/100.0
+            h_m = h if h < 1 else h/100.0
+            verts = beam_box_vertices(frame, length, w_m, h_m)
+            write_box_stl(stl_path, beam_id, verts)
+            return stl_path
         return None
 
     # =========================
-    # 6E. FUNZIONE FRAME LOCALE BEAM
+    # JOINT UTILITIES
     # =========================
-    def get_beam_local_frame(beam):
-        try:
-            line = beam.centerline
-            start = line.start if hasattr(line, "start") else get_line_start(line)
-            end = line.end if hasattr(line, "end") else get_line_end(line)
-            dx, dy, dz = end.x - start.x, end.y - start.y, end.z - start.z
-            length = (dx**2 + dy**2 + dz**2) ** 0.5
-            if length < 1e-10: return None
-            x_axis = [dx/length, dy/length, dz/length]
-            ref = [1.0, 0.0, 0.0] if abs(x_axis[2]) > 0.9 else [0.0, 0.0, 1.0]
-            cx = x_axis[1]*ref[2] - x_axis[2]*ref[1]
-            cy = x_axis[2]*ref[0] - x_axis[0]*ref[2]
-            cz = x_axis[0]*ref[1] - x_axis[1]*ref[0]
-            c_len = (cx**2 + cy**2 + cz**2) ** 0.5
-            if c_len < 1e-10: return None
-            z_axis = [cx/c_len, cy/c_len, cz/c_len]
-            y_axis = [
-                z_axis[1]*x_axis[2] - z_axis[2]*x_axis[1],
-                z_axis[2]*x_axis[0] - z_axis[0]*x_axis[2],
-                z_axis[0]*x_axis[1] - z_axis[1]*x_axis[0]
-            ]
-            return {
-                "origin": [round((start.x+end.x)/2.0, 4), round((start.y+end.y)/2.0, 4), round((start.z+end.z)/2.0, 4)],
-                "x_axis": [round(v, 4) for v in x_axis],
-                "y_axis": [round(v, 4) for v in y_axis],
-                "z_axis": [round(v, 4) for v in z_axis]
-            }
-        except: return None
+    def point_on_centerline(beam, t):
+        start, end = get_centerline_points(beam)
+        return [start[i] + (end[i]-start[i])*t for i in range(3)]
+
+    def joint_midpoint(ea, eb):
+        best_pa, best_pb, best_d = None, None, 1e99
+        samples = 20
+        for i in range(samples+1):
+            pa = point_on_centerline(ea, float(i)/samples)
+            for j in range(samples+1):
+                pb = point_on_centerline(eb, float(j)/samples)
+                d = sum((pa[k]-pb[k])**2 for k in range(3))
+                if d < best_d:
+                    best_d = d; best_pa = pa; best_pb = pb
+        return [(best_pa[k]+best_pb[k])/2.0 for k in range(3)]
 
     # =========================
-    # 7. GENERAZIONE OUTPUT BEAMS
+    # 7. GENERAZIONE OUTPUT
     # =========================
-    geom = {k: [] for k in seeds}
+    geom_out = {k: [] for k in labels_keys}
     ordered_by_module = {}
     beam_label_by_guid = {}
 
     for k in seeds:
         ordered = connected_growth(seeds[k], groups[k])
         ordered_by_module[k] = ordered
-
         for i, node in enumerate(ordered):
             beam = timber_model.get_element(node)
-            name = "{}{}".format(k, i + 1)
-
+            name = "{}{}".format(k, i+1)
             rhino_geom = beam.geometry
-            if hasattr(beam.geometry, "native_brep") and beam.geometry.native_brep:
+            if hasattr(beam.geometry, 'native_brep') and beam.geometry.native_brep:
                 rhino_geom = beam.geometry.native_brep
-            elif hasattr(beam.geometry, "native_mesh") and beam.geometry.native_mesh:
+            elif hasattr(beam.geometry, 'native_mesh') and beam.geometry.native_mesh:
                 rhino_geom = beam.geometry.native_mesh
-            elif hasattr(beam.geometry, "to_rhino"):
+            elif hasattr(beam.geometry, 'to_rhino'):
                 try: rhino_geom = beam.geometry.to_rhino()
                 except: pass
-
-            geom[k].append(rhino_geom)
+            geom_out[k].append(rhino_geom)
             beam_label_by_guid[node] = name
 
     # =========================
-    # 7B. STRUTTURA INTERNA DEI GIUNTI
+    # 7B. JOINTS
     # =========================
     joint_number_by_pair = {}
     beam_joints = {node: [] for node in g.nodes()}
@@ -384,7 +396,6 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
         ea, eb = joint.elements
         ga, gb = str(ea.guid), str(eb.guid)
         pair_key = tuple(sorted([ga, gb]))
-
         if pair_key not in joint_number_by_pair:
             joint_number = "{:02d}".format(counter)
             joint_number_by_pair[pair_key] = joint_number
@@ -392,87 +403,73 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
             counter += 1
         else:
             joint_number = joint_number_by_pair[pair_key]
+        jp = joint_midpoint(ea, eb)
+        beam_joints[ga].append(joint_number)
+        beam_joints[gb].append(joint_number)
 
-        jp = joint_point_from_beams(ea, eb)
-        beam_joints[ga].append((parameter_on_centerline(ea, jp), joint_number))
-        beam_joints[gb].append((parameter_on_centerline(eb, jp), joint_number))
-
-    A_geom_out = geom["A"]
-    B_geom_out = geom["B"]
-    C_geom_out = geom["C"]
-    D_geom_out = geom["D"]
-    E_geom_out = geom["E"]
-    F_geom_out = geom["F"]
+    A_geom_out = geom_out["A"]
+    B_geom_out = geom_out["B"]
+    C_geom_out = geom_out["C"]
+    D_geom_out = geom_out["D"]
+    E_geom_out = geom_out["E"]
+    F_geom_out = geom_out["F"]
 
     # =========================
-    # 9. ELABORAZIONE DETTAGLI
+    # 9. INFO
     # =========================
-    summary_by_category = {k: [] for k in labels_keys}
     info_lines_master = []
-
     for k in labels_keys:
         for node in ordered_by_module.get(k, []):
             name = beam_label_by_guid.get(node, "?")
             beam = timber_model.get_element(node)
-            length = beam.centerline.length if hasattr(beam.centerline, 'length') else 0.0
+            try: length = float(beam.length)
+            except:
+                s, e = get_centerline_points(beam)
+                length = vector_length(vector_sub(e, s))
             w, h = get_beam_section(beam)
             orientation = get_orientation_string(w, h)
             weight = get_beam_weight(beam, length)
-            volume_m3 = (w if w < 1 else w / 100.0) * (h if h < 1 else h / 100.0) * length if (w and h) else 0.0
-
-            full_info_string = "{} | L={:.2f}m | Sez={} | Vol={:.2f}cm3 | Peso={:.1f}kg".format(
-                name, length, orientation, volume_m3 * 1_000_000, weight
-            )
-            summary_by_category[k].append(full_info_string)
-            info_lines_master.append(full_info_string)
+            vol = ((w if w<1 else w/100.0) * (h if h<1 else h/100.0) * length * 1e6) if (w and h) else 0.0
+            info_lines_master.append("{} | L={:.2f}m | Sez={} | Vol={:.2f}cm3 | Peso={:.1f}kg".format(
+                name, length, orientation, vol, weight))
 
     def sort_key(line):
-        match = re.match(r'([A-Z]+)(\d+)', line)
-        return (match.group(1), int(match.group(2))) if match else (line, 0)
+        m = re.match(r'([A-Z]+)(\d+)', line)
+        return (m.group(1), int(m.group(2))) if m else (line, 0)
 
     info_list = sorted(info_lines_master, key=sort_key)
     info_out = info_list[idx] if (0 <= idx < len(info_list)) else (info_list[0] if info_list else "nessun beam")
 
     # =========================
-    # 10B. POSIZIONI GLOBALI TUTTI I BEAM
+    # 10B. POSIZIONI GLOBALI
     # =========================
-    all_beams_positions = {}
     all_pts_list = list(pts.values())
     min_x3, max_x3 = min(p[0] for p in all_pts_list), max(p[0] for p in all_pts_list)
     min_y3, max_y3 = min(p[1] for p in all_pts_list), max(p[1] for p in all_pts_list)
     min_z3, max_z3 = min(p[2] for p in all_pts_list), max(p[2] for p in all_pts_list)
-    rx = max_x3 - min_x3 if max_x3 != min_x3 else 1.0
-    ry = max_y3 - min_y3 if max_y3 != min_y3 else 1.0
-    rz = max_z3 - min_z3 if max_z3 != min_z3 else 1.0
+    rx = max_x3-min_x3 or 1.0; ry = max_y3-min_y3 or 1.0; rz = max_z3-min_z3 or 1.0
 
+    all_beams_positions = {}
     for node in g.nodes():
         label = beam_label_by_guid.get(node, node)
         px, py, pz = pts[node]
         beam = timber_model.get_element(node)
-        try:
-            cl = beam.centerline
-            s, e = get_line_start(cl), get_line_end(cl)
-            all_beams_positions[label] = {
-                "guid": node,
-                "module": assignment.get(node, "?"),
-                "centerline_start": [round(s.x, 4), round(s.y, 4), round(s.z, 4)],
-                "centerline_end": [round(e.x, 4), round(e.y, 4), round(e.z, 4)],
-                "midpoint": [round(px, 4), round(py, 4), round(pz, 4)],
-                "midpoint_normalized": [round((px - min_x3) / rx, 4), round((py - min_y3) / ry, 4), round((pz - min_z3) / rz, 4)]
-            }
-        except:
-            all_beams_positions[label] = {
-                "guid": node,
-                "module": assignment.get(node, "?"),
-                "midpoint": [round(px, 4), round(py, 4), round(pz, 4)],
-                "midpoint_normalized": [round((px - min_x3) / rx, 4), round((py - min_y3) / ry, 4), round((pz - min_z3) / rz, 4)]
-            }
+        s, e = get_centerline_points(beam)
+        all_beams_positions[label] = {
+            "guid": node,
+            "module": assignment.get(node, "?"),
+            "centerline_start": [round(v,4) for v in s],
+            "centerline_end": [round(v,4) for v in e],
+            "midpoint": [round(px,4), round(py,4), round(pz,4)],
+            "midpoint_normalized": [round((px-min_x3)/rx,4), round((py-min_y3)/ry,4), round((pz-min_z3)/rz,4)]
+        }
 
     # =========================
-    # 11 & 12. EXPORT DINAMICO
+    # 11 & 12. EXPORT
     # =========================
     if RunExport and OutputFolder:
         output_folder = str(OutputFolder)
+        if not os.path.exists(output_folder): os.makedirs(output_folder)
         global_structure_path = os.path.join(output_folder, "structure.json")
         json_files_created, stl_files_created, stl_errors = [], [], []
 
@@ -480,38 +477,37 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
             for node in ordered_by_module.get(k, []):
                 name = beam_label_by_guid.get(node, "?")
                 beam = timber_model.get_element(node)
-                try: length = beam.centerline.length
-                except: length = 0.0
+                try: length = float(beam.length)
+                except:
+                    s, e = get_centerline_points(beam)
+                    length = vector_length(vector_sub(e, s))
 
                 w, h = get_beam_section(beam)
-                w_m = w if (w is not None and w < 1) else (w / 100.0 if w is not None else None)
-                h_m = h if (h is not None and h < 1) else (h / 100.0 if h is not None else None)
+                w_m = (w if w<1 else w/100.0) if w else None
+                h_m = (h if h<1 else h/100.0) if h else None
                 weight = get_beam_weight(beam, length)
                 volume_m3 = w_m * h_m * length if (w_m and h_m) else 0.0
 
-                joints_list = sorted(beam_joints.get(node, []), key=lambda item: item[0])
-                seen, clean_joints = set(), []
-                for param, j_num in joints_list:
-                    if j_num not in seen:
-                        clean_joints.append(j_num)
-                        seen.add(j_num)
+                frame = get_beam_frame(beam)
 
-                # Categorizzazione joints - trattino se vuoto
+                joints_list = beam_joints.get(node, [])
+                seen, clean_joints = set(), []
+                for j_num in joints_list:
+                    if j_num not in seen:
+                        clean_joints.append(j_num); seen.add(j_num)
+
                 xlap, tbutt, lmiter = [], [], []
                 for j_num in clean_joints:
                     j_type = joint_type_by_number.get(j_num, "")
-                    if j_type == 'XLapJoint':
-                        xlap.append(j_num)
-                    elif j_type == 'TButtJoint':
-                        tbutt.append(j_num)
-                    elif j_type == 'LMiterJoint':
-                        lmiter.append(j_num)
+                    if 'XLap' in j_type: xlap.append(j_num)
+                    elif 'TButt' in j_type: tbutt.append(j_num)
+                    elif 'LMiter' in j_type: lmiter.append(j_num)
 
                 beam_id = name.lower()
                 beam_folder = os.path.join(output_folder, beam_id)
                 if not os.path.exists(beam_folder): os.makedirs(beam_folder)
 
-                stl_result = save_stl(beam.geometry, beam_id, beam_folder)
+                stl_result = save_stl(beam, beam_id, beam_folder, frame, w, h, length)
                 if stl_result: stl_files_created.append(stl_result)
                 else: stl_errors.append("Errore STL per {}".format(beam_id))
 
@@ -522,10 +518,15 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
                     "module": k,
                     "width (m)": round(w_m, 4) if w_m else None,
                     "height (m)": round(h_m, 4) if h_m else None,
-                    "length (m)": round(length, 2),
-                    "volume (cm3)": round(volume_m3 * 1_000_000, 2),
+                    "length (m)": round(length, 4),
+                    "volume (cm3)": round(volume_m3 * 1e6, 2),
                     "weight (kg)": round(weight, 2),
-                    "local_frame": get_beam_local_frame(beam),
+                    "local_frame": {
+                        "origin": [round(v,4) for v in frame["origin"]],
+                        "x_axis": [round(v,4) for v in frame["x_axis"]],
+                        "y_axis": [round(v,4) for v in frame["y_axis"]],
+                        "z_axis": [round(v,4) for v in frame["z_axis"]],
+                    },
                     "connected_beams": [beam_label_by_guid[nbr].lower() for nbr in g.neighbors(node) if nbr in beam_label_by_guid],
                     "global_position": {
                         "centerline_start": global_pos.get("centerline_start"),
@@ -542,4 +543,49 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
                     "3d_model": "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data/beams/{}/{}.stl".format(beam_id, beam_id)
                 }
 
-                json_path = os.path.join(
+                json_path = os.path.join(beam_folder, "{}.json".format(beam_id))
+                with open(json_path, 'w') as f: json.dump(beam_data, f, indent=2)
+                json_files_created.append(json_path)
+
+        all_beams_list = []
+        for k in labels_keys:
+            for node in ordered_by_module.get(k, []):
+                label = beam_label_by_guid.get(node, "?")
+                beam_id = label.lower()
+                gpos = all_beams_positions.get(label, {})
+                all_beams_list.append({
+                    "beam_id": beam_id,
+                    "module": k,
+                    "centerline_start": gpos.get("centerline_start"),
+                    "centerline_end": gpos.get("centerline_end"),
+                    "midpoint": gpos.get("midpoint"),
+                    "midpoint_normalized": gpos.get("midpoint_normalized"),
+                    "connected_beams": [beam_label_by_guid[nbr].lower() for nbr in g.neighbors(node) if nbr in beam_label_by_guid]
+                })
+
+        with open(global_structure_path, 'w') as f:
+            json.dump({
+                "total_beams": len(all_beams_list),
+                "bounding_box": {
+                    "min": [round(min_x3,4), round(min_y3,4), round(min_z3,4)],
+                    "max": [round(max_x3,4), round(max_y3,4), round(max_z3,4)]
+                },
+                "beams": all_beams_list
+            }, f, indent=2)
+        json_files_created.append(global_structure_path)
+
+        json_export_out = "JSON: {} | STL: {} | Errori STL: {}".format(
+            len(json_files_created), len(stl_files_created), len(stl_errors))
+        if stl_errors: json_export_out += "\n" + "\n".join(stl_errors[:5])
+
+    return (
+        debug_out,
+        info_out,
+        json_export_out,
+        A_geom_out,
+        B_geom_out,
+        C_geom_out,
+        D_geom_out,
+        E_geom_out,
+        F_geom_out
+    )

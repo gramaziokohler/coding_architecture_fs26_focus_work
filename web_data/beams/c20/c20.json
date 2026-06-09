@@ -4,14 +4,14 @@
   "module": "C",
   "width (m)": 0.06,
   "height (m)": 0.08,
-  "length (m)": 1.05,
-  "volume (cm\u00b3)": 5034.65,
+  "length (m)": 1.0489,
+  "volume (cm3)": 5034.65,
   "weight (kg)": 2.52,
   "local_frame": {
     "origin": [
-      2.7841,
-      0.0463,
-      2.115
+      3.3085,
+      0.0431,
+      2.1149
     ],
     "x_axis": [
       -1.0,
@@ -19,14 +19,14 @@
       0.0003
     ],
     "y_axis": [
-      0.0003,
-      -0.0,
-      1.0
+      0.0061,
+      0.9855,
+      -0.1695
     ],
     "z_axis": [
-      0.0062,
-      1.0,
-      -0.0
+      -0.0013,
+      -0.1695,
+      -0.9855
     ]
   },
   "connected_beams": [
@@ -37,14 +37,14 @@
   ],
   "global_position": {
     "centerline_start": [
-      3.3085,
-      0.0431,
-      2.1149
+      3.833,
+      0.0398,
+      2.1147
     ],
     "centerline_end": [
-      2.2597,
-      0.0496,
-      2.1152
+      2.7841,
+      0.0463,
+      2.115
     ],
     "midpoint": [
       2.7841,
@@ -59,21 +59,20 @@
   },
   "joints": {
     "all": [
-      "150",
-      "132",
+      "120",
       "131",
-      "120"
+      "132",
+      "150"
     ],
     "xlap": [
-      "150",
-      "131"
+      "131",
+      "150"
     ],
     "tbutt": [
-      "132",
-      "120"
+      "120",
+      "132"
     ],
-    "lmiter": [],
-    "custom": []
+    "lmiter": "-"
   },
   "3d_model": "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data/beams/c20/c20.stl"
 }

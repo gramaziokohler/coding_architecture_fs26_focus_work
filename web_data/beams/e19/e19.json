@@ -4,14 +4,14 @@
   "module": "E",
   "width (m)": 0.06,
   "height (m)": 0.08,
-  "length (m)": 1.16,
-  "volume (cm\u00b3)": 5567.59,
+  "length (m)": 1.1599,
+  "volume (cm3)": 5567.59,
   "weight (kg)": 2.78,
   "local_frame": {
     "origin": [
-      5.4993,
-      -0.032,
-      0.4159
+      5.8694,
+      0.1304,
+      0.0
     ],
     "x_axis": [
       -0.6382,
@@ -19,14 +19,14 @@
       0.7171
     ],
     "y_axis": [
-      0.6567,
-      0.2881,
-      0.6969
+      -0.256,
+      0.9557,
+      0.1454
     ],
     "z_axis": [
-      -0.4018,
-      0.9157,
-      0.0
+      -0.7261,
+      -0.0908,
+      -0.6816
     ]
   },
   "connected_beams": [
@@ -37,14 +37,14 @@
   ],
   "global_position": {
     "centerline_start": [
-      5.8694,
-      0.1304,
-      0.0
+      6.2396,
+      0.2928,
+      -0.4159
     ],
     "centerline_end": [
-      5.1292,
-      -0.1944,
-      0.8318
+      5.4993,
+      -0.032,
+      0.4159
     ],
     "midpoint": [
       5.4993,
@@ -59,25 +59,20 @@
   },
   "joints": {
     "all": [
-      "337",
-      "323",
+      "10",
       "319",
-      "10"
+      "323",
+      "337"
     ],
     "xlap": [
       "319"
     ],
     "tbutt": [
+      "10",
       "323",
-      "10"
+      "337"
     ],
-    "lmiter": [],
-    "custom": [
-      {
-        "id": "337",
-        "type": "PreferredFaceTButtJoint"
-      }
-    ]
+    "lmiter": "-"
   },
   "3d_model": "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data/beams/e19/e19.stl"
 }

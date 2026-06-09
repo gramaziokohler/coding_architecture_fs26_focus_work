@@ -4,14 +4,14 @@
   "module": "E",
   "width (m)": 0.06,
   "height (m)": 0.08,
-  "length (m)": 0.93,
-  "volume (cm\u00b3)": 4473.78,
+  "length (m)": 0.932,
+  "volume (cm3)": 4473.78,
   "weight (kg)": 2.24,
   "local_frame": {
     "origin": [
-      4.9353,
-      0.5091,
-      0.9315
+      5.1481,
+      0.8613,
+      0.7127
     ],
     "x_axis": [
       -0.4566,
@@ -19,14 +19,14 @@
       0.4693
     ],
     "y_axis": [
-      0.2427,
-      0.4017,
-      0.883
+      -0.5762,
+      0.6532,
+      0.4912
     ],
     "z_axis": [
-      -0.8559,
-      0.5171,
-      0.0
+      -0.6778,
+      -0.0462,
+      -0.7338
     ]
   },
   "connected_beams": [
@@ -37,14 +37,14 @@
   ],
   "global_position": {
     "centerline_start": [
-      5.1481,
-      0.8613,
-      0.7127
+      5.3609,
+      1.2135,
+      0.494
     ],
     "centerline_end": [
-      4.7225,
-      0.1569,
-      1.1502
+      4.9353,
+      0.5091,
+      0.9315
     ],
     "midpoint": [
       4.9353,
@@ -59,21 +59,20 @@
   },
   "joints": {
     "all": [
+      "02",
       "05",
-      "222",
       "221",
-      "02"
+      "222"
     ],
     "xlap": [
       "05",
       "221"
     ],
     "tbutt": [
-      "222",
-      "02"
+      "02",
+      "222"
     ],
-    "lmiter": [],
-    "custom": []
+    "lmiter": "-"
   },
   "3d_model": "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data/beams/e12/e12.stl"
 }

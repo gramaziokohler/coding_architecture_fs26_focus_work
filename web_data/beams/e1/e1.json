@@ -4,14 +4,14 @@
   "module": "E",
   "width (m)": 0.06,
   "height (m)": 0.08,
-  "length (m)": 1.35,
-  "volume (cm\u00b3)": 6472.7,
+  "length (m)": 1.3485,
+  "volume (cm3)": 6472.7,
   "weight (kg)": 3.24,
   "local_frame": {
     "origin": [
-      4.7394,
-      -0.7654,
-      1.3298
+      5.2284,
+      -0.5895,
+      0.9003
     ],
     "x_axis": [
       -0.7253,
@@ -19,14 +19,14 @@
       0.6371
     ],
     "y_axis": [
-      0.5994,
-      0.2156,
-      0.7708
+      -0.3383,
+      0.941,
+      0.0003
     ],
     "z_axis": [
-      -0.3385,
-      0.941,
-      0.0
+      -0.5996,
+      -0.2153,
+      -0.7708
     ]
   },
   "connected_beams": [
@@ -37,14 +37,14 @@
   ],
   "global_position": {
     "centerline_start": [
-      5.2284,
-      -0.5895,
-      0.9003
+      5.7175,
+      -0.4135,
+      0.4708
     ],
     "centerline_end": [
-      4.2504,
-      -0.9413,
-      1.7594
+      4.7394,
+      -0.7654,
+      1.3298
     ],
     "midpoint": [
       4.7394,
@@ -59,21 +59,20 @@
   },
   "joints": {
     "all": [
+      "200",
       "228",
-      "310",
       "308",
-      "200"
+      "310"
     ],
     "xlap": [
       "228",
       "308"
     ],
     "tbutt": [
-      "310",
-      "200"
+      "200",
+      "310"
     ],
-    "lmiter": [],
-    "custom": []
+    "lmiter": "-"
   },
   "3d_model": "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data/beams/e1/e1.stl"
 }
