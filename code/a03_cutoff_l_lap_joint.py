@@ -141,13 +141,19 @@ class CutoffLLapJoint(LLapJoint):
             negative_volume_a = self._extend_polyhedron_to_beam_edge(
                 negative_volume_a,
                 self.beam_a,
+                self.beam_b,
                 self.ref_side_index_a,
+                self.centerline_intersection,
+                clipping_plane_a if self.limit_lap_removal else self.extension_plane_b,
                 self.debug_clip_status,
             )
             negative_volume_b = self._extend_polyhedron_to_beam_edge(
                 negative_volume_b,
                 self.beam_b,
+                self.beam_a,
                 self.ref_side_index_b,
+                self.centerline_intersection,
+                clipping_plane_b if self.limit_lap_removal else self.extension_plane_a,
                 self.debug_clip_status,
             )
 
@@ -301,38 +307,37 @@ class CutoffLLapJoint(LLapJoint):
         return points
 
     @staticmethod
-    def _extend_polyhedron_to_beam_edge(polyhedron, beam, ref_side_index, debug_status=None):
+    def _extend_polyhedron_to_beam_edge(polyhedron, beam, other_beam, ref_side_index, joint_point, cutoff_plane, debug_status=None):
         original_volume = CutoffLLapJoint._brep_volume(polyhedron)
         if original_volume is None:
             if debug_status is not None:
                 debug_status.append("sliver cleanup skipped; original volume invalid")
             return polyhedron
 
-        candidates = CutoffLLapJoint._adjacent_ref_side_planes(beam, ref_side_index)
-        best_polyhedron = None
-        best_volume = original_volume
+        extended = CutoffLLapJoint._extend_cutoff_face_edge_to_beam_side(
+            polyhedron,
+            beam,
+            other_beam,
+            ref_side_index,
+            joint_point,
+            cutoff_plane,
+            debug_status,
+        )
 
-        for candidate in candidates:
-            replacement = CutoffLLapJoint._polyhedron_with_replaced_parallel_face(polyhedron, candidate, debug_status)
-            if replacement is None:
-                continue
-
-            replacement_volume = CutoffLLapJoint._brep_volume(replacement)
-            if replacement_volume is None:
-                continue
-
-            if replacement_volume > best_volume + TOL.absolute:
-                best_polyhedron = replacement
-                best_volume = replacement_volume
-
-        if best_polyhedron is None:
+        if extended is None:
             if debug_status is not None:
                 debug_status.append("sliver cleanup found no larger valid lap volume")
             return polyhedron
 
+        extended_volume = CutoffLLapJoint._brep_volume(extended)
+        if extended_volume is None or extended_volume <= original_volume + TOL.absolute:
+            if debug_status is not None:
+                debug_status.append("sliver cleanup edge move did not enlarge lap volume")
+            return polyhedron
+
         if debug_status is not None:
-            debug_status.append("sliver cleanup extended lap volume")
-        return best_polyhedron
+            debug_status.append("sliver cleanup extended cutoff face edge")
+        return extended
 
     @staticmethod
     def _adjacent_ref_side_planes(beam, ref_side_index):
@@ -344,41 +349,305 @@ class CutoffLLapJoint(LLapJoint):
         ]
 
     @staticmethod
+    def _beam_direction_from_joint(beam, joint_point):
+        line = beam.centerline
+        midpoint = line.midpoint
+        direction = Vector.from_start_end(joint_point, midpoint)
+
+        if direction.length < TOL.absolute:
+            direction = Vector.from_start_end(line.start, line.end)
+
+        if direction.length < TOL.absolute:
+            return None
+
+        direction.unitize()
+        return direction
+
+    @staticmethod
+    def _acute_angle_side_vector(beam, other_beam, joint_point):
+        beam_direction = CutoffLLapJoint._beam_direction_from_joint(beam, joint_point)
+        other_direction = CutoffLLapJoint._beam_direction_from_joint(other_beam, joint_point)
+
+        if beam_direction is None or other_direction is None:
+            return None
+
+        if beam_direction.dot(other_direction) < 0.0:
+            other_direction = -other_direction
+
+        side_vector = other_direction - beam_direction * other_direction.dot(beam_direction)
+        if side_vector.length < TOL.absolute:
+            return None
+
+        side_vector.unitize()
+        return side_vector
+
+    @staticmethod
+    def _polyhedron_centroid(polyhedron):
+        x = sum(point.x for point in polyhedron.points) / len(polyhedron.points)
+        y = sum(point.y for point in polyhedron.points) / len(polyhedron.points)
+        z = sum(point.z for point in polyhedron.points) / len(polyhedron.points)
+        return Point(x, y, z)
+
+    @staticmethod
+    def _acute_angle_side_planes(polyhedron, beam, other_beam, ref_side_index, joint_point):
+        side_vector = CutoffLLapJoint._acute_angle_side_vector(beam, other_beam, joint_point)
+        candidates = [
+            Plane.from_frame(ref_side)
+            for ref_side in beam.ref_sides
+        ]
+
+        if side_vector is None:
+            return CutoffLLapJoint._adjacent_ref_side_planes(beam, ref_side_index)
+
+        scored = []
+        centroid = CutoffLLapJoint._polyhedron_centroid(polyhedron)
+
+        for plane in candidates:
+            normal = plane.normal.copy()
+            normal.unitize()
+
+            # Orient the plane normal from the current lap volume toward this
+            # beam side. ref_side frame normals are not guaranteed outward.
+            distance = Vector.from_start_end(centroid, plane.point).dot(normal)
+            if distance < 0.0:
+                normal = -normal
+
+            score = normal.dot(side_vector)
+
+            if score <= TOL.absolute:
+                continue
+
+            # Push slightly beyond the side face so the cutter fully removes
+            # the thin acute-angle sliver instead of stopping exactly on it.
+            overcut = max(TOL.absolute * 10.0, 1e-4)
+            plane = Plane(plane.point + normal * overcut, normal)
+            scored.append((score, plane))
+
+        if not scored:
+            return CutoffLLapJoint._adjacent_ref_side_planes(beam, ref_side_index)
+
+        scored.sort(key=lambda item: item[0], reverse=True)
+        return [plane for _, plane in scored]
+
+    @staticmethod
+    def _find_cutoff_face_index(polyhedron, cutoff_plane):
+        mesh = polyhedron.to_mesh()
+        cutoff_normal = cutoff_plane.normal.copy()
+        cutoff_normal.unitize()
+
+        best_index = None
+        best_score = -1.0
+
+        for index in range(mesh.number_of_faces()):
+            plane = mesh.face_plane(index)
+            normal = plane.normal.copy()
+            normal.unitize()
+
+            parallel_score = abs(normal.dot(cutoff_normal))
+            distance_score = abs(Vector.from_start_end(cutoff_plane.point, plane.point).dot(cutoff_normal))
+            score = parallel_score - distance_score
+
+            if score > best_score:
+                best_index = index
+                best_score = score
+
+        return best_index
+
+    @staticmethod
+    def _face_edges(face):
+        return [
+            (face[index], face[(index + 1) % len(face)])
+            for index in range(len(face))
+        ]
+
+    @staticmethod
+    def _target_side_plane(polyhedron, beam, other_beam, ref_side_index, joint_point):
+        planes = CutoffLLapJoint._acute_angle_side_planes(
+            polyhedron,
+            beam,
+            other_beam,
+            ref_side_index,
+            joint_point,
+        )
+        if not planes:
+            return None
+        return planes[0]
+
+    @staticmethod
+    def _side_planes_for_direction(polyhedron, beam, ref_side_index, direction):
+        candidates = [
+            Plane.from_frame(ref_side)
+            for ref_side in beam.ref_sides
+        ]
+        centroid = CutoffLLapJoint._polyhedron_centroid(polyhedron)
+        scored = []
+
+        for plane in candidates:
+            normal = plane.normal.copy()
+            normal.unitize()
+
+            distance = Vector.from_start_end(centroid, plane.point).dot(normal)
+            if distance < 0.0:
+                normal = -normal
+
+            score = normal.dot(direction)
+            if score <= TOL.absolute:
+                continue
+
+            overcut = max(TOL.absolute * 10.0, 1e-4)
+            scored.append((score, Plane(plane.point + normal * overcut, normal)))
+
+        if not scored:
+            return CutoffLLapJoint._adjacent_ref_side_planes(beam, ref_side_index)
+
+        scored.sort(key=lambda item: item[0], reverse=True)
+        return [plane for _, plane in scored]
+
+    @staticmethod
+    def _extend_cutoff_face_edge_to_beam_side(polyhedron, beam, other_beam, ref_side_index, joint_point, cutoff_plane, debug_status=None):
+        side_vector = CutoffLLapJoint._acute_angle_side_vector(beam, other_beam, joint_point)
+        if side_vector is None:
+            if debug_status is not None:
+                debug_status.append("sliver cleanup found no acute side direction")
+            return None
+
+        cutoff_face_index = CutoffLLapJoint._find_cutoff_face_index(polyhedron, cutoff_plane)
+        if cutoff_face_index is None:
+            if debug_status is not None:
+                debug_status.append("sliver cleanup found no cutoff face")
+            return None
+
+        cutoff_face = polyhedron.faces[cutoff_face_index]
+        centroid = CutoffLLapJoint._polyhedron_centroid(polyhedron)
+        original_volume = CutoffLLapJoint._brep_volume(polyhedron)
+
+        best_replacement = None
+        best_volume_increase = None
+
+        if original_volume is None:
+            return None
+
+        for direction in (side_vector, -side_vector):
+            target_planes = CutoffLLapJoint._side_planes_for_direction(
+                polyhedron,
+                beam,
+                ref_side_index,
+                direction,
+            )
+
+            for target_plane in target_planes:
+                target_normal = target_plane.normal.copy()
+                target_normal.unitize()
+                denom = direction.dot(target_normal)
+
+                if abs(denom) <= TOL.absolute:
+                    continue
+
+                for edge in CutoffLLapJoint._face_edges(cutoff_face):
+                    point_a = polyhedron.points[edge[0]]
+                    point_b = polyhedron.points[edge[1]]
+                    midpoint = Point(
+                        (point_a.x + point_b.x) * 0.5,
+                        (point_a.y + point_b.y) * 0.5,
+                        (point_a.z + point_b.z) * 0.5,
+                    )
+
+                    if Vector.from_start_end(centroid, midpoint).dot(direction) <= TOL.absolute:
+                        continue
+
+                    points = [Point(point.x, point.y, point.z) for point in polyhedron.points]
+                    moved = False
+
+                    for vertex_index in edge:
+                        point = points[vertex_index]
+                        distance = Vector.from_start_end(point, target_plane.point).dot(target_normal)
+                        travel = distance / denom
+
+                        if travel <= TOL.absolute:
+                            continue
+
+                        points[vertex_index] = Point(
+                            point.x + direction.x * travel,
+                            point.y + direction.y * travel,
+                            point.z + direction.z * travel,
+                        )
+                        moved = True
+
+                    if not moved:
+                        continue
+
+                    replacement = Polyhedron(points, polyhedron.faces)
+                    replacement_volume = CutoffLLapJoint._brep_volume(replacement)
+                    if replacement_volume is None:
+                        continue
+
+                    volume_increase = replacement_volume - original_volume
+                    if volume_increase <= TOL.absolute:
+                        continue
+
+                    if best_volume_increase is None or volume_increase < best_volume_increase:
+                        best_replacement = replacement
+                        best_volume_increase = volume_increase
+
+        if best_replacement is None:
+            if debug_status is not None:
+                debug_status.append("sliver cleanup found no movable cutoff face edge")
+            return None
+
+        return best_replacement
+
+    @staticmethod
     def _polyhedron_with_replaced_parallel_face(polyhedron, replacement_plane, debug_status=None):
         mesh = polyhedron.to_mesh()
         planes = [mesh.face_plane(index) for index in range(mesh.number_of_faces())]
         replacement_normal = replacement_plane.normal.copy()
         replacement_normal.unitize()
 
-        best_index = None
-        best_score = 0.0
+        candidate_indices = []
         for index, plane in enumerate(planes):
             normal = plane.normal.copy()
             normal.unitize()
             score = abs(normal.dot(replacement_normal))
-            if score > best_score:
-                best_index = index
-                best_score = score
+            if score >= 0.95:
+                candidate_indices.append(index)
 
-        if best_index is None or best_score < 0.95:
+        if not candidate_indices:
             if debug_status is not None:
                 debug_status.append("sliver cleanup found no parallel lap face")
             return None
 
-        original_normal = planes[best_index].normal.copy()
-        original_normal.unitize()
-        if original_normal.dot(replacement_normal) < 0.0:
-            replacement_plane = Plane(replacement_plane.point, -replacement_plane.normal)
+        original_volume = CutoffLLapJoint._brep_volume(polyhedron)
+        best_replacement = None
+        best_volume = original_volume or 0.0
 
-        planes[best_index] = replacement_plane
-        points = CutoffLLapJoint._points_from_face_planes(polyhedron, planes, debug_status)
-        if points is None:
+        for candidate_index in candidate_indices:
+            original_normal = planes[candidate_index].normal.copy()
+            original_normal.unitize()
+
+            oriented_replacement_plane = replacement_plane
+            if original_normal.dot(replacement_normal) < 0.0:
+                oriented_replacement_plane = Plane(replacement_plane.point, -replacement_plane.normal)
+
+            candidate_planes = list(planes)
+            candidate_planes[candidate_index] = oriented_replacement_plane
+
+            points = CutoffLLapJoint._points_from_face_planes(polyhedron, candidate_planes, None)
+            if points is None:
+                continue
+
+            replacement = Polyhedron(points, polyhedron.faces)
+            replacement_volume = CutoffLLapJoint._brep_volume(replacement)
+            if replacement_volume is None:
+                continue
+
+            if replacement_volume > best_volume + TOL.absolute:
+                best_replacement = replacement
+                best_volume = replacement_volume
+
+        if best_replacement is None:
             return None
 
-        replacement = Polyhedron(points, polyhedron.faces)
-        if not CutoffLLapJoint._has_brep_volume(replacement):
-            return None
-        return replacement
+        return best_replacement
 
     @staticmethod
     def _points_from_face_planes(polyhedron, planes, debug_status=None):

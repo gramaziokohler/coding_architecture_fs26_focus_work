@@ -7,6 +7,7 @@ DevTools.ensure_path()
 ghenv.Component.Message = "Test Cutoff L-Lap"
 
 import Rhino.Geometry as rg
+import importlib
 
 from compas.geometry import Line
 from compas.geometry import Point
@@ -17,6 +18,9 @@ from compas_timber.model import TimberModel
 from timber_design.workflow import DirectRule
 from timber_design.workflow import JointRuleSolver
 
+import a03_cutoff_l_lap_joint
+
+importlib.reload(a03_cutoff_l_lap_joint)
 from a03_cutoff_l_lap_joint import CutoffLLapJoint
 
 
@@ -143,6 +147,9 @@ if joints:
     negative_volume_b_rhino = to_rhino(negative_volume_b.to_mesh(), errors) if negative_volume_b else None
     clip_status = joint.debug_clip_status
     centerline_intersection = joint.centerline_intersection
+
+for status in clip_status:
+    print(status)
 
 beam_a_out = beam_a.geometry    
 beam_b_out = beam_b.geometry
