@@ -27,22 +27,11 @@
       0.9992,
       -0.0404,
       0.0
-    ],
-    "length": 0.5887,
-    "centerline_start": [
-      5.7992,
-      0.5299,
-      0.0
-    ],
-    "centerline_end": [
-      5.823,
-      1.1182,
-      0.0
     ]
   },
   "connected_beams": [
-    "e18",
     "e15",
+    "e18",
     "f15",
     "f21"
   ],
@@ -70,101 +59,37 @@
   },
   "joints": {
     "all": [
-      "331",
-      "332",
-      "336",
-      "334"
+      "E18-F22",
+      "E15-F22",
+      "F21-F22",
+      "F15-F22"
     ],
     "xlap": [],
     "tbutt": [],
     "lmiter": [
-      "331",
-      "334"
+      "E18-F22",
+      "F15-F22"
     ],
     "details": [
       {
-        "id": "331",
+        "id": "E18-F22",
         "type": "LMiterJoint",
-        "position": {
-          "global": [
-            5.7992,
-            0.5299,
-            0.0
-          ],
-          "local_frame_a": {
-            "distance_along_x": 0.281,
-            "offset_y": 0.0,
-            "offset_z": 0.0
-          },
-          "local_frame_b": {
-            "distance_along_x": -0.2944,
-            "offset_y": 0.0,
-            "offset_z": 0.0
-          }
-        }
+        "kind": "lmiter"
       },
       {
-        "id": "332",
+        "id": "E15-F22",
         "type": "PreferredFaceTButtJoint",
-        "position": {
-          "global": [
-            5.8177,
-            0.6801,
-            0.012
-          ],
-          "local_frame_a": {
-            "distance_along_x": -0.507,
-            "offset_y": -0.0171,
-            "offset_z": 0.0015
-          },
-          "local_frame_b": {
-            "distance_along_x": -0.1436,
-            "offset_y": 0.012,
-            "offset_z": 0.0124
-          }
-        }
+        "kind": "other"
       },
       {
-        "id": "336",
+        "id": "F21-F22",
         "type": "PreferredFaceTButtJoint",
-        "position": {
-          "global": [
-            5.8289,
-            0.9127,
-            0.0127
-          ],
-          "local_frame_a": {
-            "distance_along_x": -0.1984,
-            "offset_y": -0.0159,
-            "offset_z": 0.0107
-          },
-          "local_frame_b": {
-            "distance_along_x": 0.0892,
-            "offset_y": 0.0127,
-            "offset_z": 0.0142
-          }
-        }
+        "kind": "other"
       },
       {
-        "id": "334",
+        "id": "F15-F22",
         "type": "LMiterJoint",
-        "position": {
-          "global": [
-            5.823,
-            1.1182,
-            0.0
-          ],
-          "local_frame_a": {
-            "distance_along_x": 0.2943,
-            "offset_y": 0.0,
-            "offset_z": 0.0
-          },
-          "local_frame_b": {
-            "distance_along_x": -0.4223,
-            "offset_y": 0.0,
-            "offset_z": 0.0
-          }
-        }
+        "kind": "lmiter"
       }
     ]
   },

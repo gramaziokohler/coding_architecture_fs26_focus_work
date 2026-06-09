@@ -27,23 +27,12 @@
       0.2194,
       -0.9756,
       0.0
-    ],
-    "length": 1.3661,
-    "centerline_start": [
-      -0.3321,
-      3.0889,
-      0.9563
-    ],
-    "centerline_end": [
-      0.7267,
-      3.3271,
-      1.786
     ]
   },
   "connected_beams": [
-    "d28",
+    "b15",
     "b27",
-    "b15"
+    "d28"
   ],
   "global_position": {
     "centerline_start": [
@@ -69,79 +58,31 @@
   },
   "joints": {
     "all": [
-      "262",
-      "268",
-      "59"
+      "B17-B27",
+      "B15-B17",
+      "B17-D28"
     ],
     "xlap": [],
     "tbutt": [],
     "lmiter": [
-      "262",
-      "59"
+      "B17-B27",
+      "B17-D28"
     ],
     "details": [
       {
-        "id": "262",
+        "id": "B17-B27",
         "type": "LMiterJoint",
-        "position": {
-          "global": [
-            -0.3321,
-            3.0889,
-            0.9563
-          ],
-          "local_frame_a": {
-            "distance_along_x": 0.6866,
-            "offset_y": -0.0,
-            "offset_z": -0.0
-          },
-          "local_frame_b": {
-            "distance_along_x": -0.6831,
-            "offset_y": 0.0001,
-            "offset_z": 0.0
-          }
-        }
+        "kind": "lmiter"
       },
       {
-        "id": "268",
+        "id": "B15-B17",
         "type": "PreferredFaceTButtJoint",
-        "position": {
-          "global": [
-            -0.1961,
-            3.1184,
-            1.0742
-          ],
-          "local_frame_a": {
-            "distance_along_x": 0.5803,
-            "offset_y": -0.0074,
-            "offset_z": 0.0054
-          },
-          "local_frame_b": {
-            "distance_along_x": -0.5009,
-            "offset_y": 0.0092,
-            "offset_z": 0.0011
-          }
-        }
+        "kind": "other"
       },
       {
-        "id": "59",
+        "id": "B17-D28",
         "type": "LMiterJoint",
-        "position": {
-          "global": [
-            0.7267,
-            3.3271,
-            1.786
-          ],
-          "local_frame_a": {
-            "distance_along_x": 0.6831,
-            "offset_y": 0.0,
-            "offset_z": 0.0
-          },
-          "local_frame_b": {
-            "distance_along_x": -0.6295,
-            "offset_y": 0.0,
-            "offset_z": 0.0
-          }
-        }
+        "kind": "lmiter"
       }
     ]
   },

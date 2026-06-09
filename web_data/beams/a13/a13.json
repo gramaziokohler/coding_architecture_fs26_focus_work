@@ -27,22 +27,11 @@
       0.647,
       -0.7625,
       0.0
-    ],
-    "length": 0.9456,
-    "centerline_start": [
-      -1.2567,
-      -0.9491,
-      0.0008
-    ],
-    "centerline_end": [
-      -0.5926,
-      -0.3857,
-      0.3692
     ]
   },
   "connected_beams": [
-    "a14",
     "a12",
+    "a14",
     "a15"
   ],
   "global_position": {
@@ -69,79 +58,31 @@
   },
   "joints": {
     "all": [
-      "18",
-      "240",
-      "19"
+      "A13-A14",
+      "A13-A15",
+      "A12-A13"
     ],
     "xlap": [],
     "tbutt": [
-      "240",
-      "19"
+      "A13-A15",
+      "A12-A13"
     ],
     "lmiter": [],
     "details": [
       {
-        "id": "18",
+        "id": "A13-A14",
         "type": "PreferredFaceTButtJoint",
-        "position": {
-          "global": [
-            -1.1973,
-            -0.9152,
-            0.0134
-          ],
-          "local_frame_a": {
-            "distance_along_x": -0.406,
-            "offset_y": -0.0145,
-            "offset_z": 0.0125
-          },
-          "local_frame_b": {
-            "distance_along_x": -0.2031,
-            "offset_y": 0.0134,
-            "offset_z": -0.0138
-          }
-        }
+        "kind": "other"
       },
       {
-        "id": "240",
+        "id": "A13-A15",
         "type": "TButtJoint",
-        "position": {
-          "global": [
-            -0.9454,
-            -0.6995,
-            0.1751
-          ],
-          "local_frame_a": {
-            "distance_along_x": 0.3513,
-            "offset_y": 0.0016,
-            "offset_z": -0.0049
-          },
-          "local_frame_b": {
-            "distance_along_x": -0.0376,
-            "offset_y": 0.0052,
-            "offset_z": 0.011
-          }
-        }
+        "kind": "tbutt"
       },
       {
-        "id": "19",
+        "id": "A12-A13",
         "type": "TButtJoint",
-        "position": {
-          "global": [
-            -0.6345,
-            -0.4163,
-            0.3517
-          ],
-          "local_frame_a": {
-            "distance_along_x": 0.4183,
-            "offset_y": 0.0041,
-            "offset_z": -0.0038
-          },
-          "local_frame_b": {
-            "distance_along_x": -0.0583,
-            "offset_y": -0.0054,
-            "offset_z": 0.0012
-          }
-        }
+        "kind": "tbutt"
       }
     ]
   },

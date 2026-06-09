@@ -27,24 +27,13 @@
       -0.8995,
       -0.4369,
       0.0
-    ],
-    "length": 1.2059,
-    "centerline_start": [
-      3.5622,
-      2.1519,
-      1.8814
-    ],
-    "centerline_end": [
-      4.0704,
-      1.1058,
-      1.5624
     ]
   },
   "connected_beams": [
-    "f26",
     "d15",
+    "f20",
     "f24",
-    "f20"
+    "f26"
   ],
   "global_position": {
     "centerline_start": [
@@ -70,104 +59,40 @@
   },
   "joints": {
     "all": [
-      "173",
-      "179",
-      "180",
-      "190"
+      "F25-F26",
+      "D15-F25",
+      "F24-F25",
+      "F20-F25"
     ],
     "xlap": [
-      "173",
-      "180"
+      "F25-F26",
+      "F24-F25"
     ],
     "tbutt": [
-      "179",
-      "190"
+      "D15-F25",
+      "F20-F25"
     ],
     "lmiter": [],
     "details": [
       {
-        "id": "173",
+        "id": "F25-F26",
         "type": "XLapJoint",
-        "position": {
-          "global": [
-            3.6856,
-            1.8962,
-            1.801
-          ],
-          "local_frame_a": {
-            "distance_along_x": -0.3079,
-            "offset_y": -0.0025,
-            "offset_z": 0.0007
-          },
-          "local_frame_b": {
-            "distance_along_x": 0.1017,
-            "offset_y": 0.0025,
-            "offset_z": -0.0001
-          }
-        }
+        "kind": "xlap"
       },
       {
-        "id": "179",
+        "id": "D15-F25",
         "type": "TButtJoint",
-        "position": {
-          "global": [
-            3.8175,
-            1.6263,
-            1.7211
-          ],
-          "local_frame_a": {
-            "distance_along_x": 0.5333,
-            "offset_y": 0.0,
-            "offset_z": -0.0
-          },
-          "local_frame_b": {
-            "distance_along_x": 0.0029,
-            "offset_y": -0.0,
-            "offset_z": -0.0
-          }
-        }
+        "kind": "tbutt"
       },
       {
-        "id": "180",
+        "id": "F24-F25",
         "type": "XLapJoint",
-        "position": {
-          "global": [
-            3.8754,
-            1.506,
-            1.6832
-          ],
-          "local_frame_a": {
-            "distance_along_x": 0.1417,
-            "offset_y": -0.0013,
-            "offset_z": 0.0005
-          },
-          "local_frame_b": {
-            "distance_along_x": -0.2356,
-            "offset_y": 0.0013,
-            "offset_z": 0.0005
-          }
-        }
+        "kind": "xlap"
       },
       {
-        "id": "190",
+        "id": "F20-F25",
         "type": "TButtJoint",
-        "position": {
-          "global": [
-            4.0661,
-            1.1145,
-            1.565
-          ],
-          "local_frame_a": {
-            "distance_along_x": 0.593,
-            "offset_y": 0.0,
-            "offset_z": -0.0
-          },
-          "local_frame_b": {
-            "distance_along_x": -0.0222,
-            "offset_y": 0.0,
-            "offset_z": 0.0
-          }
-        }
+        "kind": "tbutt"
       }
     ]
   },

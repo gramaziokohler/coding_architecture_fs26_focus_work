@@ -27,17 +27,6 @@
       0.9462,
       0.3235,
       -0.0
-    ],
-    "length": 0.8745,
-    "centerline_start": [
-      1.0516,
-      -1.9839,
-      2.399
-    ],
-    "centerline_end": [
-      0.8103,
-      -1.2782,
-      1.9423
     ]
   },
   "connected_beams": [
@@ -68,56 +57,24 @@
   },
   "joints": {
     "all": [
-      "282",
-      "65"
+      "C29-C30",
+      "A29-C30"
     ],
     "xlap": [],
     "tbutt": [
-      "65"
+      "A29-C30"
     ],
     "lmiter": [],
     "details": [
       {
-        "id": "282",
+        "id": "C29-C30",
         "type": "PreferredFaceTButtJoint",
-        "position": {
-          "global": [
-            1.053,
-            -1.9805,
-            2.3855
-          ],
-          "local_frame_a": {
-            "distance_along_x": -0.428,
-            "offset_y": -0.0101,
-            "offset_z": 0.0023
-          },
-          "local_frame_b": {
-            "distance_along_x": -0.1556,
-            "offset_y": 0.0097,
-            "offset_z": -0.0035
-          }
-        }
+        "kind": "other"
       },
       {
-        "id": "65",
+        "id": "A29-C30",
         "type": "TButtJoint",
-        "position": {
-          "global": [
-            0.813,
-            -1.2861,
-            1.9475
-          ],
-          "local_frame_a": {
-            "distance_along_x": 0.4274,
-            "offset_y": 0.0001,
-            "offset_z": -0.0001
-          },
-          "local_frame_b": {
-            "distance_along_x": -0.0515,
-            "offset_y": -0.0001,
-            "offset_z": 0.0001
-          }
-        }
+        "kind": "tbutt"
       }
     ]
   },

@@ -2,220 +2,29 @@ import os
 import sys
 import re
 import json
-import math
 import Rhino.Geometry as rg
 from collections import deque, defaultdict
 from compas.datastructures import Graph
 
-# =========================
-# UTILITY FUNCTIONS (DA ESPORTER)
-# =========================
-
-def rounded(value, digits=4):
-    """Round value or list."""
-    if value is None:
-        return None
-    if isinstance(value, (list, tuple)):
-        return [rounded(v, digits) for v in value]
-    return round(float(value), digits)
-
-def vector_add(a, b):
-    return [a[i] + b[i] for i in range(3)]
-
-def vector_sub(a, b):
-    return [a[i] - b[i] for i in range(3)]
-
-def vector_scale(v, scale):
-    return [v[i] * scale for i in range(3)]
-
-def vector_cross(a, b):
-    return [
-        a[1] * b[2] - a[2] * b[1],
-        a[2] * b[0] - a[0] * b[2],
-        a[0] * b[1] - a[1] * b[0],
-    ]
-
-def vector_length(v):
-    return math.sqrt(sum(component * component for component in v))
-
-def vector_normalize(v):
-    length = vector_length(v)
-    if not length:
-        return [0.0, 0.0, 0.0]
-    return [component / length for component in v]
-
-def frame_from_data(frame_data):
-    """Parse frame data (from beam.frame)."""
-    data = frame_data.get("data", frame_data)
-    origin = data.get("point") or data.get("origin")
-    x_axis = data.get("xaxis") or data.get("x_axis")
-    y_axis = data.get("yaxis") or data.get("y_axis")
-    z_axis = data.get("zaxis") or data.get("z_axis") or vector_cross(x_axis, y_axis)
-    return {
-        "origin": [float(v) for v in origin],
-        "x_axis": vector_normalize([float(v) for v in x_axis]),
-        "y_axis": vector_normalize([float(v) for v in y_axis]),
-        "z_axis": vector_normalize([float(v) for v in z_axis]),
-    }
-
-def point_data(value):
-    """Extract point data from various formats."""
-    if not value:
-        return None
-    if isinstance(value, dict):
-        return value.get("data")
-    return value
-
-def joint_kind(name):
-    """Classify joint type."""
-    lower = (name or "").lower()
-    if "xlap" in lower:
-        return "xlap"
-    if "tbutt" in lower:
-        return "tbutt"
-    if "lmiter" in lower:
-        return "lmiter"
-    return "other"
-
-# =========================
-# GET BEAM LOCAL FRAME (MIGLIORATO)
-# =========================
-
-def get_beam_local_frame(beam):
-    """Extract local frame from beam.frame or centerline."""
-    try:
-        # PRIMO: Try beam.frame se esiste
-        if hasattr(beam, "frame") and beam.frame:
-            try:
-                return frame_from_data(beam.frame)
-            except:
-                pass
-        
-        # SECONDO: Calcola da centerline
-        line = beam.centerline
-        
-        # Get start/end
-        if hasattr(line, "start_point"):
-            start = line.start_point
-            end = line.end_point
-        elif hasattr(line, "start"):
-            start = line.start
-            end = line.end
-        elif hasattr(line, "PointAtStart"):
-            start = line.PointAtStart
-            end = line.PointAtEnd
-        else:
-            return None
-        
-        # Vector along centerline
-        dx = end.x - start.x
-        dy = end.y - start.y
-        dz = end.z - start.z
-        length = (dx**2 + dy**2 + dz**2) ** 0.5
-        
-        if length < 1e-10:
-            return None
-        
-        # X-axis normalizz
-        x_axis = [dx/length, dy/length, dz/length]
-        
-        # Reference per Z-axis
-        ref = [1.0, 0.0, 0.0] if abs(x_axis[2]) > 0.9 else [0.0, 0.0, 1.0]
-        
-        # Z-axis = cross(x_axis, ref)
-        z_axis = vector_cross(x_axis, ref)
-        z_axis = vector_normalize(z_axis)
-        
-        if not z_axis or vector_length(z_axis) < 0.001:
-            z_axis = [0.0, 0.0, 1.0]
-        
-        # Y-axis = cross(z_axis, x_axis)
-        y_axis = vector_cross(z_axis, x_axis)
-        y_axis = vector_normalize(y_axis)
-        
-        # Origin nel midpoint
-        origin = [(start.x + end.x) / 2.0, (start.y + end.y) / 2.0, (start.z + end.z) / 2.0]
-        
-        return {
-            "origin": [rounded(v) for v in origin],
-            "x_axis": [rounded(v) for v in x_axis],
-            "y_axis": [rounded(v) for v in y_axis],
-            "z_axis": [rounded(v) for v in z_axis],
-            "length": rounded(length),
-            "centerline_start": [rounded(start.x), rounded(start.y), rounded(start.z)],
-            "centerline_end": [rounded(end.x), rounded(end.y), rounded(end.z)]
-        }
-    except Exception as e:
-        return None
-
-# =========================
-# GET JOINT IN LOCAL COORDS
-# =========================
-
-def get_joint_local_position(joint, frame_a, frame_b):
-    """Get joint position in local coordinate systems."""
-    try:
-        # Joint point
-        if hasattr(joint, "point"):
-            jp = joint.point
-        elif hasattr(joint, "location"):
-            jp = joint.location
-        elif hasattr(joint, "frame"):
-            jp = joint.frame.origin if hasattr(joint.frame, "origin") else joint.frame
-        else:
-            return None
-        
-        joint_point = [jp.x if hasattr(jp, 'x') else jp[0],
-                       jp.y if hasattr(jp, 'y') else jp[1],
-                       jp.z if hasattr(jp, 'z') else jp[2]]
-        
-        # Local coords in frame A
-        local_a = None
-        if frame_a:
-            # Vector da origin a joint
-            vec = vector_sub(joint_point, frame_a["origin"])
-            local_a = {
-                "distance_along_x": rounded(sum(vec[i] * frame_a["x_axis"][i] for i in range(3))),
-                "offset_y": rounded(sum(vec[i] * frame_a["y_axis"][i] for i in range(3))),
-                "offset_z": rounded(sum(vec[i] * frame_a["z_axis"][i] for i in range(3)))
-            }
-        
-        # Local coords in frame B
-        local_b = None
-        if frame_b:
-            vec = vector_sub(joint_point, frame_b["origin"])
-            local_b = {
-                "distance_along_x": rounded(sum(vec[i] * frame_b["x_axis"][i] for i in range(3))),
-                "offset_y": rounded(sum(vec[i] * frame_b["y_axis"][i] for i in range(3))),
-                "offset_z": rounded(sum(vec[i] * frame_b["z_axis"][i] for i in range(3)))
-            }
-        
-        return {
-            "global": [rounded(v) for v in joint_point],
-            "local_frame_a": local_a,
-            "local_frame_b": local_b
-        }
-    except:
-        return None
-
-# =========================
-# MAIN NUMBERING FUNCTION
-# =========================
-
 def run_numbering(timber_model, Index, RunExport, OutputFolder):
+    # =========================
+    # INSTANZIAZIONE OUTPUT PREDEFINITI
+    # =========================
     debug_out = ""
     info_out = ""
     json_export_out = "Export non avviato (RunExport è False)."
-    
+
     A_geom_out, B_geom_out, C_geom_out = [], [], []
     D_geom_out, E_geom_out, F_geom_out = [], [], []
-    
+
     try:
         idx = int(Index)
     except:
         idx = 0
-    
-    # TEST GEOMETRIA
+
+    # =========================
+    # TEST RAPIDO GEOMETRIA
+    # =========================
     try:
         test_beam = list(timber_model.beams)[0]
         g_obj = test_beam.geometry
@@ -225,64 +34,65 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
         )
     except Exception as e:
         debug_out = "ERRORE TEST GEOMETRIA: {}".format(e)
-    
+
     # =========================
     # 1. COSTRUZIONE GRAFO
     # =========================
     g = Graph()
-    
+
     for joint in timber_model.joints:
         ea, eb = joint.elements
         pa = ea.centerline.midpoint
         pb = eb.centerline.midpoint
-        
+
         na = g.add_node(str(ea.guid), x=pa.x, y=pa.y, z=pa.z)
         nb = g.add_node(str(eb.guid), x=pb.x, y=pb.y, z=pb.z)
         g.add_edge(na, nb)
-    
+
     # =========================
     # 2. DATI NODI & BOUNDING BOX
     # =========================
     pts = {n: g.node_attributes(n, ['x', 'y', 'z']) for n in g.nodes()}
-    
+
     min_x = min(p[0] for p in pts.values())
     max_x = max(p[0] for p in pts.values())
     min_y = min(p[1] for p in pts.values())
     max_y = max(p[1] for p in pts.values())
-    
+
     # =========================
     # 3. GRIGLIA 3x2 = 6 MODULI
     # =========================
-    nx, ny = 3, 2
+    nx = 3
+    ny = 2
     dx = (max_x - min_x) / nx
     dy = (max_y - min_y) / ny
-    
+
     cells = []
     for i in range(nx):
         for j in range(ny):
             cx = min_x + dx * (i + 0.5)
             cy = min_y + dy * (j + 0.5)
             cells.append((cx, cy))
-    
+
     labels_keys = ["A", "B", "C", "D", "E", "F"]
-    
+
     # =========================
     # 4. SEEDS
     # =========================
     def dist2(a, b):
         return (a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2
-    
+
     seeds = {}
     for key, (cx, cy) in zip(labels_keys, cells):
         seed = min(pts, key=lambda n: dist2(pts[n], (cx, cy)))
         seeds[key] = seed
-    
+
     # =========================
     # 5. ASSEGNAZIONE SPAZIALE
     # =========================
     assignment = {}
     groups = {k: [] for k in seeds}
-    
+
     for node, p in pts.items():
         best_k = None
         best_d = 1e99
@@ -294,7 +104,7 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
                 best_k = k
         assignment[node] = best_k
         groups[best_k].append(node)
-    
+
     # =========================
     # 6. CRESCITA COSTRUIBILE
     # =========================
@@ -303,11 +113,11 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
         visited = set([seed])
         order = [seed]
         frontier = [seed]
-        
+
         while len(order) < len(group_set):
             best_candidate = None
             best_dist = 1e99
-            
+
             for f in frontier:
                 for nbr in g.neighbors(f):
                     if nbr in group_set and nbr not in visited:
@@ -317,7 +127,7 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
                         if d < best_dist:
                             best_dist = d
                             best_candidate = nbr
-            
+
             if best_candidate is None:
                 remaining = list(group_set - visited)
                 for r in remaining:
@@ -328,28 +138,28 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
                         if d < best_dist:
                             best_dist = d
                             best_candidate = r
-            
+
             visited.add(best_candidate)
             order.append(best_candidate)
             frontier.append(best_candidate)
-        
+
         return order
-    
+
     # =========================
-    # FUNZIONI GEOMETRICHE
+    # 6B. FUNZIONI GEOMETRICHE PER METADATI
     # =========================
     def get_line_start(line):
         if hasattr(line, "start"): return line.start
         if hasattr(line, "start_point"): return line.start_point
         if hasattr(line, "point_at"): return line.point_at(0.0)
         return line[0]
-    
+
     def get_line_end(line):
         if hasattr(line, "end"): return line.end
         if hasattr(line, "end_point"): return line.end_point
         if hasattr(line, "point_at"): return line.point_at(1.0)
         return line[1]
-    
+
     def point_on_centerline(beam, t):
         line = beam.centerline
         try:
@@ -358,7 +168,7 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
             a = get_line_start(line)
             b = get_line_end(line)
             return type(a)(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t, a.z + (b.z - a.z) * t)
-    
+
     def joint_point_from_beams(ea, eb):
         best_pa, best_pb = None, None
         best_d = 1e99
@@ -375,7 +185,7 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
                     best_pa = pa
                     best_pb = pb
         return rg.Point3d((best_pa.x + best_pb.x) / 2.0, (best_pa.y + best_pb.y) / 2.0, (best_pa.z + best_pb.z) / 2.0)
-    
+
     def parameter_on_centerline(beam, point):
         best_t = 0.0
         best_d = 1e99
@@ -388,9 +198,9 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
                 best_d = d
                 best_t = t
         return best_t
-    
+
     # =========================
-    # SEZIONE, ORIENTAMENTO, PESO
+    # 6C. FUNZIONI SEZIONE, ORIENTAMENTO E PESO
     # =========================
     def get_beam_section(beam):
         for w_attr in ['width', 'w', 'b', 'breadth']:
@@ -418,14 +228,14 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
                 if w and h: return float(w), float(h)
             except: continue
         return None, None
-    
+
     def get_orientation_string(w, h):
         if w is None or h is None: return "?x?cm"
         w_cm = round(w * 100) if w < 1 else round(w)
         h_cm = round(h * 100) if h < 1 else round(h)
         return "{}x{}cm".format(int(w_cm), int(h_cm))
-    
-    WOOD_DENSITY = 500
+
+    WOOD_DENSITY = 500  # kg/m3
     def get_beam_weight(beam, length):
         w, h = get_beam_section(beam)
         if w is None or h is None: return 0.0
@@ -433,10 +243,29 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
         h_m = h if h < 1 else h / 100.0
         volume = w_m * h_m * length
         return volume * WOOD_DENSITY
-    
+
     # =========================
-    # STL EXPORT
+    # 6D. FUNZIONI STL
     # =========================
+    def compas_mesh_to_rg(compas_mesh):
+        rg_mesh = rg.Mesh()
+        vertices = list(compas_mesh.vertices())
+        vertex_map = {}
+        for i, v in enumerate(vertices):
+            try: x, y, z = compas_mesh.vertex_coordinates(v)
+            except:
+                pt = compas_mesh.vertex_attributes(v, ['x', 'y', 'z'])
+                x, y, z = pt
+            rg_mesh.Vertices.Add(x, y, z)
+            vertex_map[v] = i
+        for face in compas_mesh.faces():
+            fv = list(compas_mesh.face_vertices(face))
+            if len(fv) == 3: rg_mesh.Faces.AddFace(vertex_map[fv[0]], vertex_map[fv[1]], vertex_map[fv[2]])
+            elif len(fv) == 4: rg_mesh.Faces.AddFace(vertex_map[fv[0]], vertex_map[fv[1]], vertex_map[fv[2]], vertex_map[fv[3]])
+        rg_mesh.Normals.ComputeNormals()
+        rg_mesh.Compact()
+        return rg_mesh
+
     def write_stl(rg_mesh, path):
         lines = ["solid beam"]
         rg_mesh.Normals.ComputeNormals()
@@ -459,7 +288,7 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
                 write_tri(verts[face.A], verts[face.C], verts[face.D])
         lines.append("endsolid beam")
         with open(path, 'w') as f: f.write("\n".join(lines))
-    
+
     def save_stl(geometry, beam_id, beam_folder):
         stl_path = os.path.join(beam_folder, "{}.stl".format(beam_id))
         if hasattr(geometry, 'to_stl'):
@@ -479,23 +308,46 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
                     return stl_path
             except: pass
         return None
-    
+
+    # =========================
+    # 6E. FUNZIONE FRAME LOCALE BEAM
+    # =========================
+    def get_beam_local_frame(beam):
+        try:
+            line = beam.centerline
+            start = line.start if hasattr(line, "start") else get_line_start(line)
+            end = line.end if hasattr(line, "end") else get_line_end(line)
+            dx, dy, dz = end.x - start.x, end.y - start.y, end.z - start.z
+            length = (dx**2 + dy**2 + dz**2) ** 0.5
+            if length < 1e-10: return None
+            x_axis = [dx/length, dy/length, dz/length]
+            ref = [1.0, 0.0, 0.0] if abs(x_axis[2]) > 0.9 else [0.0, 0.0, 1.0]
+            cx, cy, cz = x_axis[1]*ref[2] - x_axis[2]*ref[1], x_axis[2]*ref[0] - x_axis[0]*ref[2], x_axis[0]*ref[1] - x_axis[1]*ref[0]
+            c_len = (cx**2 + cy**2 + cz**2) ** 0.5
+            if c_len < 1e-10: return None
+            z_axis = [cx/c_len, cy/c_len, cz/c_len]
+            y_axis = [z_axis[1]*x_axis[2] - z_axis[2]*x_axis[1], z_axis[2]*x_axis[0] - z_axis[0]*x_axis[2], z_axis[0]*x_axis[1] - z_axis[1]*x_axis[0]]
+            return {
+                "origin": [round((start.x+end.x)/2.0, 4), round((start.y+end.y)/2.0, 4), round((start.z+end.z)/2.0, 4)],
+                "x_axis": [round(v, 4) for v in x_axis], "y_axis": [round(v, 4) for v in y_axis], "z_axis": [round(v, 4) for v in z_axis]
+            }
+        except: return None
+
     # =========================
     # 7. GENERAZIONE OUTPUT BEAMS
     # =========================
     geom = {k: [] for k in seeds}
     ordered_by_module = {}
     beam_label_by_guid = {}
-    beam_frames = {}
-    
+
     for k in seeds:
         ordered = connected_growth(seeds[k], groups[k])
         ordered_by_module[k] = ordered
-        
+
         for i, node in enumerate(ordered):
             beam = timber_model.get_element(node)
             name = "{}{}".format(k, i + 1)
-            
+
             rhino_geom = beam.geometry
             if hasattr(beam.geometry, "native_brep") and beam.geometry.native_brep:
                 rhino_geom = beam.geometry.native_brep
@@ -504,57 +356,57 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
             elif hasattr(beam.geometry, "to_rhino"):
                 try: rhino_geom = beam.geometry.to_rhino()
                 except: pass
-            
+
             geom[k].append(rhino_geom)
             beam_label_by_guid[node] = name
-            beam_frames[node] = get_beam_local_frame(beam)
-    
+
     # =========================
-    # 7B. CO-GIUNTI CON POSIZIONI LOCALI
+    # 7B. STRUTTURA INTERNA DEI CO-GIUNTI CON NAMING COMPOUND
     # =========================
-    joint_number_by_pair = {}
-    beam_joints = {node: [] for node in g.nodes()}
-    joint_type_by_number = {}
-    joint_local_pos = {}
-    counter = 1
+    joint_name_by_pair = {}  # (sorted_guid_a, sorted_guid_b) -> "d2-d1"
+    beam_joints = defaultdict(list)  # beam_guid -> [(param, "d2-d1"), ...]
+    joint_type_by_name = {}  # "d2-d1" -> "XLapJoint"
     
     for joint in timber_model.joints:
         ea, eb = joint.elements
         ga, gb = str(ea.guid), str(eb.guid)
         pair_key = tuple(sorted([ga, gb]))
-        
-        if pair_key not in joint_number_by_pair:
-            joint_number = "{:02d}".format(counter)
-            joint_number_by_pair[pair_key] = joint_number
-            joint_type_by_number[joint_number] = type(joint).__name__
-            counter += 1
+
+        # Se joint non ancora visto, crea il nome compound
+        if pair_key not in joint_name_by_pair:
+            beam_a_name = beam_label_by_guid.get(ga, "unknown")
+            beam_b_name = beam_label_by_guid.get(gb, "unknown")
+            # Ordina i nomi alfabeticamente
+            joint_names_sorted = sorted([beam_a_name, beam_b_name])
+            joint_name = "{}-{}".format(joint_names_sorted[0], joint_names_sorted[1])
+            joint_name_by_pair[pair_key] = joint_name
+            joint_type_by_name[joint_name] = type(joint).__name__
         else:
-            joint_number = joint_number_by_pair[pair_key]
-        
+            joint_name = joint_name_by_pair[pair_key]
+
+        # Calcola il punto del joint
         jp = joint_point_from_beams(ea, eb)
-        frame_a = beam_frames.get(ga)
-        frame_b = beam_frames.get(gb)
         
-        # Posizioni locali
-        local_pos = get_joint_local_position(joint, frame_a, frame_b)
-        joint_local_pos[joint_number] = local_pos
+        # Aggiungi a ENTRAMBI i beam, ordinato per parametro sulla centerline
+        param_a = parameter_on_centerline(ea, jp)
+        param_b = parameter_on_centerline(eb, jp)
         
-        beam_joints[ga].append((parameter_on_centerline(ea, jp), joint_number))
-        beam_joints[gb].append((parameter_on_centerline(eb, jp), joint_number))
-    
+        beam_joints[ga].append((param_a, joint_name))
+        beam_joints[gb].append((param_b, joint_name))
+
     A_geom_out = geom["A"]
     B_geom_out = geom["B"]
     C_geom_out = geom["C"]
     D_geom_out = geom["D"]
     E_geom_out = geom["E"]
     F_geom_out = geom["F"]
-    
+
     # =========================
     # 9. ELABORAZIONE DETTAGLI
     # =========================
     summary_by_category = {k: [] for k in labels_keys}
     info_lines_master = []
-    
+
     for k in labels_keys:
         for node in ordered_by_module.get(k, []):
             name = beam_label_by_guid.get(node, "?")
@@ -564,22 +416,22 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
             orientation = get_orientation_string(w, h)
             weight = get_beam_weight(beam, length)
             volume_m3 = (w if w < 1 else w / 100.0) * (h if h < 1 else h / 100.0) * length if (w and h) else 0.0
-            
+
             full_info_string = "{} | L={:.2f}m | Sez={} | Vol={:.2f}cm3 | Peso={:.1f}kg".format(
                 name, length, orientation, volume_m3 * 1_000_000, weight
             )
             summary_by_category[k].append(full_info_string)
             info_lines_master.append(full_info_string)
-    
+
     def sort_key(line):
         match = re.match(r'([A-Z]+)(\d+)', line)
         return (match.group(1), int(match.group(2))) if match else (line, 0)
-    
+
     info_list = sorted(info_lines_master, key=sort_key)
     info_out = info_list[idx] if (0 <= idx < len(info_list)) else (info_list[0] if info_list else "nessun beam")
-    
+
     # =========================
-    # 10. POSIZIONI GLOBALI
+    # 10B. POSIZIONI GLOBALI TUTTI I BEAM
     # =========================
     all_beams_positions = {}
     all_pts_list = list(pts.values())
@@ -589,151 +441,141 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
     rx = max_x3 - min_x3 if max_x3 != min_x3 else 1.0
     ry = max_y3 - min_y3 if max_y3 != min_y3 else 1.0
     rz = max_z3 - min_z3 if max_z3 != min_z3 else 1.0
-    
+
     for node in g.nodes():
         label = beam_label_by_guid.get(node, node)
         px, py, pz = pts[node]
         beam = timber_model.get_element(node)
-        frame = beam_frames.get(node)
-        
         try:
             cl = beam.centerline
             s, e = get_line_start(cl), get_line_end(cl)
-            
             all_beams_positions[label] = {
-                "guid": node,
-                "module": assignment.get(node, "?"),
-                "centerline_start": [rounded(s.x), rounded(s.y), rounded(s.z)],
-                "centerline_end": [rounded(e.x), rounded(e.y), rounded(e.z)],
-                "midpoint": [rounded(px), rounded(py), rounded(pz)],
-                "midpoint_normalized": [rounded((px - min_x3) / rx), rounded((py - min_y3) / ry), rounded((pz - min_z3) / rz)],
-                "local_frame": frame
+                "guid": node, "module": assignment.get(node, "?"),
+                "centerline_start": [round(s.x, 4), round(s.y, 4), round(s.z, 4)], "centerline_end": [round(e.x, 4), round(e.y, 4), round(e.z, 4)],
+                "midpoint": [round(px, 4), round(py, 4), round(pz, 4)],
+                "midpoint_normalized": [round((px - min_x3) / rx, 4), round((py - min_y3) / ry, 4), round((pz - min_z3) / rz, 4)]
             }
         except:
             all_beams_positions[label] = {
-                "guid": node,
-                "module": assignment.get(node, "?"),
-                "midpoint": [rounded(px), rounded(py), rounded(pz)],
-                "midpoint_normalized": [rounded((px - min_x3) / rx), rounded((py - min_y3) / ry), rounded((pz - min_z3) / rz)],
-                "local_frame": frame
+                "guid": node, "module": assignment.get(node, "?"),
+                "midpoint": [round(px, 4), round(py, 4), round(pz, 4)],
+                "midpoint_normalized": [round((px - min_x3) / rx, 4), round((py - min_y3) / ry, 4), round((pz - min_z3) / rz, 4)]
             }
-    
+
     # =========================
-    # 11 & 12. EXPORT CON FRAME LOCALE E POSIZIONI JOINT
+    # 11 & 12. EXPORT DINAMICO CON CARTELLA DA GRASSHOPPER
     # =========================
     if RunExport and OutputFolder:
         output_folder = str(OutputFolder)
         global_structure_path = os.path.join(output_folder, "structure.json")
         json_files_created, stl_files_created, stl_errors = [], [], []
-        
+
         for k in labels_keys:
             for node in ordered_by_module.get(k, []):
                 name = beam_label_by_guid.get(node, "?")
                 beam = timber_model.get_element(node)
                 try: length = beam.centerline.length
                 except: length = 0.0
-                
+
                 w, h = get_beam_section(beam)
                 w_m = w if (w is not None and w < 1) else (w / 100.0 if w is not None else None)
                 h_m = h if (h is not None and h < 1) else (h / 100.0 if h is not None else None)
                 weight = get_beam_weight(beam, length)
                 volume_m3 = w_m * h_m * length if (w_m and h_m) else 0.0
-                
+
+                # Pulisci i joint per questo beam: ordina per parametro, deduplicati
                 joints_list = sorted(beam_joints.get(node, []), key=lambda item: item[0])
                 seen, clean_joints = set(), []
-                for param, j_num in joints_list:
-                    if j_num not in seen: clean_joints.append(j_num); seen.add(j_num)
-                
+                for param, j_name in joints_list:
+                    if j_name not in seen: 
+                        clean_joints.append(j_name)
+                        seen.add(j_name)
+
+                # Categorizza per tipo
                 xlap, tbutt, lmiter = [], [], []
-                for j_num in clean_joints:
-                    j_type = joint_type_by_number.get(j_num, "")
-                    if j_type == 'XLapJoint': xlap.append(j_num)
-                    elif j_type == 'TButtJoint': tbutt.append(j_num)
-                    elif j_type == 'LMiterJoint': lmiter.append(j_num)
-                
+                for j_name in clean_joints:
+                    j_type = joint_type_by_name.get(j_name, "")
+                    if j_type == 'XLapJoint': xlap.append(j_name)
+                    elif j_type == 'TButtJoint': tbutt.append(j_name)
+                    elif j_type == 'LMiterJoint': lmiter.append(j_name)
+
                 beam_id = name.lower()
                 beam_folder = os.path.join(output_folder, beam_id)
                 if not os.path.exists(beam_folder): os.makedirs(beam_folder)
-                
+
                 stl_result = save_stl(beam.geometry, beam_id, beam_folder)
                 if stl_result: stl_files_created.append(stl_result)
                 else: stl_errors.append("Errore STL per {}".format(beam_id))
-                
+
                 global_pos = all_beams_positions.get(name, {})
-                frame = global_pos.get("local_frame")
-                
-                # Joint details con posizioni locali
-                joint_details = []
-                for j_num in clean_joints:
-                    joint_details.append({
-                        "id": j_num,
-                        "type": joint_type_by_number.get(j_num, ""),
-                        "position": joint_local_pos.get(j_num, {})
-                    })
-                
                 beam_data = {
-                    "beam ID": beam_id,
-                    "name": name,
+                    "beam ID": beam_id, 
+                    "name": name, 
                     "module": k,
-                    "width (m)": rounded(w_m, 4) if w_m else None,
-                    "height (m)": rounded(h_m, 4) if h_m else None,
-                    "length (m)": rounded(length, 2),
-                    "volume (cm³)": rounded(volume_m3 * 1_000_000, 2),
-                    "weight (kg)": rounded(weight, 2),
-                    "local_frame": frame,
-                    "connected_beams": [beam_label_by_guid[nbr].lower() for nbr in g.neighbors(node) if nbr in beam_label_by_guid],
+                    "width (m)": round(w_m, 4) if w_m else None, 
+                    "height (m)": round(h_m, 4) if h_m else None,
+                    "length (m)": round(length, 2), 
+                    "volume (cm³)": round(volume_m3 * 1_000_000, 2), 
+                    "weight (kg)": round(weight, 2),
+                    "local_frame": get_beam_local_frame(beam),
+                    "connected_beams": sorted([beam_label_by_guid[nbr].lower() for nbr in g.neighbors(node) if nbr in beam_label_by_guid]),
                     "global_position": {
-                        "centerline_start": global_pos.get("centerline_start"),
+                        "centerline_start": global_pos.get("centerline_start"), 
                         "centerline_end": global_pos.get("centerline_end"),
-                        "midpoint": global_pos.get("midpoint"),
+                        "midpoint": global_pos.get("midpoint"), 
                         "midpoint_normalized": global_pos.get("midpoint_normalized")
                     },
                     "joints": {
-                        "all": clean_joints,
-                        "xlap": xlap,
-                        "tbutt": tbutt,
+                        "all": clean_joints, 
+                        "xlap": xlap, 
+                        "tbutt": tbutt, 
                         "lmiter": lmiter,
-                        "details": joint_details
+                        "details": [
+                            {
+                                "id": j_name,
+                                "type": joint_type_by_name.get(j_name, "Unknown"),
+                                "kind": "xlap" if j_name in xlap else ("tbutt" if j_name in tbutt else ("lmiter" if j_name in lmiter else "other"))
+                            }
+                            for j_name in clean_joints
+                        ]
                     },
                     "3d_model": "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data/beams/{}/{}.stl".format(beam_id, beam_id)
                 }
-                
+
                 json_path = os.path.join(beam_folder, "{}.json".format(beam_id))
                 with open(json_path, 'w') as f: json.dump(beam_data, f, indent=2)
                 json_files_created.append(json_path)
-        
+
         all_beams_list = []
         for k in labels_keys:
             for node in ordered_by_module.get(k, []):
                 label = beam_label_by_guid.get(node, "?")
-                gpos = all_beams_positions.get(label, {})
+                gpos  = all_beams_positions.get(label, {})
                 all_beams_list.append({
-                    "beam_id": label.lower(),
+                    "beam_id": label.lower(), 
                     "module": k,
-                    "centerline_start": gpos.get("centerline_start"),
+                    "centerline_start": gpos.get("centerline_start"), 
                     "centerline_end": gpos.get("centerline_end"),
-                    "midpoint": gpos.get("midpoint"),
+                    "midpoint": gpos.get("midpoint"), 
                     "midpoint_normalized": gpos.get("midpoint_normalized"),
-                    "connected_beams": [beam_label_by_guid[nbr].lower() for nbr in g.neighbors(node) if nbr in beam_label_by_guid]
+                    "connected_beams": sorted([beam_label_by_guid[nbr].lower() for nbr in g.neighbors(node) if nbr in beam_label_by_guid])
                 })
-        
+
         if not os.path.exists(output_folder): os.makedirs(output_folder)
         with open(global_structure_path, 'w') as f:
             json.dump({
-                "total_beams": len(all_beams_list),
+                "total_beams": len(all_beams_list), 
                 "bounding_box": {
-                    "min": [rounded(min_x3), rounded(min_y3), rounded(min_z3)],
-                    "max": [rounded(max_x3), rounded(max_y3), rounded(max_z3)]
-                },
+                    "min": [round(min_x3, 4), round(min_y3, 4), round(min_z3, 4)], 
+                    "max": [round(max_x3, 4), round(max_y3, 4), round(max_z3, 4)]
+                }, 
                 "beams": all_beams_list
             }, f, indent=2)
         json_files_created.append(global_structure_path)
-        
-        json_export_out = "JSON: {} | STL: {} | Errori STL: {}".format(
-            len(json_files_created), len(stl_files_created), len(stl_errors)
-        )
+
+        json_export_out = "JSON: {} | STL: {} | Errori STL: {}".format(len(json_files_created), len(stl_files_created), len(stl_errors))
         if stl_errors: json_export_out += "\n" + "\n".join(stl_errors[:5])
-    
+
     # =========================
     # 13. RETURN FINALE
     # =========================
