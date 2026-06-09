@@ -32,40 +32,19 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
         l = vector_length(v)
         return [c/l for c in v] if l else [0.0, 0.0, 0.0]
 
-    def unwrap_vector(v):
-        """Gestisce vettori COMPAS annidati tipo {"dtype": "...", "data": [x,y,z]}"""
-        if isinstance(v, dict):
-            v = v.get("data", v)
-        if isinstance(v, dict):
-            return [float(v.get("x", 0.0)), float(v.get("y", 0.0)), float(v.get("z", 0.0))]
-        return [float(c) for c in v]
-
     # =========================
-    # FRAME PARSING (robusto)
+    # FRAME PARSING (originale senza modifiche)
     # =========================
     def get_beam_frame(beam):
-        """Legge beam.frame con fallback multipli, restituisce dict con origin/x_axis/y_axis/z_axis"""
+        """Legge beam.frame con fallback multipli"""
         try:
             frame = beam.frame
-            # COMPAS Frame object (caso piu' comune in Grasshopper)
             if hasattr(frame, 'point') and hasattr(frame, 'xaxis'):
                 origin = [float(frame.point.x), float(frame.point.y), float(frame.point.z)]
-                x_axis = vector_normalize([float(frame.xaxis.x), float(frame.xaxis.y), float(frame.xaxis.z)])
-                y_axis = vector_normalize([float(frame.yaxis.x), float(frame.yaxis.y), float(frame.yaxis.z)])
-                z_axis = vector_cross(x_axis, y_axis)
+                x_axis = [float(frame.xaxis.x), float(frame.xaxis.y), float(frame.xaxis.z)]
+                y_axis = [float(frame.yaxis.x), float(frame.yaxis.y), float(frame.yaxis.z)]
+                z_axis = [float(frame.zaxis.x), float(frame.zaxis.y), float(frame.zaxis.z)]
                 return {"origin": origin, "x_axis": x_axis, "y_axis": y_axis, "z_axis": z_axis}
-            # dict-like (JSON gia' caricato)
-            if isinstance(frame, dict):
-                data = frame.get("data", frame)
-                raw_origin = data.get("point") or data.get("origin")
-                raw_x = data.get("xaxis") or data.get("x_axis")
-                raw_y = data.get("yaxis") or data.get("y_axis")
-                if raw_origin and raw_x and raw_y:
-                    origin = unwrap_vector(raw_origin)
-                    x_axis = vector_normalize(unwrap_vector(raw_x))
-                    y_axis = vector_normalize(unwrap_vector(raw_y))
-                    z_axis = vector_cross(x_axis, y_axis)
-                    return {"origin": origin, "x_axis": x_axis, "y_axis": y_axis, "z_axis": z_axis}
         except:
             pass
 
@@ -88,7 +67,7 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
         return {"origin": [0,0,0], "x_axis": [1,0,0], "y_axis": [0,1,0], "z_axis": [0,0,1]}
 
     def get_centerline_points(beam):
-        """Restituisce (start, end) come liste [x,y,z] usando frame+length o centerline"""
+        """Restituisce (start, end) come liste [x,y,z]"""
         try:
             frame = get_beam_frame(beam)
             length = float(beam.length)
@@ -119,6 +98,9 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
         )
     except Exception as e:
         debug_out = "ERRORE TEST: {}".format(e)
+
+    # [RESTO DEL CODICE IDENTICO...]
+    # Copia tutto il resto dal codice precedente, da "1. COSTRUZIONE GRAFO" fino al return finale
 
     # =========================
     # 1. COSTRUZIONE GRAFO
