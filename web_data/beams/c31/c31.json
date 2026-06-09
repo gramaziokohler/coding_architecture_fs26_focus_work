@@ -27,6 +27,17 @@
       0.0787,
       -0.9969,
       0.0
+    ],
+    "length": 1.1984,
+    "centerline_start": [
+      1.775,
+      -2.1038,
+      2.7652
+    ],
+    "centerline_end": [
+      2.9696,
+      -2.0095,
+      2.7519
     ]
   },
   "connected_beams": [
@@ -65,7 +76,51 @@
     "lmiter": [
       "289",
       "297"
+    ],
+    "details": [
+      {
+        "id": "289",
+        "type": "LMiterJoint",
+        "position": {
+          "global": [
+            1.775,
+            -2.1038,
+            2.7652
+          ],
+          "local_frame_a": {
+            "distance_along_x": 0.6693,
+            "offset_y": 0.0,
+            "offset_z": -0.0
+          },
+          "local_frame_b": {
+            "distance_along_x": -0.5992,
+            "offset_y": -0.0001,
+            "offset_z": -0.0001
+          }
+        }
+      },
+      {
+        "id": "297",
+        "type": "LMiterJoint",
+        "position": {
+          "global": [
+            2.9696,
+            -2.0095,
+            2.7519
+          ],
+          "local_frame_a": {
+            "distance_along_x": 0.5991,
+            "offset_y": -0.0,
+            "offset_z": -0.0
+          },
+          "local_frame_b": {
+            "distance_along_x": -0.6783,
+            "offset_y": 0.0,
+            "offset_z": -0.0
+          }
+        }
+      }
     ]
   },
-  "3d_model": "beams/c31/c31.stl"
+  "3d_model": "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data/beams/c31/c31.stl"
 }

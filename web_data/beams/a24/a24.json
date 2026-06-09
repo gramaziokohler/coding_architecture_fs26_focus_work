@@ -27,11 +27,22 @@
       0.7275,
       -0.6861,
       0.0
+    ],
+    "length": 0.5129,
+    "centerline_start": [
+      -0.3034,
+      -1.602,
+      1.2909
+    ],
+    "centerline_end": [
+      0.0447,
+      -1.2329,
+      1.3664
     ]
   },
   "connected_beams": [
-    "a23",
-    "a26"
+    "a26",
+    "a23"
   ],
   "global_position": {
     "centerline_start": [
@@ -64,7 +75,51 @@
     "tbutt": [
       "272"
     ],
-    "lmiter": []
+    "lmiter": [],
+    "details": [
+      {
+        "id": "264",
+        "type": "PreferredFaceTButtJoint",
+        "position": {
+          "global": [
+            -0.2821,
+            -1.591,
+            1.2855
+          ],
+          "local_frame_a": {
+            "distance_along_x": -0.2348,
+            "offset_y": -0.0087,
+            "offset_z": 0.008
+          },
+          "local_frame_b": {
+            "distance_along_x": -0.5211,
+            "offset_y": 0.0116,
+            "offset_z": -0.0021
+          }
+        }
+      },
+      {
+        "id": "272",
+        "type": "TButtJoint",
+        "position": {
+          "global": [
+            0.0452,
+            -1.2316,
+            1.3662
+          ],
+          "local_frame_a": {
+            "distance_along_x": 0.2577,
+            "offset_y": -0.0004,
+            "offset_z": -0.0006
+          },
+          "local_frame_b": {
+            "distance_along_x": 0.0066,
+            "offset_y": 0.0002,
+            "offset_z": -0.0014
+          }
+        }
+      }
+    ]
   },
-  "3d_model": "beams/a24/a24.stl"
+  "3d_model": "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data/beams/a24/a24.stl"
 }

@@ -27,11 +27,22 @@
       0.7095,
       0.7047,
       -0.0
+    ],
+    "length": 0.432,
+    "centerline_start": [
+      5.2182,
+      -1.0523,
+      0.9987
+    ],
+    "centerline_end": [
+      4.9353,
+      -0.7675,
+      1.1584
     ]
   },
   "connected_beams": [
-    "e23",
-    "e3"
+    "e3",
+    "e23"
   ],
   "global_position": {
     "centerline_start": [
@@ -64,7 +75,51 @@
     "tbutt": [
       "227"
     ],
-    "lmiter": []
+    "lmiter": [],
+    "details": [
+      {
+        "id": "316",
+        "type": "PreferredFaceTButtJoint",
+        "position": {
+          "global": [
+            5.2119,
+            -1.0564,
+            0.9919
+          ],
+          "local_frame_a": {
+            "distance_along_x": -0.2171,
+            "offset_y": -0.0069,
+            "offset_z": -0.0074
+          },
+          "local_frame_b": {
+            "distance_along_x": -0.5812,
+            "offset_y": 0.0102,
+            "offset_z": 0.0
+          }
+        }
+      },
+      {
+        "id": "227",
+        "type": "TButtJoint",
+        "position": {
+          "global": [
+            4.952,
+            -0.7866,
+            1.146
+          ],
+          "local_frame_a": {
+            "distance_along_x": 0.1879,
+            "offset_y": -0.0023,
+            "offset_z": -0.0017
+          },
+          "local_frame_b": {
+            "distance_along_x": -0.0312,
+            "offset_y": 0.0025,
+            "offset_z": 0.0014
+          }
+        }
+      }
+    ]
   },
-  "3d_model": "beams/e4/e4.stl"
+  "3d_model": "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data/beams/e4/e4.stl"
 }

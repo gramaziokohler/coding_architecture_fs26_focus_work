@@ -27,14 +27,25 @@
       -0.3434,
       -0.9392,
       0.0
+    ],
+    "length": 1.2787,
+    "centerline_start": [
+      3.0429,
+      3.2185,
+      2.2705
+    ],
+    "centerline_end": [
+      4.1436,
+      2.816,
+      1.7591
     ]
   },
   "connected_beams": [
-    "d20",
     "d23",
-    "f28",
+    "f5",
+    "d20",
     "f30",
-    "f5"
+    "f28"
   ],
   "global_position": {
     "centerline_start": [
@@ -71,7 +82,114 @@
     "lmiter": [
       "233",
       "234"
+    ],
+    "details": [
+      {
+        "id": "233",
+        "type": "LMiterJoint",
+        "position": {
+          "global": [
+            3.0429,
+            3.2185,
+            2.2705
+          ],
+          "local_frame_a": {
+            "distance_along_x": 0.5873,
+            "offset_y": -0.0,
+            "offset_z": -0.0
+          },
+          "local_frame_b": {
+            "distance_along_x": -0.6393,
+            "offset_y": -0.0,
+            "offset_z": 0.0001
+          }
+        }
+      },
+      {
+        "id": "299",
+        "type": "PreferredFaceTButtJoint",
+        "position": {
+          "global": [
+            3.1886,
+            3.163,
+            2.2176
+          ],
+          "local_frame_a": {
+            "distance_along_x": 0.5597,
+            "offset_y": -0.0128,
+            "offset_z": -0.0056
+          },
+          "local_frame_b": {
+            "distance_along_x": -0.4753,
+            "offset_y": 0.0138,
+            "offset_z": 0.0022
+          }
+        }
+      },
+      {
+        "id": "301",
+        "type": "PreferredFaceTButtJoint",
+        "position": {
+          "global": [
+            3.7022,
+            2.976,
+            1.9778
+          ],
+          "local_frame_a": {
+            "distance_along_x": -0.4396,
+            "offset_y": -0.0126,
+            "offset_z": 0.0023
+          },
+          "local_frame_b": {
+            "distance_along_x": 0.1215,
+            "offset_y": 0.0127,
+            "offset_z": 0.0014
+          }
+        }
+      },
+      {
+        "id": "303",
+        "type": "PreferredFaceTButtJoint",
+        "position": {
+          "global": [
+            3.9658,
+            2.879,
+            1.853
+          ],
+          "local_frame_a": {
+            "distance_along_x": 0.6895,
+            "offset_y": -0.0108,
+            "offset_z": -0.0015
+          },
+          "local_frame_b": {
+            "distance_along_x": 0.4289,
+            "offset_y": 0.0107,
+            "offset_z": 0.002
+          }
+        }
+      },
+      {
+        "id": "234",
+        "type": "LMiterJoint",
+        "position": {
+          "global": [
+            4.1436,
+            2.816,
+            1.7591
+          ],
+          "local_frame_a": {
+            "distance_along_x": -0.6894,
+            "offset_y": -0.0,
+            "offset_z": -0.0
+          },
+          "local_frame_b": {
+            "distance_along_x": 0.6393,
+            "offset_y": -0.0,
+            "offset_z": 0.0001
+          }
+        }
+      }
     ]
   },
-  "3d_model": "beams/f31/f31.stl"
+  "3d_model": "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data/beams/f31/f31.stl"
 }

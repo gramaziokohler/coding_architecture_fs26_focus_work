@@ -27,13 +27,24 @@
       0.9926,
       0.1216,
       -0.0
+    ],
+    "length": 0.9991,
+    "centerline_start": [
+      -0.6888,
+      0.7399,
+      0.0
+    ],
+    "centerline_end": [
+      -0.8103,
+      1.7316,
+      0.0
     ]
   },
   "connected_beams": [
-    "a18",
-    "b10",
     "b26",
-    "b8"
+    "b8",
+    "b10",
+    "a18"
   ],
   "global_position": {
     "centerline_start": [
@@ -69,7 +80,93 @@
     "lmiter": [
       "250",
       "246"
+    ],
+    "details": [
+      {
+        "id": "250",
+        "type": "LMiterJoint",
+        "position": {
+          "global": [
+            -0.6888,
+            0.7399,
+            0.0
+          ],
+          "local_frame_a": {
+            "distance_along_x": 0.4769,
+            "offset_y": 0.0,
+            "offset_z": -0.0
+          },
+          "local_frame_b": {
+            "distance_along_x": -0.4995,
+            "offset_y": 0.0,
+            "offset_z": 0.0
+          }
+        }
+      },
+      {
+        "id": "248",
+        "type": "PreferredFaceTButtJoint",
+        "position": {
+          "global": [
+            -0.7376,
+            1.0305,
+            0.0135
+          ],
+          "local_frame_a": {
+            "distance_along_x": -0.3579,
+            "offset_y": -0.0147,
+            "offset_z": 0.0117
+          },
+          "local_frame_b": {
+            "distance_along_x": -0.2052,
+            "offset_y": 0.0135,
+            "offset_z": -0.0131
+          }
+        }
+      },
+      {
+        "id": "247",
+        "type": "PreferredFaceTButtJoint",
+        "position": {
+          "global": [
+            -0.7976,
+            1.5323,
+            0.0119
+          ],
+          "local_frame_a": {
+            "distance_along_x": -0.5162,
+            "offset_y": -0.0165,
+            "offset_z": 0.0018
+          },
+          "local_frame_b": {
+            "distance_along_x": 0.3003,
+            "offset_y": 0.0119,
+            "offset_z": -0.0116
+          }
+        }
+      },
+      {
+        "id": "246",
+        "type": "LMiterJoint",
+        "position": {
+          "global": [
+            -0.8103,
+            1.7316,
+            0.0
+          ],
+          "local_frame_a": {
+            "distance_along_x": 0.4996,
+            "offset_y": 0.0,
+            "offset_z": 0.0001
+          },
+          "local_frame_b": {
+            "distance_along_x": -0.6648,
+            "offset_y": 0.0,
+            "offset_z": -0.0001
+          }
+        }
+      }
     ]
   },
-  "3d_model": "beams/b11/b11.stl"
+  "3d_model": "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data/beams/b11/b11.stl"
 }

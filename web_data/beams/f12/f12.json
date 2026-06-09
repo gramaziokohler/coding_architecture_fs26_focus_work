@@ -27,11 +27,22 @@
       -0.8887,
       -0.4584,
       0.0
+    ],
+    "length": 0.9986,
+    "centerline_start": [
+      5.3099,
+      1.5856,
+      0.6273
+    ],
+    "centerline_end": [
+      5.7104,
+      0.8093,
+      0.1433
     ]
   },
   "connected_beams": [
-    "f13",
     "f21",
+    "f13",
     "f8"
   ],
   "global_position": {
@@ -69,7 +80,72 @@
       "321",
       "235"
     ],
-    "lmiter": []
+    "lmiter": [],
+    "details": [
+      {
+        "id": "320",
+        "type": "XLapJoint",
+        "position": {
+          "global": [
+            5.404,
+            1.3978,
+            0.5069
+          ],
+          "local_frame_a": {
+            "distance_along_x": -0.2572,
+            "offset_y": -0.0035,
+            "offset_z": 0.0026
+          },
+          "local_frame_b": {
+            "distance_along_x": 0.1676,
+            "offset_y": 0.0043,
+            "offset_z": 0.0004
+          }
+        }
+      },
+      {
+        "id": "321",
+        "type": "TButtJoint",
+        "position": {
+          "global": [
+            5.5247,
+            1.1611,
+            0.3579
+          ],
+          "local_frame_a": {
+            "distance_along_x": 0.5125,
+            "offset_y": 0.0062,
+            "offset_z": -0.001
+          },
+          "local_frame_b": {
+            "distance_along_x": 0.0474,
+            "offset_y": -0.005,
+            "offset_z": 0.0038
+          }
+        }
+      },
+      {
+        "id": "235",
+        "type": "TButtJoint",
+        "position": {
+          "global": [
+            5.7201,
+            0.8017,
+            0.145
+          ],
+          "local_frame_a": {
+            "distance_along_x": 0.5083,
+            "offset_y": 0.0069,
+            "offset_z": -0.0051
+          },
+          "local_frame_b": {
+            "distance_along_x": 0.0052,
+            "offset_y": -0.002,
+            "offset_z": 0.0123
+          }
+        }
+      }
+    ]
   },
-  "3d_model": "beams/f12/f12.stl"
+  "3d_model": "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data/beams/f12/f12.stl"
 }

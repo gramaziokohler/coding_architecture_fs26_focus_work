@@ -27,15 +27,26 @@
       0.3068,
       -0.9518,
       0.0
+    ],
+    "length": 1.3566,
+    "centerline_start": [
+      2.9696,
+      -2.0095,
+      2.7519
+    ],
+    "centerline_end": [
+      4.1089,
+      -1.6422,
+      2.1136
     ]
   },
   "connected_beams": [
+    "e35",
+    "e5",
+    "c31",
     "c13",
     "c14",
-    "c31",
-    "e34",
-    "e35",
-    "e5"
+    "e34"
   ],
   "global_position": {
     "centerline_start": [
@@ -73,7 +84,135 @@
     "lmiter": [
       "297",
       "182"
+    ],
+    "details": [
+      {
+        "id": "297",
+        "type": "LMiterJoint",
+        "position": {
+          "global": [
+            2.9696,
+            -2.0095,
+            2.7519
+          ],
+          "local_frame_a": {
+            "distance_along_x": 0.5991,
+            "offset_y": -0.0,
+            "offset_z": -0.0
+          },
+          "local_frame_b": {
+            "distance_along_x": -0.6783,
+            "offset_y": 0.0,
+            "offset_z": -0.0
+          }
+        }
+      },
+      {
+        "id": "298",
+        "type": "PreferredFaceTButtJoint",
+        "position": {
+          "global": [
+            3.1097,
+            -1.9588,
+            2.6875
+          ],
+          "local_frame_a": {
+            "distance_along_x": 0.5301,
+            "offset_y": -0.012,
+            "offset_z": 0.0076
+          },
+          "local_frame_b": {
+            "distance_along_x": -0.5167,
+            "offset_y": 0.0133,
+            "offset_z": -0.0053
+          }
+        }
+      },
+      {
+        "id": "300",
+        "type": "PreferredFaceTButtJoint",
+        "position": {
+          "global": [
+            3.3116,
+            -1.8951,
+            2.5745
+          ],
+          "local_frame_a": {
+            "distance_along_x": -0.3192,
+            "offset_y": -0.0118,
+            "offset_z": -0.007
+          },
+          "local_frame_b": {
+            "distance_along_x": -0.2767,
+            "offset_y": 0.0132,
+            "offset_z": -0.004
+          }
+        }
+      },
+      {
+        "id": "302",
+        "type": "PreferredFaceTButtJoint",
+        "position": {
+          "global": [
+            3.7651,
+            -1.7508,
+            2.3157
+          ],
+          "local_frame_a": {
+            "distance_along_x": 0.6472,
+            "offset_y": -0.0088,
+            "offset_z": 0.0015
+          },
+          "local_frame_b": {
+            "distance_along_x": 0.265,
+            "offset_y": 0.0087,
+            "offset_z": -0.0022
+          }
+        }
+      },
+      {
+        "id": "181",
+        "type": "PreferredFaceTButtJoint",
+        "position": {
+          "global": [
+            3.9694,
+            -1.6833,
+            2.2035
+          ],
+          "local_frame_a": {
+            "distance_along_x": -0.3474,
+            "offset_y": -0.0115,
+            "offset_z": -0.0008
+          },
+          "local_frame_b": {
+            "distance_along_x": 0.5077,
+            "offset_y": 0.0109,
+            "offset_z": -0.0038
+          }
+        }
+      },
+      {
+        "id": "182",
+        "type": "LMiterJoint",
+        "position": {
+          "global": [
+            4.1089,
+            -1.6422,
+            2.1136
+          ],
+          "local_frame_a": {
+            "distance_along_x": 0.6782,
+            "offset_y": 0.0,
+            "offset_z": -0.0001
+          },
+          "local_frame_b": {
+            "distance_along_x": -0.7568,
+            "offset_y": 0.0,
+            "offset_z": -0.0
+          }
+        }
+      }
     ]
   },
-  "3d_model": "beams/e36/e36.stl"
+  "3d_model": "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data/beams/e36/e36.stl"
 }

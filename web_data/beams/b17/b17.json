@@ -27,12 +27,23 @@
       0.2194,
       -0.9756,
       0.0
+    ],
+    "length": 1.3661,
+    "centerline_start": [
+      -0.3321,
+      3.0889,
+      0.9563
+    ],
+    "centerline_end": [
+      0.7267,
+      3.3271,
+      1.786
     ]
   },
   "connected_beams": [
-    "b15",
+    "d28",
     "b27",
-    "d28"
+    "b15"
   ],
   "global_position": {
     "centerline_start": [
@@ -67,7 +78,72 @@
     "lmiter": [
       "262",
       "59"
+    ],
+    "details": [
+      {
+        "id": "262",
+        "type": "LMiterJoint",
+        "position": {
+          "global": [
+            -0.3321,
+            3.0889,
+            0.9563
+          ],
+          "local_frame_a": {
+            "distance_along_x": 0.6866,
+            "offset_y": -0.0,
+            "offset_z": -0.0
+          },
+          "local_frame_b": {
+            "distance_along_x": -0.6831,
+            "offset_y": 0.0001,
+            "offset_z": 0.0
+          }
+        }
+      },
+      {
+        "id": "268",
+        "type": "PreferredFaceTButtJoint",
+        "position": {
+          "global": [
+            -0.1961,
+            3.1184,
+            1.0742
+          ],
+          "local_frame_a": {
+            "distance_along_x": 0.5803,
+            "offset_y": -0.0074,
+            "offset_z": 0.0054
+          },
+          "local_frame_b": {
+            "distance_along_x": -0.5009,
+            "offset_y": 0.0092,
+            "offset_z": 0.0011
+          }
+        }
+      },
+      {
+        "id": "59",
+        "type": "LMiterJoint",
+        "position": {
+          "global": [
+            0.7267,
+            3.3271,
+            1.786
+          ],
+          "local_frame_a": {
+            "distance_along_x": 0.6831,
+            "offset_y": 0.0,
+            "offset_z": 0.0
+          },
+          "local_frame_b": {
+            "distance_along_x": -0.6295,
+            "offset_y": 0.0,
+            "offset_z": 0.0
+          }
+        }
+      }
     ]
   },
-  "3d_model": "beams/b17/b17.stl"
+  "3d_model": "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data/beams/b17/b17.stl"
 }

@@ -27,12 +27,23 @@
       -0.8913,
       -0.4534,
       0.0
+    ],
+    "length": 1.1452,
+    "centerline_start": [
+      1.5745,
+      2.3033,
+      1.9062
+    ],
+    "centerline_end": [
+      2.0925,
+      1.2848,
+      1.9828
     ]
   },
   "connected_beams": [
-    "d1",
     "d3",
     "d6",
+    "d1",
     "d8"
   ],
   "global_position": {
@@ -72,7 +83,93 @@
       "99",
       "114"
     ],
-    "lmiter": []
+    "lmiter": [],
+    "details": [
+      {
+        "id": "95",
+        "type": "XLapJoint",
+        "position": {
+          "global": [
+            1.6598,
+            2.1357,
+            1.9186
+          ],
+          "local_frame_a": {
+            "distance_along_x": -0.3842,
+            "offset_y": -0.0002,
+            "offset_z": -0.0001
+          },
+          "local_frame_b": {
+            "distance_along_x": 0.0868,
+            "offset_y": 0.0003,
+            "offset_z": 0.0
+          }
+        }
+      },
+      {
+        "id": "99",
+        "type": "TButtJoint",
+        "position": {
+          "global": [
+            1.8006,
+            1.8586,
+            1.9397
+          ],
+          "local_frame_a": {
+            "distance_along_x": 0.5321,
+            "offset_y": -0.0,
+            "offset_z": -0.0
+          },
+          "local_frame_b": {
+            "distance_along_x": -0.0727,
+            "offset_y": 0.0,
+            "offset_z": -0.0
+          }
+        }
+      },
+      {
+        "id": "100",
+        "type": "XLapJoint",
+        "position": {
+          "global": [
+            1.8731,
+            1.7189,
+            1.9463
+          ],
+          "local_frame_a": {
+            "distance_along_x": 0.0848,
+            "offset_y": -0.0039,
+            "offset_z": -0.0013
+          },
+          "local_frame_b": {
+            "distance_along_x": -0.3303,
+            "offset_y": 0.0039,
+            "offset_z": -0.001
+          }
+        }
+      },
+      {
+        "id": "114",
+        "type": "TButtJoint",
+        "position": {
+          "global": [
+            2.088,
+            1.2937,
+            1.9822
+          ],
+          "local_frame_a": {
+            "distance_along_x": 0.5626,
+            "offset_y": 0.0,
+            "offset_z": 0.0
+          },
+          "local_frame_b": {
+            "distance_along_x": -0.0581,
+            "offset_y": -0.0,
+            "offset_z": -0.0
+          }
+        }
+      }
+    ]
   },
-  "3d_model": "beams/d2/d2.stl"
+  "3d_model": "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data/beams/d2/d2.stl"
 }

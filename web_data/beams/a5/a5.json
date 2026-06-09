@@ -27,13 +27,24 @@
       0.9284,
       0.3715,
       -0.0
+    ],
+    "length": 1.1562,
+    "centerline_start": [
+      0.5477,
+      -0.285,
+      1.3722
+    ],
+    "centerline_end": [
+      0.154,
+      0.6992,
+      0.9105
     ]
   },
   "connected_beams": [
     "a21",
     "a4",
-    "a6",
-    "a7"
+    "a7",
+    "a6"
   ],
   "global_position": {
     "centerline_start": [
@@ -72,7 +83,93 @@
       "46",
       "41"
     ],
-    "lmiter": []
+    "lmiter": [],
+    "details": [
+      {
+        "id": "48",
+        "type": "XLapJoint",
+        "position": {
+          "global": [
+            0.456,
+            -0.0595,
+            1.2687
+          ],
+          "local_frame_a": {
+            "distance_along_x": 0.1311,
+            "offset_y": -0.0027,
+            "offset_z": 0.0001
+          },
+          "local_frame_b": {
+            "distance_along_x": -0.3137,
+            "offset_y": 0.0023,
+            "offset_z": -0.0014
+          }
+        }
+      },
+      {
+        "id": "46",
+        "type": "TButtJoint",
+        "position": {
+          "global": [
+            0.3546,
+            0.1977,
+            1.1458
+          ],
+          "local_frame_a": {
+            "distance_along_x": 0.5426,
+            "offset_y": -0.0,
+            "offset_z": -0.0001
+          },
+          "local_frame_b": {
+            "distance_along_x": -0.0111,
+            "offset_y": 0.0,
+            "offset_z": 0.0
+          }
+        }
+      },
+      {
+        "id": "45",
+        "type": "XLapJoint",
+        "position": {
+          "global": [
+            0.3166,
+            0.2972,
+            1.0963
+          ],
+          "local_frame_a": {
+            "distance_along_x": -0.2931,
+            "offset_y": 0.0027,
+            "offset_z": 0.0019
+          },
+          "local_frame_b": {
+            "distance_along_x": 0.1063,
+            "offset_y": -0.0028,
+            "offset_z": 0.0017
+          }
+        }
+      },
+      {
+        "id": "41",
+        "type": "TButtJoint",
+        "position": {
+          "global": [
+            0.157,
+            0.6915,
+            0.9141
+          ],
+          "local_frame_a": {
+            "distance_along_x": 0.5691,
+            "offset_y": 0.0,
+            "offset_z": 0.0
+          },
+          "local_frame_b": {
+            "distance_along_x": -0.023,
+            "offset_y": -0.0,
+            "offset_z": -0.0
+          }
+        }
+      }
+    ]
   },
-  "3d_model": "beams/a5/a5.stl"
+  "3d_model": "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data/beams/a5/a5.stl"
 }

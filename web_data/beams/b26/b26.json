@@ -27,12 +27,23 @@
       0.9318,
       0.3629,
       -0.0
+    ],
+    "length": 1.3296,
+    "centerline_start": [
+      -0.8103,
+      1.7316,
+      0.0
+    ],
+    "centerline_end": [
+      -1.2928,
+      2.9706,
+      0.0
     ]
   },
   "connected_beams": [
-    "b11",
+    "b27",
     "b25",
-    "b27"
+    "b11"
   ],
   "global_position": {
     "centerline_start": [
@@ -66,7 +77,72 @@
     "tbutt": [],
     "lmiter": [
       "246"
+    ],
+    "details": [
+      {
+        "id": "246",
+        "type": "LMiterJoint",
+        "position": {
+          "global": [
+            -0.8103,
+            1.7316,
+            0.0
+          ],
+          "local_frame_a": {
+            "distance_along_x": 0.4996,
+            "offset_y": 0.0,
+            "offset_z": 0.0001
+          },
+          "local_frame_b": {
+            "distance_along_x": -0.6648,
+            "offset_y": 0.0,
+            "offset_z": -0.0001
+          }
+        }
+      },
+      {
+        "id": "238",
+        "type": "PreferredFaceTButtJoint",
+        "position": {
+          "global": [
+            -0.9845,
+            2.1419,
+            0.013
+          ],
+          "local_frame_a": {
+            "distance_along_x": -0.3849,
+            "offset_y": -0.0143,
+            "offset_z": 0.012
+          },
+          "local_frame_b": {
+            "distance_along_x": -0.2192,
+            "offset_y": 0.013,
+            "offset_z": -0.0135
+          }
+        }
+      },
+      {
+        "id": "237",
+        "type": "PreferredFaceTButtJoint",
+        "position": {
+          "global": [
+            -1.2313,
+            2.7818,
+            0.0116
+          ],
+          "local_frame_a": {
+            "distance_along_x": -0.6532,
+            "offset_y": -0.0161,
+            "offset_z": -0.0005
+          },
+          "local_frame_b": {
+            "distance_along_x": 0.4665,
+            "offset_y": 0.0116,
+            "offset_z": -0.0113
+          }
+        }
+      }
     ]
   },
-  "3d_model": "beams/b26/b26.stl"
+  "3d_model": "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data/beams/b26/b26.stl"
 }

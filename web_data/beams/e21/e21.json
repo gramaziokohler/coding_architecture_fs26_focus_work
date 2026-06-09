@@ -27,12 +27,23 @@
       -0.8913,
       0.4534,
       0.0
+    ],
+    "length": 0.8604,
+    "centerline_start": [
+      5.9035,
+      -0.1877,
+      -0.0048
+    ],
+    "centerline_end": [
+      5.5889,
+      -0.8062,
+      0.5038
     ]
   },
   "connected_beams": [
+    "e23",
     "e20",
-    "e22",
-    "e23"
+    "e22"
   ],
   "global_position": {
     "centerline_start": [
@@ -66,7 +77,72 @@
     "tbutt": [
       "330"
     ],
-    "lmiter": []
+    "lmiter": [],
+    "details": [
+      {
+        "id": "339",
+        "type": "PreferredFaceTButtJoint",
+        "position": {
+          "global": [
+            5.8695,
+            -0.226,
+            0.0124
+          ],
+          "local_frame_a": {
+            "distance_along_x": -0.3801,
+            "offset_y": -0.0153,
+            "offset_z": 0.013
+          },
+          "local_frame_b": {
+            "distance_along_x": 0.1799,
+            "offset_y": 0.0124,
+            "offset_z": 0.0159
+          }
+        }
+      },
+      {
+        "id": "330",
+        "type": "TButtJoint",
+        "position": {
+          "global": [
+            5.7949,
+            -0.3866,
+            0.1638
+          ],
+          "local_frame_a": {
+            "distance_along_x": 0.4529,
+            "offset_y": 0.0027,
+            "offset_z": 0.0001
+          },
+          "local_frame_b": {
+            "distance_along_x": -0.1478,
+            "offset_y": 0.0021,
+            "offset_z": 0.0067
+          }
+        }
+      },
+      {
+        "id": "326",
+        "type": "PreferredFaceTButtJoint",
+        "position": {
+          "global": [
+            5.5832,
+            -0.8101,
+            0.4976
+          ],
+          "local_frame_a": {
+            "distance_along_x": 0.4314,
+            "offset_y": -0.0086,
+            "offset_z": 0.0034
+          },
+          "local_frame_b": {
+            "distance_along_x": 0.0843,
+            "offset_y": 0.0093,
+            "offset_z": 0.0
+          }
+        }
+      }
+    ]
   },
-  "3d_model": "beams/e21/e21.stl"
+  "3d_model": "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data/beams/e21/e21.stl"
 }

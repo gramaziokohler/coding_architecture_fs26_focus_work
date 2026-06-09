@@ -27,11 +27,22 @@
       0.8771,
       -0.4803,
       0.0
+    ],
+    "length": 0.7204,
+    "centerline_start": [
+      3.968,
+      -1.6876,
+      2.2201
+    ],
+    "centerline_end": [
+      4.258,
+      -1.1581,
+      1.827
     ]
   },
   "connected_beams": [
-    "e33",
-    "e36"
+    "e36",
+    "e33"
   ],
   "global_position": {
     "centerline_start": [
@@ -64,7 +75,51 @@
     "tbutt": [
       "305"
     ],
-    "lmiter": []
+    "lmiter": [],
+    "details": [
+      {
+        "id": "181",
+        "type": "PreferredFaceTButtJoint",
+        "position": {
+          "global": [
+            3.9694,
+            -1.6833,
+            2.2035
+          ],
+          "local_frame_a": {
+            "distance_along_x": -0.3474,
+            "offset_y": -0.0115,
+            "offset_z": -0.0008
+          },
+          "local_frame_b": {
+            "distance_along_x": 0.5077,
+            "offset_y": 0.0109,
+            "offset_z": -0.0038
+          }
+        }
+      },
+      {
+        "id": "305",
+        "type": "TButtJoint",
+        "position": {
+          "global": [
+            4.2542,
+            -1.1503,
+            1.8265
+          ],
+          "local_frame_a": {
+            "distance_along_x": 0.3647,
+            "offset_y": 0.0024,
+            "offset_z": -0.0071
+          },
+          "local_frame_b": {
+            "distance_along_x": 0.0324,
+            "offset_y": 0.0006,
+            "offset_z": -0.0087
+          }
+        }
+      }
+    ]
   },
-  "3d_model": "beams/e35/e35.stl"
+  "3d_model": "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data/beams/e35/e35.stl"
 }

@@ -27,6 +27,17 @@
       -0.8924,
       -0.4512,
       0.0
+    ],
+    "length": 0.79,
+    "centerline_start": [
+      1.6679,
+      3.3833,
+      2.2188
+    ],
+    "centerline_end": [
+      2.0218,
+      2.6832,
+      2.1256
     ]
   },
   "connected_beams": [
@@ -64,7 +75,51 @@
     "tbutt": [
       "110"
     ],
-    "lmiter": []
+    "lmiter": [],
+    "details": [
+      {
+        "id": "286",
+        "type": "PreferredFaceTButtJoint",
+        "position": {
+          "global": [
+            1.6746,
+            3.3807,
+            2.2088
+          ],
+          "local_frame_a": {
+            "distance_along_x": -0.3886,
+            "offset_y": -0.0093,
+            "offset_z": -0.0048
+          },
+          "local_frame_b": {
+            "distance_along_x": 0.4098,
+            "offset_y": 0.0101,
+            "offset_z": 0.003
+          }
+        }
+      },
+      {
+        "id": "110",
+        "type": "TButtJoint",
+        "position": {
+          "global": [
+            2.0285,
+            2.6801,
+            2.1255
+          ],
+          "local_frame_a": {
+            "distance_along_x": 0.4007,
+            "offset_y": 0.0006,
+            "offset_z": -0.0045
+          },
+          "local_frame_b": {
+            "distance_along_x": 0.0035,
+            "offset_y": 0.0001,
+            "offset_z": 0.0073
+          }
+        }
+      }
+    ]
   },
-  "3d_model": "beams/d27/d27.stl"
+  "3d_model": "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data/beams/d27/d27.stl"
 }
