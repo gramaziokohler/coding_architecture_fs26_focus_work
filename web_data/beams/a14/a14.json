@@ -4,13 +4,13 @@
   "module": "A",
   "width (m)": 0.12,
   "height (m)": 0.14,
-  "length (m)": 1.187,
-  "volume (cm3)": 19942.11,
+  "length (m)": 1.19,
+  "volume (cm\u00b3)": 19942.11,
   "weight (kg)": 9.97,
   "local_frame": {
     "origin": [
-      -1.352,
-      -1.2739,
+      -1.0979,
+      -0.7376,
       0.0
     ],
     "x_axis": [
@@ -19,31 +19,31 @@
       0.0
     ],
     "y_axis": [
-      -0.9037,
-      0.4282,
-      0.0
+      -0.0,
+      0.0,
+      1.0
     ],
     "z_axis": [
-      0.0,
-      -0.0,
-      1.0
+      0.9037,
+      -0.4282,
+      0.0
     ]
   },
   "connected_beams": [
-    "a16",
-    "a13",
     "a12",
+    "a13",
+    "a16",
     "a18"
   ],
   "global_position": {
     "centerline_start": [
-      -1.6062,
-      -1.8103,
+      -1.352,
+      -1.2739,
       0.0
     ],
     "centerline_end": [
-      -1.0979,
-      -0.7376,
+      -0.8438,
+      -0.2012,
       0.0
     ],
     "midpoint": [
@@ -64,15 +64,11 @@
       "241",
       "244"
     ],
-    "xlap": "-",
-    "tbutt": [
-      "17",
-      "18",
-      "241"
-    ],
+    "xlap": [],
+    "tbutt": [],
     "lmiter": [
       "244"
     ]
   },
-  "3d_model": "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data/beams/a14/a14.stl"
+  "3d_model": "beams/a14/a14.stl"
 }

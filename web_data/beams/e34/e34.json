@@ -4,14 +4,14 @@
   "module": "E",
   "width (m)": 0.06,
   "height (m)": 0.08,
-  "length (m)": 1.308,
-  "volume (cm3)": 6278.6,
+  "length (m)": 1.31,
+  "volume (cm\u00b3)": 6278.6,
   "weight (kg)": 3.14,
   "local_frame": {
     "origin": [
-      4.2549,
-      -0.7263,
-      1.6802
+      4.0103,
+      -1.2396,
+      2.0034
     ],
     "x_axis": [
       -0.3739,
@@ -19,32 +19,32 @@
       0.4942
     ],
     "y_axis": [
-      -0.7907,
-      0.5483,
-      0.2724
+      0.2126,
+      0.4462,
+      0.8693
     ],
     "z_axis": [
-      -0.4848,
-      -0.2889,
-      -0.8255
+      -0.9028,
+      0.4301,
+      0.0
     ]
   },
   "connected_beams": [
-    "e33",
     "e30",
     "e32",
+    "e33",
     "e36"
   ],
   "global_position": {
     "centerline_start": [
-      4.4994,
-      -0.213,
-      1.357
+      4.2549,
+      -0.7263,
+      1.6802
     ],
     "centerline_end": [
-      4.0103,
-      -1.2396,
-      2.0034
+      3.7658,
+      -1.7528,
+      2.3266
     ],
     "midpoint": [
       4.0103,
@@ -59,20 +59,19 @@
   },
   "joints": {
     "all": [
-      "193",
-      "194",
       "199",
+      "194",
+      "193",
       "302"
     ],
     "xlap": [
-      "193",
-      "199"
+      "199",
+      "193"
     ],
     "tbutt": [
-      "194",
-      "302"
+      "194"
     ],
-    "lmiter": "-"
+    "lmiter": []
   },
-  "3d_model": "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data/beams/e34/e34.stl"
+  "3d_model": "beams/e34/e34.stl"
 }

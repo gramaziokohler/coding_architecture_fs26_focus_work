@@ -4,13 +4,13 @@
   "module": "E",
   "width (m)": 0.12,
   "height (m)": 0.14,
-  "length (m)": 0.562,
-  "volume (cm3)": 9440.95,
+  "length (m)": 0.56,
+  "volume (cm\u00b3)": 9440.95,
   "weight (kg)": 4.72,
   "local_frame": {
     "origin": [
-      5.826,
-      -0.0314,
+      5.8126,
+      0.2493,
       0.0
     ],
     "x_axis": [
@@ -19,31 +19,31 @@
       0.0
     ],
     "y_axis": [
-      -0.9989,
-      -0.0476,
-      0.0
-    ],
-    "z_axis": [
       0.0,
       0.0,
       1.0
+    ],
+    "z_axis": [
+      0.9989,
+      0.0476,
+      -0.0
     ]
   },
   "connected_beams": [
-    "f22",
     "e17",
+    "e19",
     "e22",
-    "e19"
+    "f22"
   ],
   "global_position": {
     "centerline_start": [
-      5.8394,
-      -0.312,
+      5.826,
+      -0.0314,
       0.0
     ],
     "centerline_end": [
-      5.8126,
-      0.2493,
+      5.7992,
+      0.5299,
       0.0
     ],
     "midpoint": [
@@ -59,20 +59,17 @@
   },
   "joints": {
     "all": [
-      "331",
-      "333",
       "335",
-      "337"
-    ],
-    "xlap": "-",
-    "tbutt": [
+      "337",
       "333",
-      "337"
+      "331"
     ],
+    "xlap": [],
+    "tbutt": [],
     "lmiter": [
-      "331",
-      "335"
+      "335",
+      "331"
     ]
   },
-  "3d_model": "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data/beams/e18/e18.stl"
+  "3d_model": "beams/e18/e18.stl"
 }

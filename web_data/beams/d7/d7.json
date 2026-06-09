@@ -4,14 +4,14 @@
   "module": "D",
   "width (m)": 0.06,
   "height (m)": 0.08,
-  "length (m)": 1.1497,
-  "volume (cm3)": 5518.6,
+  "length (m)": 1.15,
+  "volume (cm\u00b3)": 5518.6,
   "weight (kg)": 2.76,
   "local_frame": {
     "origin": [
-      2.5135,
-      0.978,
-      2.0241
+      2.2527,
+      1.4902,
+      2.015
     ],
     "x_axis": [
       -0.4536,
@@ -19,32 +19,32 @@
       -0.0157
     ],
     "y_axis": [
-      0.8823,
-      0.4515,
-      0.1329
+      -0.0071,
+      0.014,
+      0.9999
     ],
     "z_axis": [
-      0.1255,
-      0.0464,
-      -0.991
+      0.8912,
+      0.4537,
+      -0.0
     ]
   },
   "connected_beams": [
     "d1",
-    "d8",
     "d12",
+    "d8",
     "d9"
   ],
   "global_position": {
     "centerline_start": [
-      2.7743,
-      0.4657,
-      2.0331
+      2.5135,
+      0.978,
+      2.0241
     ],
     "centerline_end": [
-      2.2527,
-      1.4902,
-      2.015
+      1.9919,
+      2.0024,
+      2.006
     ],
     "midpoint": [
       2.2527,
@@ -59,20 +59,20 @@
   },
   "joints": {
     "all": [
-      "107",
-      "121",
+      "126",
       "122",
-      "126"
+      "121",
+      "107"
     ],
     "xlap": [
-      "121",
-      "126"
+      "126",
+      "121"
     ],
     "tbutt": [
-      "107",
-      "122"
+      "122",
+      "107"
     ],
-    "lmiter": "-"
+    "lmiter": []
   },
-  "3d_model": "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data/beams/d7/d7.stl"
+  "3d_model": "beams/d7/d7.stl"
 }
