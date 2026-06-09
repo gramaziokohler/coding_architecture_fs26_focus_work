@@ -19,6 +19,120 @@ from compas_rhino.conversions import plane_to_rhino
 from timber_design.workflow import DirectRule
 
 
+def iter_model_beams(model):
+    """Yield beams from a TimberModel across COMPAS Timber versions."""
+
+    beams = getattr(model, "beams", None)
+    if beams is not None:
+        for beam in beams:
+            yield beam
+        return
+
+    elements = getattr(model, "elements", None)
+    if elements is not None:
+        for element in elements:
+            if hasattr(element, "attributes"):
+                yield element
+
+
+def mark_feature_as_standalone(feature):
+    """Mark a fabrication feature as beam-owned, not joint-owned joinery."""
+
+    try:
+        feature.is_joinery = False
+    except Exception:
+        try:
+            feature.__dict__["is_joinery"] = False
+        except Exception:
+            pass
+
+    try:
+        feature.is_standalone_fabrication_feature = True
+    except Exception:
+        pass
+
+    return feature
+
+
+def has_inner_jack_rafter_cut_feature(beam):
+    for feature in getattr(beam, "features", None) or []:
+        if type(feature).__name__ == "JackRafterCut":
+            return True
+    return False
+
+
+def restore_inner_jack_rafter_cuts(model):
+    """Restore standalone inner-beam JackRafterCut features after JSON load.
+
+    COMPAS Timber filters joinery features from beam.features during JSON
+    serialization. These inner beam-end cuts are not joints; they affect only
+    one free beam end. The exporter keeps their plane/ref-side attributes, and
+    this helper turns that durable description back into beam features.
+    """
+
+    restored = 0
+    failed = []
+
+    for beam in iter_model_beams(model):
+        attributes = getattr(beam, "attributes", None) or {}
+        cut_data = attributes.get("inner_jack_rafter_cut")
+        plane = attributes.get("inner_cutting_compas_plane")
+        ref_side_index = None
+
+        if hasattr(cut_data, "apply"):
+            feature = mark_feature_as_standalone(cut_data)
+            if not has_inner_jack_rafter_cut_feature(beam):
+                try:
+                    beam.add_feature(feature)
+                    restored += 1
+                except Exception as error:
+                    failed.append((beam, error))
+            continue
+
+        if isinstance(cut_data, dict):
+            plane = cut_data.get("plane") or plane
+            ref_side_index = cut_data.get("ref_side_index")
+
+        if plane is None:
+            continue
+
+        if has_inner_jack_rafter_cut_feature(beam):
+            continue
+
+        feature = None
+        last_error = None
+
+        ref_side_indices = []
+        if ref_side_index is not None:
+            ref_side_indices.append(int(ref_side_index))
+        ref_side_indices.extend([index for index in range(4) if index not in ref_side_indices])
+
+        for candidate_ref_side_index in ref_side_indices:
+            try:
+                feature = JackRafterCut.from_plane_and_beam(
+                    plane,
+                    beam,
+                    ref_side_index=candidate_ref_side_index,
+                )
+                mark_feature_as_standalone(feature)
+                break
+            except Exception as error:
+                last_error = error
+                feature = None
+
+        if feature is None:
+            failed.append((beam, last_error))
+            continue
+
+        try:
+            beam.add_feature(feature)
+            restored += 1
+        except Exception as error:
+            failed.append((beam, error))
+
+    return restored, failed
+
+
 
 class GeometricTimberModelCreator:
     """
@@ -1100,6 +1214,7 @@ class GeometricTimberModelCreator:
 
             # Add the feature to the beam
             try:
+                mark_feature_as_standalone(feature)
                 beam.add_feature(feature)
                 added = True
             except Exception as e:
