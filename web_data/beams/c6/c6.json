@@ -4,138 +4,75 @@
   "module": "C",
   "width (m)": 0.06,
   "height (m)": 0.08,
-  "length (m)": 1.1005,
-  "volume (cm3)": 5282.48,
-  "weight (kg)": 2.64,
+  "length (m)": 1.09,
+  "volume (cm\u00b3)": 5232.05,
+  "weight (kg)": 2.62,
   "local_frame": {
     "origin": [
-      -0.8327,
-      1.5241,
-      0.0
+      0.9688,
+      -0.6962,
+      1.8156
     ],
     "x_axis": [
-      0.6895,
-      0.1991,
-      0.6963
+      -0.6131,
+      -0.7838,
+      -0.0986
     ],
     "y_axis": [
-      0.241,
-      -0.9698,
-      0.0387
+      -0.0608,
+      -0.0777,
+      0.9951
     ],
     "z_axis": [
-      0.683,
-      0.1411,
-      -0.7167
+      -0.7877,
+      0.6161,
+      0.0
     ]
   },
   "connected_beams": [
-    "c10",
-    "c5",
-    "d20",
-    "f15"
+    "a27",
+    "a8",
+    "c4",
+    "c5"
   ],
   "global_position": {
     "centerline_start": [
-      -0.8327,
-      1.5241,
-      0.0
+      1.3029,
+      -0.269,
+      1.8694
     ],
     "centerline_end": [
-      -0.0738,
-      1.7433,
-      0.7663
+      0.6347,
+      -1.1234,
+      1.7619
     ],
     "midpoint": [
-      -0.8327,
-      1.5241,
-      0.0
+      0.9688,
+      -0.6962,
+      1.8156
     ],
     "midpoint_normalized": [
-      0.0712,
-      0.6597,
-      0.0033
+      0.2962,
+      0.2511,
+      0.6582
     ]
   },
   "joints": {
     "all": [
-      "25",
-      "247",
-      "256",
-      "261"
+      "83",
+      "72",
+      "71",
+      "52"
     ],
     "xlap": [
-      "261"
+      "83",
+      "71"
     ],
     "tbutt": [
-      "25",
-      "247",
-      "256"
+      "72",
+      "52"
     ],
-    "lmiter": [],
-    "details": [
-      {
-        "id": "25",
-        "guid": "d37c64b0-8724-45d2-b105-aa5ab3ea79eb",
-        "type": "TButtJoint",
-        "kind": "tbutt",
-        "connected_beams": [
-          "c6",
-          "c5"
-        ],
-        "location": [
-          -0.0796,
-          1.7416,
-          0.7604
-        ]
-      },
-      {
-        "id": "247",
-        "guid": "cf23bd09-ea35-4493-bd9a-d2cd22aab70f",
-        "type": "TButtJoint",
-        "kind": "tbutt",
-        "connected_beams": [
-          "c6",
-          "f15"
-        ],
-        "location": [
-          -0.7976,
-          1.5323,
-          0.0119
-        ]
-      },
-      {
-        "id": "256",
-        "guid": "fdd06249-0138-4f46-8bdf-7f66b00d4689",
-        "type": "TButtJoint",
-        "kind": "tbutt",
-        "connected_beams": [
-          "c10",
-          "c6"
-        ],
-        "location": [
-          -0.5366,
-          1.6098,
-          0.301
-        ]
-      },
-      {
-        "id": "261",
-        "guid": "2b7961a8-37c3-4bc8-9817-0b0f3f3a8e61",
-        "type": "XLapJoint",
-        "kind": "xlap",
-        "connected_beams": [
-          "c6",
-          "d20"
-        ],
-        "location": [
-          -0.3651,
-          1.6594,
-          0.4653
-        ]
-      }
-    ]
+    "lmiter": []
   },
-  "processing": [],
-  "3d_model": "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data/beams/c6/c6.stl"
+  "3d_model": "beams/c6/c6.stl"
 }
