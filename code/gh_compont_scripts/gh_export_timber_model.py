@@ -7,12 +7,9 @@ from compas.data import json_dump
 ghenv.Component.Message = "Export TimberModel"
 
 
-TEMP_EXPORT_ATTRIBUTE_PREFIXES = (
-    "inner_cutting_",
-)
+TEMP_EXPORT_ATTRIBUTE_PREFIXES = ()
 
 TEMP_EXPORT_ATTRIBUTE_KEYS = (
-    "inner_jack_rafter_cut",
     "trimmed_geometry",
     "is_trimmed_inner_geometry",
 )
@@ -84,10 +81,6 @@ def restore_temporary_export_attributes(removed):
         beam.attributes[key] = value
 
 
-def is_proxy_feature(feature):
-    return type(feature).__name__.endswith("Proxy")
-
-
 def collect_joint_feature_ids(model):
     feature_ids = set()
 
@@ -98,13 +91,20 @@ def collect_joint_feature_ids(model):
     return feature_ids
 
 
+def is_export_generated_joinery_feature(feature):
+    feature_type = type(feature).__name__
+    return feature_type == "LapProxy"
+
+
 def strip_temporary_joinery_features(model):
-    """Remove generated joinery/proxy features before JSON export.
+    """Remove generated joint-owned features before JSON export.
 
     COMPAS Timber does not serialize joinery features on beams; it serializes
-    the joints and recreates the features via ``process_joinery``. Some proxy
+    the joints and recreates the features via ``process_joinery``. Some LapProxy
     features unproxy during the normal ``is_joinery`` check and can fail on
-    edge-case machining parameters, so we remove them temporarily instead.
+    edge-case machining parameters, so we remove those temporarily. Standalone
+    fabrication features, such as extra JackRafterCuts for trimmed inner beams,
+    stay on the beam and are serialized.
     """
 
     removed = []
@@ -117,7 +117,7 @@ def strip_temporary_joinery_features(model):
 
         kept = []
         for feature in features:
-            if id(feature) in joint_feature_ids or is_proxy_feature(feature):
+            if id(feature) in joint_feature_ids or is_export_generated_joinery_feature(feature):
                 removed.append((beam, feature))
             else:
                 kept.append(feature)
@@ -214,6 +214,6 @@ else:
 
 print(export_message)
 if removed_attributes_count:
-    print("Removed {} temporary inner cut/preview attributes for export only.".format(removed_attributes_count))
+    print("Removed {} temporary preview geometry attributes for export only.".format(removed_attributes_count))
 if removed_features_count:
-    print("Removed {} generated joinery/proxy features for export only.".format(removed_features_count))
+    print("Removed {} generated joint-owned features for export only.".format(removed_features_count))
