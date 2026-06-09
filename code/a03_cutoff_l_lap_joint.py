@@ -10,6 +10,7 @@ from compas.geometry import Plane
 from compas.geometry import Point
 from compas.geometry import Polyhedron
 from compas.geometry import Vector
+from compas.geometry import angle_vectors
 from compas.geometry import intersection_plane_plane_plane
 from compas.geometry import intersection_line_line
 from compas.tolerance import TOL
@@ -113,9 +114,8 @@ class CutoffLLapJoint(LLapJoint):
         except Exception as error:
             raise BeamJoiningError(self.elements, self, debug_info=str(error))
 
-        tol = TOL.absolute
-        self.beam_a.add_blank_extension(start_a + tol, end_a + tol, self.guid)
-        self.beam_b.add_blank_extension(start_b + tol, end_b + tol, self.guid)
+        self.beam_a.add_blank_extension(start_a, end_a, self.guid)
+        self.beam_b.add_blank_extension(start_b, end_b, self.guid)
 
     def add_features(self):
         """Add cutoff and bounded lap features to both beams."""
@@ -278,6 +278,15 @@ class CutoffLLapJoint(LLapJoint):
                 debug_status.append("no positive face to replace; using original")
             return None
 
+        projected_points = CutoffLLapJoint._polyhedron_with_projected_cutoff_face(
+            polyhedron,
+            clipping_plane,
+            face_index,
+            debug_status,
+        )
+        if projected_points is not None:
+            return projected_points
+
         planes[face_index] = clipping_plane
 
         points = []
@@ -304,6 +313,51 @@ class CutoffLLapJoint(LLapJoint):
                 return None
             points.append(Point(*point))
 
+        return points
+
+    @staticmethod
+    def _polyhedron_with_projected_cutoff_face(polyhedron, clipping_plane, cutoff_face_index, debug_status=None):
+        """Move only the cutoff-face vertices onto the clipping plane.
+
+        The fallback plane-intersection rebuild can slightly re-orient the lap
+        cutoff because it derives the replacement face from neighboring lap
+        side planes. For this local correction we keep the lap volume topology
+        and all non-cutoff vertices untouched, and only move the four vertices
+        of the selected cutoff face onto the target plane.
+        """
+
+        normal = clipping_plane.normal.copy()
+        normal.unitize()
+        points = [Point(point.x, point.y, point.z) for point in polyhedron.points]
+
+        for vertex_index in polyhedron.faces[cutoff_face_index]:
+            point = points[vertex_index]
+            distance = Vector.from_start_end(clipping_plane.point, point).dot(normal)
+            points[vertex_index] = point - normal * distance
+
+        projected = Polyhedron(points, polyhedron.faces)
+        if not CutoffLLapJoint._has_brep_volume(projected):
+            if debug_status is not None:
+                debug_status.append("projected cutoff face invalid; using plane replacement")
+            return None
+
+        if debug_status is not None:
+            face_plane = projected.to_mesh().face_plane(cutoff_face_index)
+            face_normal = face_plane.normal.copy()
+            face_normal.unitize()
+            angle = angle_vectors(face_normal, normal, deg=True)
+            angle = min(angle, 180.0 - angle)
+            max_distance = max(
+                abs(Vector.from_start_end(clipping_plane.point, points[index]).dot(normal))
+                for index in polyhedron.faces[cutoff_face_index]
+            )
+            debug_status.append("projected cutoff face vertices")
+            debug_status.append(
+                "projected cutoff face angle {:.6f} deg, max plane distance {:.9f}".format(
+                    angle,
+                    max_distance,
+                )
+            )
         return points
 
     @staticmethod

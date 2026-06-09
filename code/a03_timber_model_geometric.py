@@ -1,6 +1,6 @@
 from a03_rf_system import RFSystem
 from compas.datastructures import Mesh
-from compas.geometry import distance_point_point, Vector, Plane, Point
+from compas.geometry import distance_point_point, Vector, Plane, Point, Line
 from compas_timber.connections import (
     LButtJoint,
     LMiterJoint,
@@ -172,6 +172,8 @@ class GeometricTimberModelCreator:
         arch_B_inner_cross_beam_ref_side_index: int = None,
         use_lap_for_arch_l_joints: bool = False,
         use_lap_for_base_l_joints: bool = False,
+        enforce_arch_planarity: bool = False,
+        arch_planarity_tolerance: float = 0.001,
     ):
         self.rf_system = rf_system
         self.timber_model = TimberModel()
@@ -213,6 +215,8 @@ class GeometricTimberModelCreator:
         self.arch_B_inner_cross_beam_ref_side_index = arch_B_inner_cross_beam_ref_side_index
         self.use_lap_for_arch_l_joints = use_lap_for_arch_l_joints
         self.use_lap_for_base_l_joints = use_lap_for_base_l_joints
+        self.enforce_arch_planarity = enforce_arch_planarity
+        self.arch_planarity_tolerance = arch_planarity_tolerance
 
     @property
     def jack_rafter_cut_features_inner_beams(self):
@@ -249,6 +253,163 @@ class GeometricTimberModelCreator:
 
         return None
         
+    @staticmethod
+    def _fit_plane_to_points(points):
+        """Best-fit plane via PCA. Returns (centroid, normal) as compas Point/Vector."""
+        import math
+        n = len(points)
+        cx = sum(p.x for p in points) / n
+        cy = sum(p.y for p in points) / n
+        cz = sum(p.z for p in points) / n
+
+        cov = [[0.0]*3 for _ in range(3)]
+        for p in points:
+            d = [p.x - cx, p.y - cy, p.z - cz]
+            for i in range(3):
+                for j in range(3):
+                    cov[i][j] += d[i] * d[j]
+
+        try:
+            import numpy as np
+            _, vecs = np.linalg.eigh(np.array(cov))
+            normal = Vector(float(vecs[0, 0]), float(vecs[1, 0]), float(vecs[2, 0]))
+        except ImportError:
+            # Fallback: cross product of two outermost vectors from centroid
+            def dist2(p):
+                return (p.x-cx)**2 + (p.y-cy)**2 + (p.z-cz)**2
+            sp = sorted(points, key=dist2, reverse=True)
+            v1 = Vector(sp[0].x-cx, sp[0].y-cy, sp[0].z-cz)
+            v2 = Vector(sp[1].x-cx, sp[1].y-cy, sp[1].z-cz)
+            normal = v1.cross(v2)
+
+        normal.unitize()
+        return Point(cx, cy, cz), normal
+
+    def _enforce_arch_planarity(self):
+        """Project arch beam centerline endpoints onto their arch reference plane."""
+        import math
+
+        # Use the existing arch_plane_A / arch_plane_B (Rhino planes) as reference.
+        # Each defines the correct plane for its arch group.
+        plane_map = {}
+        if self.arch_plane_A is not None:
+            o = self.arch_plane_A.Origin
+            n = self.arch_plane_A.Normal
+            length = (n.X**2 + n.Y**2 + n.Z**2) ** 0.5
+            plane_map["arch_A"] = (
+                Point(o.X, o.Y, o.Z),
+                Vector(n.X / length, n.Y / length, n.Z / length),
+            )
+        if self.arch_plane_B is not None:
+            o = self.arch_plane_B.Origin
+            n = self.arch_plane_B.Normal
+            length = (n.X**2 + n.Y**2 + n.Z**2) ** 0.5
+            plane_map["arch_B"] = (
+                Point(o.X, o.Y, o.Z),
+                Vector(n.X / length, n.Y / length, n.Z / length),
+            )
+
+        if not plane_map:
+            print("Arch planarity: no arch_plane_A / arch_plane_B provided, skipping.")
+            return
+
+        arch_groups = {"arch_A": [], "arch_B": [], "arch": []}
+        for beam in self.timber_model.beams:
+            cat = beam.attributes.get("category", "")
+            if cat in arch_groups:
+                arch_groups[cat].append(beam)
+
+        # Assign bare "arch" beams to whichever plane is closer
+        if arch_groups["arch"]:
+            for beam in arch_groups["arch"]:
+                mid = beam.centerline.midpoint
+                best = min(
+                    plane_map.keys(),
+                    key=lambda k: abs(
+                        (mid.x - plane_map[k][0].x) * plane_map[k][1].x +
+                        (mid.y - plane_map[k][0].y) * plane_map[k][1].y +
+                        (mid.z - plane_map[k][0].z) * plane_map[k][1].z
+                    )
+                )
+                arch_groups[best].append(beam)
+
+        for group_name, beams in arch_groups.items():
+            if group_name == "arch" or not beams:
+                continue
+            if group_name not in plane_map:
+                continue
+
+            origin, normal = plane_map[group_name]
+
+            def signed_dist(p, o=origin, n=normal):
+                return (p.x-o.x)*n.x + (p.y-o.y)*n.y + (p.z-o.z)*n.z
+
+            points = [pt for beam in beams for pt in (beam.centerline.start, beam.centerline.end)]
+            residuals = [abs(signed_dist(p)) for p in points]
+            rms_before = math.sqrt(sum(r*r for r in residuals) / len(residuals))
+            max_before = max(residuals)
+            print(f"Arch planarity [{group_name}]: {len(beams)} beams, "
+                  f"RMS={rms_before*1000:.2f}mm, max={max_before*1000:.2f}mm before")
+
+            moved = 0
+            tol = self.arch_planarity_tolerance
+            for beam in beams:
+                cl = beam.centerline
+                changed = False
+
+                d_start = signed_dist(cl.start)
+                if abs(d_start) > tol:
+                    new_start = Point(
+                        cl.start.x - d_start * normal.x,
+                        cl.start.y - d_start * normal.y,
+                        cl.start.z - d_start * normal.z,
+                    )
+                    changed = True
+                else:
+                    new_start = cl.start
+
+                d_end = signed_dist(cl.end)
+                if abs(d_end) > tol:
+                    new_end = Point(
+                        cl.end.x - d_end * normal.x,
+                        cl.end.y - d_end * normal.y,
+                        cl.end.z - d_end * normal.z,
+                    )
+                    changed = True
+                else:
+                    new_end = cl.end
+
+                if changed:
+                    new_cl = Line(new_start, new_end)
+                    # Beam stores centerline as frame.point (start) + frame.xaxis (direction) + length
+                    x_vector = Vector.from_start_end(new_start, new_end)
+                    new_length = x_vector.length
+                    x_vector.unitize()
+                    y_vector = beam.frame.zaxis.cross(x_vector)
+                    if y_vector.length < 1e-6:
+                        y_vector = beam.frame.yaxis
+                    y_vector.unitize()
+                    beam.frame.point = new_start
+                    beam.frame.xaxis = x_vector
+                    beam.frame.yaxis = y_vector
+                    beam.length = new_length
+                    # Also update the centerline stored on the RF mesh edge
+                    edge = beam.attributes.get("edge")
+                    if edge is not None:
+                        self.rf_system.mesh.edge_attribute(edge, "centerline", new_cl)
+                    moved += 1
+
+            # Report after
+            points_after = []
+            for beam in beams:
+                cl = beam.centerline
+                points_after.append(cl.start)
+                points_after.append(cl.end)
+            residuals_after = [abs(signed_dist(p)) for p in points_after]
+            rms_after = math.sqrt(sum(r*r for r in residuals_after) / len(residuals_after))
+            print(f"Arch planarity [{group_name}]: corrected {moved} beams, "
+                  f"RMS={rms_after*1000:.4f}mm after")
+
     def create_timber_model(self, process_joinery: bool = True) -> TimberModel:
         """Main recipe for generating the model with geometric intersection detection."""
         print("=" * 60)
@@ -258,6 +419,10 @@ class GeometricTimberModelCreator:
         # Step 1: Create beams
         self._create_beams()
         print(f"Generated {len(list(self.timber_model.beams))} beams")
+
+        # Step 1b: Enforce arch planarity before joint solving
+        if self.enforce_arch_planarity:
+            self._enforce_arch_planarity()
 
         # Step 2: Find intersections and detect actual topology
         self._find_intersections_with_topology()

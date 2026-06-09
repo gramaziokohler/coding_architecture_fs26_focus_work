@@ -46,6 +46,8 @@ if 'arch_A_inner_cross_beam_ref_side_index' not in dir():  arch_A_inner_cross_be
 if 'arch_B_inner_cross_beam_ref_side_index' not in dir():  arch_B_inner_cross_beam_ref_side_index = None
 if 'use_lap_for_arch_l_joints' not in dir():               use_lap_for_arch_l_joints = False
 if 'use_lap_for_base_l_joints' not in dir():               use_lap_for_base_l_joints = False
+if 'enforce_arch_planarity' not in dir():                  enforce_arch_planarity = False
+if 'arch_planarity_tolerance' not in dir():                arch_planarity_tolerance = 0.001
 
 # ---------------- RF SYSTEM WRAPPING --------------
 
@@ -113,6 +115,8 @@ creator = GeometricTimberModelCreator(
     arch_B_inner_cross_beam_ref_side_index=int(arch_B_inner_cross_beam_ref_side_index) if arch_B_inner_cross_beam_ref_side_index is not None else None,
     use_lap_for_arch_l_joints=bool(use_lap_for_arch_l_joints),
     use_lap_for_base_l_joints=bool(use_lap_for_base_l_joints),
+    enforce_arch_planarity=bool(enforce_arch_planarity),
+    arch_planarity_tolerance=float(arch_planarity_tolerance),
 )
 
 timber_model = creator.create_timber_model(process_joinery)
