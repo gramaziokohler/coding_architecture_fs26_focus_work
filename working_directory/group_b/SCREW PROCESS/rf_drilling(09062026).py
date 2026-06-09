@@ -9,93 +9,22 @@ from compas_timber.connections import (
     TStepJoint
 )
 
-
-# ---------------------------------------------------------------------------
-# Geometry helpers for the true contact surface (work in IronPython & CPython)
-# ---------------------------------------------------------------------------
-def _poly_centroid_2d(pts):
-    """Area-weighted centroid of a 2D polygon given as a list of (u, v)."""
-    n = len(pts)
-    if n == 0:
-        return None
-    if n < 3:
-        return (sum(p[0] for p in pts) / n, sum(p[1] for p in pts) / n)
-    A = cx = cy = 0.0
-    for i in range(n):
-        x0, y0 = pts[i]
-        x1, y1 = pts[(i + 1) % n]
-        cr = x0 * y1 - x1 * y0
-        A += cr
-        cx += (x0 + x1) * cr
-        cy += (y0 + y1) * cr
-    if abs(A) < 1e-12:
-        return (sum(p[0] for p in pts) / n, sum(p[1] for p in pts) / n)
-    A *= 0.5
-    return (cx / (6 * A), cy / (6 * A))
-
-
-def _clip_convex(subject, clip):
-    """Sutherland-Hodgman: clip the 'subject' polygon by a convex 'clip' polygon (CCW). 2D."""
-    def inside(p, a, b):
-        return (b[0] - a[0]) * (p[1] - a[1]) - (b[1] - a[1]) * (p[0] - a[0]) >= -1e-12
-
-    def inter(s, e, a, b):
-        dc = (a[0] - b[0], a[1] - b[1])
-        dp = (s[0] - e[0], s[1] - e[1])
-        n1 = a[0] * b[1] - a[1] * b[0]
-        n2 = s[0] * e[1] - s[1] * e[0]
-        den = dc[0] * dp[1] - dc[1] * dp[0]
-        if abs(den) < 1e-15:
-            return e
-        return ((n1 * dp[0] - n2 * dc[0]) / den, (n1 * dp[1] - n2 * dc[1]) / den)
-
-    out = subject[:]
-    m = len(clip)
-    for i in range(m):
-        a = clip[i]
-        b = clip[(i + 1) % m]
-        inp = out
-        out = []
-        if not inp:
-            break
-        s = inp[-1]
-        for e in inp:
-            if inside(e, a, b):
-                if not inside(s, a, b):
-                    out.append(inter(s, e, a, b))
-                out.append(e)
-            elif inside(s, a, b):
-                out.append(inter(s, e, a, b))
-            s = e
-    return out
-
-
-def _signed_area_2d(p):
-    a = 0.0
-    n = len(p)
-    for i in range(n):
-        a += p[i][0] * p[(i + 1) % n][1] - p[(i + 1) % n][0] * p[i][1]
-    return a / 2.0
-
 class DrillingProcessor:
-    def __init__(self, timber_model, screw_diameter=0.006, screw_length=0.150, screw_spacing=0.040, max_drilling_depth=None, run_joinery=True):
+    def __init__(self, timber_model, screw_diameter=0.006, screw_length=0.150, screw_spacing=0.040, max_drilling_depth=None):
         self.timber_model = timber_model
         self.screw_diameter = screw_diameter
         self.screw_length = screw_length
         self.screw_spacing = screw_spacing 
         self.max_drilling_depth = max_drilling_depth
-        self.run_joinery = run_joinery                 # NEW
         
         self.drilling_count = 0
         self.screw_lines = []
         self.failed_screw_info = []
         self.summary_text = ""
-        self.joinery_errors = []                       # NEW
         
         self.processed_beam_pairs = set()
 
         self.debug_points = []
-        self.contact_polylines = []                    # NEW
         
         self.hardware_screws_by_type = {}
         self.screw_lengths_by_type = {}
@@ -110,30 +39,12 @@ class DrillingProcessor:
         self.screw_lines = []
         self.failed_screw_info = []
         self.summary_text = "" 
-        self.joinery_errors = []                       # NEW
         self.processed_beam_pairs = set()
-        self.debug_points = []                         # NEW (reset for clean re-runs)
-        self.contact_polylines = []                    # NEW
         
         self.hardware_screws_by_type = {}
         self.screw_lengths_by_type = {}
         self.extrema_screws_by_type = {}
         self.miter_counts = {}
-
-        # =====================================================================
-        # STEP 0: PROCESS JOINERY (extend blanks, then add joint features).
-        # Must run before reading joint geometry / contact-face indices.
-        # Set run_joinery=False if a CompasTimber "Process Joinery" component
-        # already ran upstream.
-        # =====================================================================
-        if self.run_joinery:
-            try:
-                errors = self.timber_model.process_joinery(stop_on_first_error=False)
-                self.joinery_errors = errors or []
-                print(f"Joinery processed. {len(self.joinery_errors)} joining error(s).")
-            except Exception as e:
-                print(f"process_joinery() failed: {e}")
-                self.joinery_errors = [str(e)]
         
         for beam in self.timber_model.beams:
             if hasattr(beam, 'features'):
@@ -170,7 +81,7 @@ class DrillingProcessor:
                 
             self.processed_beam_pairs.add(pair_id)
             
-            # --- ROUTING SYSTEM ---  (UNCHANGED from your original)
+            # --- ROUTING SYSTEM ---
             if isinstance(joint, TButtJoint):
                 # 1. Resolve beam identities
                 if hasattr(joint, 'main_beam') and hasattr(joint, 'cross_beam'):
@@ -212,7 +123,7 @@ class DrillingProcessor:
                     label = "Lmitter arch"
                 self.miter_counts[label] = self.miter_counts.get(label, 0) + 1
             
-        # --- COMPILE PROCUREMENT SUMMARY TEXT ---  (UNCHANGED)
+        # --- COMPILE PROCUREMENT SUMMARY TEXT ---
         log = []
         log.append("================ PROCUREMENT & DRILLING SUMMARY ================")
         log.append(f"Unique Joints Processed: {len(self.processed_beam_pairs)}")
@@ -298,188 +209,126 @@ class DrillingProcessor:
 
 
     # =====================================================================
-    # EXPLICIT FOUNDATION BUTT DRILLING   (REWRITTEN)
+    # EXPLICIT FOUNDATION BUTT DRILLING
     # =====================================================================
     def _apply_foundation_butt_drilling(self, joint, abut_beam, cont_beam):
-        """
-        Arch (abut_beam) lands on the foundation (cont_beam).
-        1. Get the exact foundation FACE the arch butts against (the finite
-           ref_side surface resolved by process_joinery).
-        2. Project the arch's end cross-section onto that face, then CLIP the
-           footprint against the face rectangle -> the real touching surface
-           (their overlap).
-        3. The area-weighted centroid of that overlap is the UV-middle of the
-           touching surface. Two screws straddle it, driven along the face
-           normal into the foundation, heads on the arch's top face.
-        """
         joint_label = "TButtJoint - foundation"
-
-        w, h = abut_beam.width, abut_beam.height
-
-        # ---- 1. THE FOUNDATION FACE THE ARCH BUTTS AGAINST ------------------
-        #     cross_beam_ref_side_index is resolved by process_joinery and
-        #     points to the exact ref_side of the through (foundation) beam.
-        idx = getattr(joint, 'cross_beam_ref_side_index', None)
-        face_surf = None
-        if idx is not None:
-            try:
-                face_surf = cont_beam.side_as_surface(idx)
-            except (IndexError, AttributeError):
-                face_surf = None
-
-        if face_surf is not None:
-            face_fr = face_surf.frame
-            face_pt = face_fr.point
-            face_n = face_fr.zaxis.copy()
-            ax_u = face_fr.xaxis.copy()
-            ax_v = face_fr.yaxis.copy()
-            # Finite face rectangle (point_at uses NORMALISED 0..1 parameters)
-            rect3d = [
-                face_surf.point_at(0.0, 0.0),
-                face_surf.point_at(1.0, 0.0),
-                face_surf.point_at(1.0, 1.0),
-                face_surf.point_at(0.0, 1.0),
-            ]
+        
+        # 1. FIND THE TOP PLANE OF THE FOUNDATION
+        if hasattr(joint, 'cross_beam_ref_side_index') and joint.cross_beam_ref_side_index is not None:
+            top_face_index = joint.cross_beam_ref_side_index
+            top_frame = cont_beam.ref_sides[top_face_index]
+            top_plane = (top_frame.point, top_frame.normal)
         else:
-            # Fallback: foundation's geometric top face (+local Z), unbounded
             c_mid = cont_beam.centerline.midpoint
-            face_n = cont_beam.frame.zaxis.copy()
-            face_pt = c_mid + face_n * (cont_beam.height / 2.0)
-            ax_u = cont_beam.centerline.direction.copy()
-            ax_v = face_n.cross(ax_u)
-            big = 1e3
-            rect3d = [
-                face_pt + ax_u * big + ax_v * big,
-                face_pt - ax_u * big + ax_v * big,
-                face_pt - ax_u * big - ax_v * big,
-                face_pt + ax_u * big - ax_v * big,
-            ]
-
-        face_n.unitize(); ax_u.unitize(); ax_v.unitize()
-        # Normal must point OUT of the foundation (towards the arch)
-        to_arch = Vector.from_start_end(face_pt, abut_beam.centerline.midpoint)
-        if face_n.dot(to_arch) < 0:
-            face_n.scale(-1)
-        contact_plane = (face_pt, face_n)
-
-        # Screw drives INTO the foundation (opposite the outward normal)
-        screw_dir = face_n.copy()
+            top_plane = (c_mid + cont_beam.frame.zaxis * (cont_beam.height / 2.0), cont_beam.frame.zaxis)
+            
+        screw_dir = top_plane[1].copy()
         screw_dir.scale(-1)
         screw_dir.unitize()
 
-        # 2D local frame on the face for clipping (origin = face_pt)
-        def to2d(P):
-            d = Vector.from_start_end(face_pt, P)
-            return (d.dot(ax_u), d.dot(ax_v))
-
-        def to3d(uv):
-            return face_pt + ax_u * uv[0] + ax_v * uv[1]
-
-        # ---- 2. THE ARCH FOOTPRINT ON THAT FACE -----------------------------
-        cl = abut_beam.centerline
-        d_start = abs(Vector.from_start_end(face_pt, cl.start).dot(face_n))
-        d_end = abs(Vector.from_start_end(face_pt, cl.end).dot(face_n))
-        end_center = cl.start if d_start < d_end else cl.end
-
-        axis = Vector.from_start_end(cl.midpoint, end_center)
-        if axis.length < 1e-9:
-            axis = cl.direction.copy()
-        axis.unitize()
-
+        # 2. FIND THE TRUE CENTROID OF THE TOUCHING SURFACE (The Red Diamond)
+        w, h = abut_beam.width, abut_beam.height
+        c_mid = abut_beam.centerline.midpoint
         vy, vz = abut_beam.frame.yaxis, abut_beam.frame.zaxis
+        
+        # Get the 4 corners of the beam's cross-section in 3D space
         corners = [
-            end_center + vy * (w/2.0) + vz * (h/2.0),
-            end_center - vy * (w/2.0) + vz * (h/2.0),
-            end_center - vy * (w/2.0) - vz * (h/2.0),
-            end_center + vy * (w/2.0) - vz * (h/2.0),
+            c_mid + vy * (w/2.0) + vz * (h/2.0),
+            c_mid - vy * (w/2.0) + vz * (h/2.0),
+            c_mid - vy * (w/2.0) - vz * (h/2.0),
+            c_mid + vy * (w/2.0) - vz * (h/2.0)
         ]
+        
         footprint_pts = []
+        beam_axis = abut_beam.centerline.direction.copy()
+        
+        # Project each corner along the beam's axis until it hits the foundation plane
         for corner in corners:
-            res_pt = intersection_line_plane(Line(corner, corner + axis * 10.0), contact_plane)
+            edge_line = Line(corner, corner + beam_axis * 10.0)
+            res_pt = intersection_line_plane(edge_line, top_plane)
             if res_pt:
                 footprint_pts.append(Point(*res_pt))
-
+                
         if len(footprint_pts) != 4:
-            print("Foundation joint skipped: could not project footprint onto contact face.")
-            return False
-
-        # ---- 3. THE TRUE TOUCHING SURFACE = footprint  ∩  foundation face ----
-        rect2d = [to2d(P) for P in rect3d]
-        foot2d = [to2d(P) for P in footprint_pts]
-        if _signed_area_2d(rect2d) < 0:
-            rect2d = rect2d[::-1]
-        if _signed_area_2d(foot2d) < 0:
-            foot2d = foot2d[::-1]
-
-        overlap2d = _clip_convex(foot2d, rect2d)
-        if overlap2d:
-            center_uv = _poly_centroid_2d(overlap2d)
-            contact_loop = [to3d(p) for p in overlap2d]
-        else:
-            # Footprint sits off the face: clamp its centroid onto the face
-            cc = _poly_centroid_2d(foot2d)
-            us = [p[0] for p in rect2d]; vs = [p[1] for p in rect2d]
-            center_uv = (min(max(cc[0], min(us)), max(us)), min(max(cc[1], min(vs)), max(vs)))
-            contact_loop = [to3d(p) for p in foot2d]
-
-        center_of_area = Point(*to3d(center_uv))
-
-        # ---- DEBUG / VISUALISATION ------------------------------------------
-        print(f"Contact centre -> X: {center_of_area.x:.3f}, Y: {center_of_area.y:.3f}, Z: {center_of_area.z:.3f}")
+            return False # Fallback if parallel (impossible for a T-Butt)
+            
+        # The true center is the average (centroid) of the 4 footprint corners
+        cx = sum(p.x for p in footprint_pts) / 4.0
+        cy = sum(p.y for p in footprint_pts) / 4.0
+        cz = sum(p.z for p in footprint_pts) / 4.0
+        center_of_area = Point(cx, cy, cz)
+        
+        # ==========================================
+        # DEBUG: PRINT AND STORE THE CENTER POINT
+        # ==========================================
+        print(f"Footprint Center found at -> X: {cx:.3f}, Y: {cy:.3f}, Z: {cz:.3f}")
+        
+        # Safely create a debug list if it doesn't exist yet
+        if not hasattr(self, 'debug_points'):
+            self.debug_points = []
+            
+        # Add the point to our visual debug list
         self.debug_points.append(center_of_area)
-        # Store the ACTUAL touching surface (closed loop) for the GH viewport
-        loop = list(contact_loop)
-        if loop:
-            loop.append(loop[0])
-        self.contact_polylines.append(loop)
+        # ==========================================
+        
+        # 3. CALCULATE SCREW SPACING (Left and Right)
+        dir_flat = Vector(beam_axis.x, beam_axis.y, 0.0)
+        if dir_flat.length < 1e-6: dir_flat = Vector(1, 0, 0)
+        dir_flat.unitize()
+        
+        offset_dir = dir_flat.cross(Vector(0, 0, 1))
+        if offset_dir.length < 1e-5: offset_dir = Vector(0, 1, 0)
+        offset_dir.unitize()
+        offset_vec = offset_dir * (self.screw_spacing / 2.0)
 
-        # ---- 3. SCREW LAYOUT -------------------------------------------------
-        # "along" = arch run direction projected onto the contact face
-        along = axis - face_n * axis.dot(face_n)
-        if along.length < 1e-6:
-            along = abut_beam.frame.xaxis.copy()
-        along.unitize()
-        # "across" = sideways on the face, perpendicular to the arch run
-        across = face_n.cross(along)
-        if across.length < 1e-6:
-            across = abut_beam.frame.yaxis.copy()
-        across.unitize()
-        offset_vec = across * (self.screw_spacing / 2.0)
-
-        # Arch's TOP face = ref_side whose normal best matches the outward
-        # contact normal (works for tilted foundations, not just world-Z).
+        # 4. FIND THE 'UP' PLANE OF THE ARCH BEAM
         best_face = None
-        max_dot = -2.0
+        max_dot = -1.0
         for face in abut_beam.ref_sides[:4]:
-            nrm = face.normal.copy()
-            nrm.unitize()
-            d = nrm.dot(face_n)
-            if d > max_dot:
-                max_dot = d
+            normal = face.normal.copy()
+            normal.unitize()
+            dot = normal.dot(Vector(0, 0, 1))
+            if dot > max_dot:
+                max_dot = dot
                 best_face = face
+                
         arch_top_plane = (best_face.point, best_face.normal)
 
-        calculated = []
-        for sign in (offset_vec, -offset_vec):
-            contact_pt = center_of_area + sign
-            target_tail = contact_pt + screw_dir * 0.080      # 80 mm into foundation
-
-            up_line = Line(contact_pt, contact_pt + face_n * 5.0)
-            res_top = intersection_line_plane(up_line, arch_top_plane)
-            head = Point(*res_top) if res_top else (contact_pt - screw_dir * max(w, h))
-
-            raw_len = distance_point_point(head, target_tail)
-            req_len = math.ceil(raw_len / 0.010) * 0.010
-            calculated.append({"head": head, "req_len": req_len})
-
-        final_screw_length = max(item["req_len"] for item in calculated)
-
+        # 5. GENERATE DYNAMIC LENGTH SCREWS
         hw_lines = []
         cnc_lines = []
-        for item in calculated:
+        calculated_lengths = []
+        
+        for pos_offset in [offset_vec, -offset_vec]:
+            # The contact point on the foundation plane
+            contact_pt = center_of_area + pos_offset
+            
+            # Anchor exactly 8cm into the foundation
+            target_tail = contact_pt + screw_dir * 0.080
+            
+            # Project straight UP to find where the screw enters the angled wood
+            vertical_line = Line(contact_pt, contact_pt + Vector(0, 0, 1.0))
+            res_plane = intersection_line_plane(vertical_line, arch_top_plane)
+            
+            if res_plane:
+                head = Point(*res_plane)
+            else:
+                head = contact_pt - screw_dir * max(w, h)
+
+            raw_length = distance_point_point(head, target_tail)
+            req_len = math.ceil(raw_length / 0.010) * 0.010
+            calculated_lengths.append({"head": head, "req_len": req_len})
+
+        # 6. STANDARDIZE HARDWARE & GENERATE LINES
+        final_screw_length = max(item["req_len"] for item in calculated_lengths)
+        
+        for item in calculated_lengths:
             head = item["head"]
             final_tail = head + screw_dir * final_screw_length
+            
             hw_lines.append(Line(head, final_tail))
+            
             cnc_head = head - screw_dir * 0.010
             cnc_tail = final_tail + screw_dir * 0.010
             cnc_lines.append(Line(cnc_head, cnc_tail))
@@ -488,7 +337,7 @@ class DrillingProcessor:
     
 
 # =====================================================================
-    # EXPLICIT STANDARD BUTT DRILLING   (VERBATIM from your original)
+    # EXPLICIT STANDARD BUTT DRILLING
     # =====================================================================
     def _apply_standard_butt_drilling(self, joint):
         """
@@ -577,7 +426,7 @@ class DrillingProcessor:
         )
 
     # =====================================================================
-    # EXPLICIT LAP DRILLING   (VERBATIM from your original)
+    # EXPLICIT LAP DRILLING
     # =====================================================================
     def _apply_lap_drilling(self, joint, beam_a, beam_b):
         joint_label = type(joint).__name__
