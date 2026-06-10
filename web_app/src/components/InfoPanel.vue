@@ -73,6 +73,23 @@ const formatValue = (value) => {
     return value;
 };
 const formatLabel = (key) => key.replace(/_/g, " ").replace("cm3", "cm³");
+
+const formatJointValue = (jointData) => {
+    if (jointData === null || jointData === undefined) {
+        return "—";
+    }
+    
+    if (isArray(jointData)) {
+        return jointData.length === 0 ? "—" : jointData.join(", ");
+    }
+    
+    if (isObject(jointData)) {
+        const values = Object.values(jointData);
+        return values.length === 0 ? "—" : values.join(", ");
+    }
+    
+    return jointData || "—";
+};
 </script>
 
 <template>
@@ -138,13 +155,7 @@ const formatLabel = (key) => key.replace(/_/g, " ").replace("cm3", "cm³");
                                 class="spec-item"
                             >
                                 <span class="joint-tag">{{ jointType }}</span>
-                                <span class="joint-values">
-                                    {{ isArray(jointData)
-                                        ? jointData.join(", ")
-                                        : isObject(jointData)
-                                            ? Object.values(jointData).join(", ")
-                                            : jointData ?? "—" }}
-                                </span>
+                                <span class="joint-values">{{ formatJointValue(jointData) }}</span>
                             </li>
                         </template>
                         <template v-else>
