@@ -1021,6 +1021,43 @@ def write_rhino_geometry_ascii_stl(path, name, geometry):
     write_mesh_ascii_stl(path, name, vertices, faces)
     return True
 
+def rhino_geometry_to_vertices_and_faces(geometry):
+    native = (
+        getattr(geometry, "native_brep", None)
+        or getattr(geometry, "native_mesh", None)
+        or getattr(geometry, "native", None)
+        or geometry
+    )
+    meshes = []
+    if isinstance(native, rg.Mesh):
+        meshes = [native]
+    elif isinstance(native, rg.Brep):
+        meshes = list(rg.Mesh.CreateFromBrep(native, rg.MeshingParameters.Default) or [])
+    else:
+        return None
+
+    joined = rg.Mesh()
+    for mesh in meshes:
+        joined.Append(mesh)
+
+    vertices = [[float(v.X), float(v.Y), float(v.Z)] for v in joined.Vertices]
+    faces = []
+    for face in joined.Faces:
+        faces.append([int(face.A), int(face.B), int(face.C)])
+        if not face.IsTriangle:
+            faces.append([int(face.A), int(face.C), int(face.D)])
+    if not vertices or not faces:
+        return None
+    return vertices, faces
+
+def geometry_to_vertices_and_faces_any(geometry):
+    if geometry is None:
+        return None
+    rhino_data = rhino_geometry_to_vertices_and_faces(geometry)
+    if rhino_data:
+        return rhino_data
+    return geometry_to_vertices_and_faces(geometry)
+
 def write_geometry_ascii_stl(path, name, geometry):
     if geometry is None:
         return False
@@ -1032,6 +1069,243 @@ def write_geometry_ascii_stl(path, name, geometry):
     vertices, faces = mesh_data
     write_mesh_ascii_stl(path, name, vertices, faces)
     return True
+
+def safe_number(value):
+    try:
+        return float(value)
+    except:
+        return None
+
+def point_list(value):
+    if value is None:
+        return None
+    if isinstance(value, dict):
+        value = value.get("data", value)
+        if all(key in value for key in ("x", "y", "z")):
+            return [float(value["x"]), float(value["y"]), float(value["z"])]
+        if all(key in value for key in ("X", "Y", "Z")):
+            return [float(value["X"]), float(value["Y"]), float(value["Z"])]
+    try:
+        return xyz_to_list(value)
+    except:
+        return None
+
+def line_points(value):
+    if value is None:
+        return None
+    if isinstance(value, dict):
+        data = value.get("data", value)
+        start = data.get("start") or data.get("from") or data.get("start_point")
+        end = data.get("end") or data.get("to") or data.get("end_point")
+        if start is not None and end is not None:
+            start_pt = point_list(start)
+            end_pt = point_list(end)
+            if start_pt and end_pt:
+                return start_pt, end_pt
+        if "point" in data and ("direction" in data or "vector" in data):
+            origin = point_list(data.get("point"))
+            direction = point_list(data.get("direction") or data.get("vector"))
+            length = safe_number(data.get("length") or data.get("depth"))
+            if origin and direction and length:
+                direction = vector_normalize(direction)
+                return origin, vector_add(origin, vector_scale(direction, length))
+    for start_name, end_name in (("start", "end"), ("from_point", "to_point"), ("start_point", "end_point")):
+        start = getattr(value, start_name, None)
+        end = getattr(value, end_name, None)
+        start_pt = point_list(start)
+        end_pt = point_list(end)
+        if start_pt and end_pt:
+            return start_pt, end_pt
+    return None
+
+def primitive_data(value, depth=0):
+    if depth > 3:
+        return str(value)
+    if value is None or isinstance(value, (str, bool, int, float)):
+        return value
+    if isinstance(value, (list, tuple)):
+        return [primitive_data(item, depth + 1) for item in value]
+    if isinstance(value, dict):
+        return {str(key): primitive_data(val, depth + 1) for key, val in value.items() if not str(key).startswith("_")}
+    pts = line_points(value)
+    if pts:
+        return {"start": [rounded(v) for v in pts[0]], "end": [rounded(v) for v in pts[1]]}
+    point = point_list(value)
+    if point:
+        return [rounded(v) for v in point]
+    return str(value)
+
+def feature_raw_data(feature):
+    for method_name in ("to_data", "__data__"):
+        method = getattr(feature, method_name, None)
+        if callable(method):
+            try:
+                return method()
+            except:
+                pass
+    data = getattr(feature, "data", None)
+    if isinstance(data, dict):
+        return data
+    data = {}
+    for key in dir(feature):
+        if key.startswith("_"):
+            continue
+        try:
+            value = getattr(feature, key)
+        except:
+            continue
+        if callable(value):
+            continue
+        if isinstance(value, (str, bool, int, float, list, tuple, dict)) or point_list(value) or line_points(value):
+            data[key] = value
+    return data
+
+def feature_type_name(feature):
+    return type(feature).__name__
+
+def is_joinery_feature(feature):
+    name = feature_type_name(feature).lower()
+    joinery_tokens = ("lap", "miter", "tbutt", "butt", "joint", "cut", "tenon", "birdsmouth", "jackrafter")
+    non_joinery_tokens = ("drill", "screw", "hole", "fastener")
+    if any(token in name for token in non_joinery_tokens):
+        return False
+    return any(token in name for token in joinery_tokens)
+
+def feature_number(feature, raw, keys):
+    for key in keys:
+        if isinstance(raw, dict) and key in raw:
+            value = safe_number(raw.get(key))
+            if value is not None:
+                return value
+        value = safe_number(getattr(feature, key, None))
+        if value is not None:
+            return value
+    return None
+
+def feature_line(feature, raw):
+    for key in ("line", "drilling_line", "screw_line", "toolpath", "axis", "centerline"):
+        value = raw.get(key) if isinstance(raw, dict) else None
+        pts = line_points(value)
+        if pts:
+            return pts
+        pts = line_points(getattr(feature, key, None))
+        if pts:
+            return pts
+
+    point = None
+    direction = None
+    for key in ("point", "origin", "start", "start_point"):
+        point = point_list(raw.get(key)) if isinstance(raw, dict) else None
+        if point:
+            break
+        point = point_list(getattr(feature, key, None))
+        if point:
+            break
+    for key in ("direction", "vector", "axis_vector"):
+        direction = point_list(raw.get(key)) if isinstance(raw, dict) else None
+        if direction:
+            break
+        direction = point_list(getattr(feature, key, None))
+        if direction:
+            break
+    length = feature_number(feature, raw, ("length", "depth", "screw_length", "drilling_depth"))
+    if point and direction and length:
+        direction = vector_normalize(direction)
+        return point, vector_add(point, vector_scale(direction, length))
+    return None
+
+def cylinder_mesh_from_line(start, end, radius, segments=16):
+    axis = vector_sub(end, start)
+    length = vector_length(axis)
+    if length <= 1e-9 or radius <= 0:
+        return None
+    x_axis = vector_normalize(axis)
+    ref = [0.0, 0.0, 1.0]
+    if abs(sum(x_axis[i] * ref[i] for i in range(3))) > 0.92:
+        ref = [0.0, 1.0, 0.0]
+    y_axis = vector_normalize(vector_cross(x_axis, ref))
+    z_axis = vector_normalize(vector_cross(x_axis, y_axis))
+
+    vertices = []
+    for center in (start, end):
+        for index in range(segments):
+            angle = 2.0 * math.pi * float(index) / float(segments)
+            offset = vector_add(
+                vector_scale(y_axis, math.cos(angle) * radius),
+                vector_scale(z_axis, math.sin(angle) * radius)
+            )
+            vertices.append(vector_add(center, offset))
+    vertices.append(start)
+    vertices.append(end)
+    start_center = len(vertices) - 2
+    end_center = len(vertices) - 1
+
+    faces = []
+    for index in range(segments):
+        nxt = (index + 1) % segments
+        faces.append([index, nxt, segments + nxt, segments + index])
+        faces.append([start_center, nxt, index])
+        faces.append([end_center, segments + index, segments + nxt])
+    return vertices, faces
+
+def feature_geometry_data(feature):
+    for key in ("geometry", "mesh", "brep", "volume", "shape", "solid"):
+        try:
+            value = getattr(feature, key, None)
+        except:
+            value = None
+        mesh_data = geometry_to_vertices_and_faces_any(value)
+        if mesh_data:
+            return mesh_data
+    return None
+
+def collect_non_joinery_features(beam):
+    records = []
+    combined_vertices = []
+    combined_faces = []
+
+    for index, feature in enumerate(list(getattr(beam, "features", None) or []), start=1):
+        if is_joinery_feature(feature):
+            continue
+        raw = feature_raw_data(feature)
+        record = {
+            "id": index,
+            "type": feature_type_name(feature),
+            "data": primitive_data(raw),
+        }
+        diameter = feature_number(feature, raw, ("diameter", "diameter_m", "screw_diameter"))
+        length = feature_number(feature, raw, ("length", "depth", "screw_length", "drilling_depth"))
+        pts = feature_line(feature, raw)
+        if pts:
+            start, end = pts
+            record["start"] = [rounded(v) for v in start]
+            record["end"] = [rounded(v) for v in end]
+            record["line_length_m"] = rounded(vector_length(vector_sub(end, start)))
+            if length is None:
+                length = record["line_length_m"]
+        if diameter is not None:
+            record["diameter_m"] = rounded(diameter)
+        if length is not None:
+            record["length_m"] = rounded(length)
+            record["length_mm"] = rounded(length * 1000.0, 1)
+
+        mesh_data = feature_geometry_data(feature)
+        if not mesh_data and pts:
+            radius = (diameter or 0.006) / 2.0
+            mesh_data = cylinder_mesh_from_line(pts[0], pts[1], radius)
+        if mesh_data:
+            vertices, faces = mesh_data
+            offset = len(combined_vertices)
+            combined_vertices.extend(vertices)
+            combined_faces.extend([[int(i) + offset for i in face] for face in faces])
+            record["has_stl_geometry"] = True
+        else:
+            record["has_stl_geometry"] = False
+
+        records.append(record)
+
+    mesh_data = (combined_vertices, combined_faces) if combined_vertices and combined_faces else None
+    return records, mesh_data
 
 # =========================
 # JOINT FUNCTIONS
@@ -1495,7 +1769,7 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
             os.makedirs(output_folder)
 
         global_structure_path = os.path.join(output_folder, "structure.json")
-        json_files_created, stl_files_created, blank_files_created, stl_errors = [], [], [], []
+        json_files_created, stl_files_created, blank_files_created, feature_files_created, stl_errors = [], [], [], [], []
 
         for k in labels_keys:
             for node in ordered_by_module.get(k, []):
@@ -1542,6 +1816,7 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
                 # STL Export
                 stl_path = os.path.join(beam_folder, "{}.stl".format(beam_id))
                 blank_stl_path = os.path.join(beam_folder, "{}_blank.stl".format(beam_id))
+                features_stl_path = os.path.join(beam_folder, "{}_features.stl".format(beam_id))
                 try:
                     if write_geometry_ascii_stl(stl_path, beam_id, beam.geometry):
                         stl_files_created.append(stl_path)
@@ -1559,6 +1834,15 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
                     stl_errors.append("Errore STL geometry per {}".format(beam_id))
                 if not os.path.exists(blank_stl_path):
                     stl_errors.append("Errore STL blank per {}".format(beam_id))
+
+                feature_records, feature_mesh_data = collect_non_joinery_features(beam)
+                if feature_mesh_data:
+                    try:
+                        vertices, faces = feature_mesh_data
+                        write_mesh_ascii_stl(features_stl_path, "{}_features".format(beam_id), vertices, faces)
+                        feature_files_created.append(features_stl_path)
+                    except Exception as error:
+                        stl_errors.append("Errore STL features per {}: {}".format(beam_id, error))
 
                 global_pos = all_beams_positions.get(name, {})
 
@@ -1591,10 +1875,14 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
                         "tbutt": tbutt,
                         "lmiter": lmiter
                     },
+                    "features": feature_records,
+                    "processing": feature_records,
                     "3d_model": "beams/{}/{}.stl".format(beam_id, beam_id),
                     "geometry_model": "beams/{}/{}.stl".format(beam_id, beam_id),
                     "blank_model": "beams/{}/{}_blank.stl".format(beam_id, beam_id)
                 }
+                if feature_files_created and feature_files_created[-1] == features_stl_path:
+                    beam_data["features_model"] = "beams/{}/{}_features.stl".format(beam_id, beam_id)
 
                 json_path = os.path.join(beam_folder, "{}.json".format(beam_id))
                 with open(json_path, 'w') as f:
@@ -1635,8 +1923,8 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
             json.dump(structure_data, f, indent=2)
         json_files_created.append(global_structure_path)
 
-        json_export_out = "JSON: {} | STL geometry: {} | STL blank: {} | Errori STL: {}".format(
-            len(json_files_created), len(stl_files_created), len(blank_files_created), len(stl_errors)
+        json_export_out = "JSON: {} | STL geometry: {} | STL blank: {} | STL features: {} | Errori STL: {}".format(
+            len(json_files_created), len(stl_files_created), len(blank_files_created), len(feature_files_created), len(stl_errors)
         )
         if stl_errors:
             json_export_out += "\n" + "\n".join(stl_errors[:5])
