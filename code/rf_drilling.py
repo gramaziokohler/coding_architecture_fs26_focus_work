@@ -112,10 +112,10 @@ class DrillingProcessor:
         self.hardware_screws_by_type = {}
         self.screw_lengths_by_type = {}
         self.extrema_screws_by_type = {}
-        self.miter_counts = {}
         
-        # Procurement tracking
-        self.inventory_counts = {100: 0, 130: 0, 150: 0, "Oversized": 0}
+        # Separated inventory bins
+        self.inventory_counts = {100: 0, 130: 0, 150: 0}
+        self.miter_inventory_counts = {"Miter Standard": 0} 
 
     def process_drillings(self):
         print("--- Starting Drilling Generation ---")
@@ -133,8 +133,16 @@ class DrillingProcessor:
         self.hardware_screws_by_type = {}
         self.screw_lengths_by_type = {}
         self.extrema_screws_by_type = {}
-        self.miter_counts = {}
-        self.inventory_counts = {100: 0, 130: 0, 150: 0, "Oversized": 0}
+        
+        # Standard timber model inventory tracking
+        self.inventory_counts = {100: 0, 130: 0, 150: 0}
+        
+        # NEW: Fully separate inventory mappings for custom/manual hardware specifications
+        self.miter_inventory_counts = {"Miter Standard": 0}
+        self.manual_foundation_inventory_counts = {"Foundation Screw Spec": 0} 
+        
+        miter_joints_detected = {"Lmitter arch": 0, "Lmitter foundation": 0}
+        llap_joints_count = 0
 
         for beam in self.timber_model.beams:
             if hasattr(beam, 'features'):
@@ -146,6 +154,14 @@ class DrillingProcessor:
         joints = getattr(self.timber_model, 'joints', None) or getattr(self.timber_model, 'interactions', [])
         
         for joint in joints:
+            joint_classname = type(joint).__name__
+            
+            # Count the CutoffLLapJoint instances
+            if joint_classname == "CutoffLLapJoint":
+                llap_joints_count += 1
+                self.inventory_counts[130] += 2
+                continue
+
             elements = getattr(joint, 'elements', None)
             if not elements and hasattr(joint, 'main_beam'):
                 elements = [joint.main_beam, getattr(joint, 'cross_beam')]
@@ -165,7 +181,6 @@ class DrillingProcessor:
             pair_id = frozenset([uid_a, uid_b])
             
             if pair_id in self.processed_beam_pairs: continue 
-                
             self.processed_beam_pairs.add(pair_id)
             
             # --- ROUTING SYSTEM --- 
@@ -198,19 +213,26 @@ class DrillingProcessor:
             elif isinstance(joint, LMiterJoint):
                 cat1 = elements[0].attributes.get("category", "inner")
                 cat2 = elements[1].attributes.get("category", "inner")
-                if cat1 == "base" or cat2 == "base": label = "Lmitter foundation"
-                else: label = "Lmitter arch"
-                self.miter_counts[label] = self.miter_counts.get(label, 0) + 1
+                label = "Lmitter foundation" if (cat1 == "base" or cat2 == "base") else "Lmitter arch"
+                miter_joints_detected[label] += 1
+                
+                screws_to_add = 16 if "foundation" in label.lower() else 8
+                self.miter_inventory_counts["Miter Standard"] += screws_to_add
             
+        # Injected foundation values recorded isolated from structural geometric counts
+        manual_foundation_screws = 20 * 4
+        self.manual_foundation_inventory_counts["Foundation Screw Spec"] += manual_foundation_screws
+
         # --- COMPILE PROCUREMENT SUMMARY TEXT --- 
         log = []
         log.append("================================================================")
         log.append("             PROCUREMENT & DRILLING SUMMARY                     ")
         log.append("================================================================")
-        log.append(f"Unique Joints Processed: {len(self.processed_beam_pairs)}")
+        log.append(f"Unique Joints Processed Geometry: {len(self.processed_beam_pairs)}")
+        log.append(f"Lap Joint : {llap_joints_count} ( 2x 130mm screws/joint)")
+        log.append(f"Screw Foundation  : 20 ( 4x Separate Foundation screws/joint)")
         log.append("----------------------------------------------------------------")
         
-        # Details by connection type
         for j_type in sorted(self.hardware_screws_by_type.keys()):
             num_screws = self.hardware_screws_by_type[j_type]
             lengths = self.screw_lengths_by_type[j_type]
@@ -222,37 +244,34 @@ class DrillingProcessor:
                 log.append(f"  -> Shortest Screw   : {min_len * 1000:.1f} mm")
                 log.append(f"  -> Longest Screw    : {max_len * 1000:.1f} mm\n")
                 
-        # Un-geometrized miter joints
-        miter_screws_total = 0
-        for m_type in sorted(self.miter_counts.keys()):
-            count = self.miter_counts[m_type]
+        for m_type, count in sorted(miter_joints_detected.items()):
             if count > 0:
                 screws = (count * 16) if "foundation" in m_type.lower() else (count * 8)
-                miter_screws_total += screws
                 log.append(f"[{m_type}]")
                 log.append(f"  -> Unmodeled Screws : {screws} ({count} joints estimated)\n")
 
-        # INVENTORY & BOX CATEGORIZATION
         log.append("----------------------------------------------------------------")
         log.append("                    INVENTORY TO PROCURE                        ")
         log.append("----------------------------------------------------------------")
         
         color_map = {100: "GREEN", 130: "BLUE", 150: "ORANGE"}
         
-        total_boxes = 0
+        # Standard Wood Screw Boxes
         for length in [100, 130, 150]:
             count = self.inventory_counts[length]
             boxes = math.ceil(count / 100.0)
-            total_boxes += boxes
             color_label = color_map[length]
             log.append(f" Screw {length} mm [{color_label:^6}] : {count:4} pcs  ->  {boxes} boxes (100/box)")
-        oversized = self.inventory_counts["Oversized"]
-
-        if oversized > 0:
-            log.append(f" OVERSIZED   [ RED  ] : {oversized:4} pcs  ->  (Requires custom >150mm length)")
             
-        if miter_screws_total > 0:
-            log.append(f" MITER JOINTS         : {miter_screws_total:4} pcs  ->  (Length unspecified by geometry)")
+        # Isolated Foundation Hardware Section
+        found_total = self.manual_foundation_inventory_counts["Foundation Screw Spec"]
+        found_boxes = math.ceil(found_total / 100.0)
+        log.append(f" Foundation Screw : {found_total:4} pcs  ->  {found_boxes} boxes")
+
+        # Isolated Miter Hardware Section
+        miter_total = self.miter_inventory_counts["Miter Standard"]
+        miter_boxes = math.ceil(miter_total / 100.0)
+        log.append(f" Miter Arch : {miter_total:4} pcs  ->  {miter_boxes} boxes")
 
         log.append("================================================================")
 
@@ -293,21 +312,17 @@ class DrillingProcessor:
         joint_label = "TButtJoint - foundation"
         w, h = abut_beam.width, abut_beam.height
 
-        # Hardened Face Detection: Vector directly from continuous centerline to abutting midpoint
         c_mid = cont_beam.centerline.midpoint
         abut_mid = abut_beam.centerline.midpoint
         
-        # Determine the primary orientation axis of the continuous beam closest to the abutting beam
         vy, vz = cont_beam.frame.yaxis.copy(), cont_beam.frame.zaxis.copy()
         vec_to_abut = Vector.from_start_end(c_mid, abut_mid)
         
-        # Use the beam face normal that aligns closest to the target beam
         face_n = vz if abs(vec_to_abut.dot(vz)) > abs(vec_to_abut.dot(vy)) else vy
         if vec_to_abut.dot(face_n) < 0:
             face_n.scale(-1)
         face_n.unitize()
 
-        # Set contact point at the outer surface boundary of the continuous beam
         thick_c = cont_beam.height if face_n.dot(vz) > 0.9 else cont_beam.width
         face_pt = c_mid + face_n * (thick_c / 2.0)
 
@@ -315,7 +330,6 @@ class DrillingProcessor:
         ax_v = face_n.cross(ax_u)
         ax_u.unitize(); ax_v.unitize()
 
-        # Build local plane frame for footprint clipping
         big = 1e3
         rect3d = [
             face_pt + ax_u * big + ax_v * big,
@@ -324,8 +338,6 @@ class DrillingProcessor:
             face_pt + ax_u * big - ax_v * big,
         ]
         contact_plane = (face_pt, face_n)
-
-        # Screw trajectory points back into the foundation beam
         screw_dir = face_n * -1
         screw_dir.unitize()
 
@@ -358,9 +370,7 @@ class DrillingProcessor:
             res_pt = intersection_line_plane(Line(corner, corner + axis * 10.0), contact_plane)
             if res_pt: footprint_pts.append(Point(*res_pt))
 
-        # Fallback security if boundary checking gets clipped due to shifting anomalies
         if len(footprint_pts) != 4:
-            # Generate fallback lines right at the intersection interface center point
             center_of_area = face_pt
         else:
             rect2d = [to2d(P) for P in rect3d]
@@ -375,7 +385,6 @@ class DrillingProcessor:
                 center_uv = _poly_centroid_2d(foot2d)
             center_of_area = Point(*to3d(center_uv))
 
-        # Track vectors for visual validation outputs
         self.debug_points.append(center_of_area)
 
         along = axis - face_n * axis.dot(face_n)
@@ -386,7 +395,6 @@ class DrillingProcessor:
         across.unitize()
         offset_vec = across * (self.screw_spacing / 2.0)
 
-        # Pinpoint entry boundary face of abutting member
         best_face = None
         max_dot = -2.0
         for face in abut_beam.ref_sides[:4]:
@@ -423,11 +431,9 @@ class DrillingProcessor:
             final_tail = head + screw_dir * final_screw_length
             hw_lines.append(Line(head, final_tail))
 
-        # Target the abutting beam to anchor downward safely
         return self._generate_features(hw_lines, [abut_beam], joint_label, final_screw_length)
-    
+
     def _resolve_shallow_drilling(self, abut_beam, cont_beam, intersection_pt):
-        # 1. Establish coordinate vectors
         dir_abut = abut_beam.centerline.direction.copy()
         vec_to_mid = Vector.from_start_end(intersection_pt, abut_beam.centerline.midpoint)
         if dir_abut.dot(vec_to_mid) < 0: 
@@ -439,13 +445,11 @@ class DrillingProcessor:
         if dir_cont.dot(dir_abut) < 0:
             dir_cont.scale(-1)
             
-        # Define the local plane of the joint
         plane_normal = dir_cont.cross(dir_abut)
         if plane_normal.length < 1e-5: 
             plane_normal = Vector(0, 0, 1)
         plane_normal.unitize()
         
-        # 2. Construct the exact 40-degree target vector
         target_angle_rad = math.radians(40.0)
         
         v_perp = plane_normal.cross(dir_cont)
@@ -453,48 +457,32 @@ class DrillingProcessor:
         if v_perp.dot(dir_abut) < 0: 
             v_perp.scale(-1)
             
-        # ideal_screw_dir points OUTWARDS from the continuous beam towards the abutting beam
         ideal_screw_dir = dir_cont * math.cos(target_angle_rad) + v_perp * math.sin(target_angle_rad)
         ideal_screw_dir.unitize()
-        
-        # The actual drilling direction is the reverse (from outside face into the continuous beam)
         screw_dir = ideal_screw_dir * -1
 
-        # 3. Iteration Setup: Shift the piercing point along the continuous beam
-        walk_step = 0.010  # 10mm increments
-        max_steps = 60     # Walk up to 600mm down the beam
+        walk_step = 0.010 
+        max_steps = 60    
         anchor_depth = 0.060
-        min_abut_length = 0.040 # Minimum length the screw must travel inside the abutting beam
+        min_abut_length = 0.040 
         
         cat_a = abut_beam.attributes.get("category", "inner")
         cat_c = cont_beam.attributes.get("category", "inner")
         joint_label = "TButtJoint - arch (40° Fixed)" if cat_a == "arch" or cat_c == "arch" else "TButtJoint - inner (40° Fixed)"
         
-        # 4. The "Slide and Check" Loop
         for step in range(max_steps):
-            # Move the piercing point AWAY from the acute intersection corner along the continuous beam
-            pierce_pt = intersection_pt + (dir_cont * (step * walk_step))
-            
-            # Check volumetric boundaries: How far back can we go along ideal_screw_dir before exiting the abutting beam?
-            exit_dist = _ray_obb_exit(pierce_pt, ideal_screw_dir, abut_beam)
+            piece_pt = intersection_pt + (dir_cont * (step * walk_step))
+            exit_dist = _ray_obb_exit(piece_pt, ideal_screw_dir, abut_beam)
             
             if exit_dist is not None and exit_dist >= min_abut_length:
-                # --- CAP THE RAYCAST DISTANCE FOR A 20mm BUFFER ZONE ---
-                # Max allowed ray distance inside abutting beam = 150mm screw + 20mm buffer = 170mm (0.170m)
                 max_allowed_ray = 0.150 + 0.020
                 if exit_dist > max_allowed_ray:
                     exit_dist = max_allowed_ray
-                # --------------------------------------------------------
 
-                # We found a point where the chord through the abutting beam is thick enough.
-                # Start point is exactly at the outer boundary (or capped boundary) of the abutting beam.
-                start_pt = pierce_pt + (ideal_screw_dir * exit_dist)
-                
-                # Total length needed is the distance through the abutting beam + anchor depth into continuous beam
+                start_pt = piece_pt + (ideal_screw_dir * exit_dist)
                 req_screw_length = math.ceil((exit_dist + anchor_depth) / 0.010) * 0.010
                 end_pt = start_pt + (screw_dir * req_screw_length)
                 
-                # Generate offset lines for lateral spacing
                 offset_dir = screw_dir.cross(dir_cont)
                 if offset_dir.length < 1e-5: offset_dir = Vector(0, 0, 1)
                 offset_dir.unitize()
@@ -540,11 +528,8 @@ class DrillingProcessor:
         angle_deg = math.degrees(angle_rad)
         acute_angle_deg = min(angle_deg, 180.0 - angle_deg)
 
-        # --- THE 40-DEGREE REROUTE ---
         if acute_angle_deg < 40.0:
             success = self._resolve_shallow_drilling(abut_beam, cont_beam, intersection_pt)
-            
-            # If the solver couldn't find a valid geometry without breaching, throw the visual flag
             if not success:
                 flag_line = Line(intersection_pt, intersection_pt + Vector(0, 0, 0.2))
                 self.failed_screw_info.append({
@@ -552,7 +537,6 @@ class DrillingProcessor:
                     "type": f"FAILED 40° SOLVE: {acute_angle_deg:.1f}°"
                 })
             return
-        # -----------------------------
 
         centerline = abut_beam.centerline
         dir_into_abut = centerline.direction.copy()
@@ -648,25 +632,19 @@ class DrillingProcessor:
     
     def _evaluate_majority_faces(self, beam_top, beam_bottom, screw_dir):
         def get_pierced_face_normal(beam):
-            if not hasattr(beam, 'frame'): 
-                return Vector(0,0,1)
-            
+            if not hasattr(beam, 'frame'): return Vector(0,0,1)
             dots = {
                 "xaxis": abs(screw_dir.dot(beam.frame.xaxis)),
                 "yaxis": abs(screw_dir.dot(beam.frame.yaxis)),
                 "zaxis": abs(screw_dir.dot(beam.frame.zaxis))
             }
-            max_axis = max(dots, key=dots.get)
-            return max_axis
+            return max(dots, key=dots.get)
 
         top_hit = get_pierced_face_normal(beam_top)
         bottom_hit = get_pierced_face_normal(beam_bottom)
 
-        if top_hit == "zaxis":
-            return beam_top
-        elif bottom_hit == "zaxis":
-            return beam_bottom
-        
+        if top_hit == "zaxis": return beam_top
+        elif bottom_hit == "zaxis": return beam_bottom
         return beam_top
 
     def _generate_features(self, hw_lines, target_beams, joint_label, req_screw_length):
@@ -681,10 +659,9 @@ class DrillingProcessor:
             assigned_len = 100
         elif req_mm < 150:
             assigned_len = 130
-        elif req_mm <= 150.1:
-            assigned_len = 150
         else:
-            assigned_len = "Oversized"
+            # REDIRECT RULE: Force all oversized (>150mm) pieces straight into the standard max 150mm inventory bin
+            assigned_len = 150
             
         for i in range(len(hw_lines)):
             hw_line = hw_lines[i]
@@ -693,7 +670,6 @@ class DrillingProcessor:
             for beam in target_beams:
                 try:
                     drill = Drilling.from_line_and_element(hw_line, beam, diameter=self.screw_diameter)
-                    
                     if hasattr(beam, 'add_feature'): beam.add_feature(drill)
                     else: beam.features.append(drill)
                     line_added_to_any = True
