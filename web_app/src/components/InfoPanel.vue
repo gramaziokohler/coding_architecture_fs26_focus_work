@@ -26,8 +26,8 @@ const HIDDEN_KEYS = [
     "processings",
     "features",
     "machining",
+    "key_beam",
     "is_key_beam",
-    "key_beam"
 ];
 
 const engravingText = computed(() =>
@@ -52,6 +52,7 @@ const loadBeamInfo = async () => {
         const response = await fetch(jsonUrl);
         if (!response.ok) throw new Error(`Failed to fetch beam data: ${response.status} ${response.statusText}`);
         beamData.value = await response.json();
+        console.log("is_key_beam value:", beamData.value?.is_key_beam);
     } catch (e) {
         error.value = e.message;
         console.error("InfoPanel error:", e);
@@ -78,16 +79,16 @@ const formatJointValue = (jointData) => {
     if (jointData === null || jointData === undefined) {
         return "—";
     }
-    
+
     if (isArray(jointData)) {
         return jointData.length === 0 ? "—" : jointData.join(", ");
     }
-    
+
     if (isObject(jointData)) {
         const values = Object.values(jointData);
         return values.length === 0 ? "—" : values.join(", ");
     }
-    
+
     return jointData || "—";
 };
 </script>
@@ -115,6 +116,10 @@ const formatJointValue = (jointData) => {
                             <span class="label">module</span>
                             <span class="value">{{ beamData.module }}</span>
                         </li>
+                        <li v-if="beamData.is_key_beam === true || beamData.is_key_beam === 'true'" class="spec-item">
+                            <span class="label">key beam</span>
+                            <span class="value">Yes</span>
+                        </li>
                         <template v-for="(value, key) in beamData" :key="key">
                             <li
                                 v-if="!HIDDEN_KEYS.includes(key) && key !== 'beam ID' && key !== 'module' && key !== 'engraving_text'"
@@ -128,8 +133,8 @@ const formatJointValue = (jointData) => {
                             <span class="label">connected beams</span>
                             <span class="value">
                                 {{ isArray(beamData.connected_beams)
-                                    ? beamData.connected_beams.join(", ")
-                                    : beamData.connected_beams }}
+                                    ? beamData.connected_beams.map(b => b.toUpperCase()).join(", ")
+                                    : beamData.connected_beams.toUpperCase() }}
                             </span>
                         </li>
                     </ul>
