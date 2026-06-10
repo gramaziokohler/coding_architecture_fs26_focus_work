@@ -1264,6 +1264,49 @@ def collect_non_joinery_features(beam):
     combined_vertices = []
     combined_faces = []
 
+    def add_record_mesh(record, pts, diameter):
+        mesh_data = None
+        if pts:
+            radius = (diameter or 0.006) / 2.0
+            mesh_data = cylinder_mesh_from_line(pts[0], pts[1], radius)
+        if mesh_data:
+            vertices, faces = mesh_data
+            offset = len(combined_vertices)
+            combined_vertices.extend(vertices)
+            combined_faces.extend([[int(i) + offset for i in face] for face in faces])
+            record["has_stl_geometry"] = True
+        else:
+            record["has_stl_geometry"] = False
+        records.append(record)
+
+    for index, raw_record in enumerate((getattr(beam, "attributes", {}) or {}).get("web_features", []) or [], start=1):
+        raw = raw_record if isinstance(raw_record, dict) else {}
+        pts = feature_line(raw, raw)
+        diameter = feature_number(raw, raw, ("diameter", "diameter_m", "screw_diameter"))
+        length = feature_number(raw, raw, ("length", "length_m", "depth", "screw_length", "drilling_depth"))
+        record = {
+            "id": "web-{}".format(index),
+            "type": raw.get("type") or "Feature",
+            "data": primitive_data(raw),
+        }
+        if pts:
+            start, end = pts
+            record["start"] = [rounded(v) for v in start]
+            record["end"] = [rounded(v) for v in end]
+            record["line_length_m"] = rounded(vector_length(vector_sub(end, start)))
+            if length is None:
+                length = record["line_length_m"]
+        if diameter is not None:
+            record["diameter_m"] = rounded(diameter)
+        if length is not None:
+            record["length_m"] = rounded(length)
+            record["length_mm"] = rounded(length * 1000.0, 1)
+        if raw.get("assigned_length_mm") is not None:
+            record["assigned_length_mm"] = raw.get("assigned_length_mm")
+        if raw.get("joint_type"):
+            record["joint_type"] = raw.get("joint_type")
+        add_record_mesh(record, pts, diameter)
+
     for index, feature in enumerate(list(getattr(beam, "features", None) or []), start=1):
         if is_joinery_feature(feature):
             continue
@@ -1299,10 +1342,10 @@ def collect_non_joinery_features(beam):
             combined_vertices.extend(vertices)
             combined_faces.extend([[int(i) + offset for i in face] for face in faces])
             record["has_stl_geometry"] = True
-        else:
+            records.append(record)
+        elif not records or record.get("start") or record.get("end"):
             record["has_stl_geometry"] = False
-
-        records.append(record)
+            records.append(record)
 
     mesh_data = (combined_vertices, combined_faces) if combined_vertices and combined_faces else None
     return records, mesh_data

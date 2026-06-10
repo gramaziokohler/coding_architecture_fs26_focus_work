@@ -36,6 +36,7 @@ const colorCurrentModule = ref(true);
 const colorAllModules = ref(false);
 const showKeyBeams = ref(false);
 const showBlankBeams = ref(false);
+const showFeatures = ref(false);
 const currentBeamId = ref("");
 const currentModule = ref("");
 const beamIndex = ref(-1);
@@ -141,6 +142,12 @@ const getBlankModelUrl = (beamDataOrId) => {
     const beamData = typeof beamDataOrId === "object" ? beamDataOrId : beamDataCache.get(beamDataOrId);
     const id = typeof beamDataOrId === "string" ? beamDataOrId : getBeamId(beamData);
     return resolveModelUrl(beamData?.blank_model || beamData?.["3d_model_blank"] || beamData?.blank_3d_model || `beams/${id}/${id}_blank.stl`);
+};
+
+const getFeaturesModelUrl = (beamDataOrId) => {
+    const beamData = typeof beamDataOrId === "object" ? beamDataOrId : beamDataCache.get(beamDataOrId);
+    const modelPath = beamData?.features_model || beamData?.feature_model || beamData?.["3d_model_features"];
+    return modelPath ? resolveModelUrl(modelPath) : "";
 };
 
 const getCenterlineStart = (beamData = currentBeamData) => {
@@ -396,6 +403,7 @@ const getDisplayFrame = (beamData = currentBeamData) => {
 };
 
 const drawProcessing = () => {
+    if (!showFeatures.value) return;
     const records =
         currentBeamData?.processing ||
         currentBeamData?.processings ||
@@ -554,6 +562,52 @@ const addBlankOverlay = async (beamData) => {
     }
 };
 
+const addFeatureOverlay = async (beamData) => {
+    if (!showFeatures.value || !beamData) return;
+    const url = getFeaturesModelUrl(beamData);
+    if (!url) return;
+    try {
+        const geometry = await loadSTL(url);
+        geometry.computeBoundingBox();
+        const material = new THREE.MeshBasicMaterial({
+            color: 0x3366ff,
+            side: THREE.DoubleSide,
+            transparent: true,
+            opacity: 0.62,
+            depthWrite: false,
+        });
+        const mesh = new THREE.Mesh(geometry, material);
+        mesh.userData.isModelObject = true;
+        mesh.userData.isFeatureOverlay = true;
+        mesh.userData.hoverInfo = {
+            title: `${getBeamDisplayName(getBeamId(beamData))} features`,
+            lines: currentFeatureRecords(beamData)
+                .map((record) => {
+                    const length = featureLengthMm(record);
+                    return `${record.type || record.name || "Feature"}${Number.isFinite(length) ? ` ${Math.round(length)} mm` : ""}`;
+                })
+                .slice(0, 8),
+        };
+        makeModelObject(mesh);
+        scene.add(mesh);
+
+        const edges = new THREE.EdgesGeometry(geometry, 18);
+        const outline = new THREE.LineSegments(
+            edges,
+            new THREE.LineBasicMaterial({
+                color: 0x123d9f,
+                transparent: true,
+                opacity: 0.8,
+            })
+        );
+        outline.userData.isOverlay = true;
+        makeModelObject(outline);
+        scene.add(outline);
+    } catch (e) {
+        if (beamData.features_model) console.warn(`Could not load feature STL for ${getBeamId(beamData)}`, e);
+    }
+};
+
 const numericBeamValue = (beamData, key, fallback = 0) => {
     const value = beamData?.[key];
     return Number.isFinite(value) ? value : fallback;
@@ -589,12 +643,12 @@ const featureLengthMm = (record) => {
     return lengthM !== null ? lengthM * 1000 : null;
 };
 
-const currentFeatureRecords = () => {
+const currentFeatureRecords = (beamData = currentBeamData) => {
     const records =
-        currentBeamData?.features ||
-        currentBeamData?.processing ||
-        currentBeamData?.processings ||
-        currentBeamData?.machining ||
+        beamData?.features ||
+        beamData?.processing ||
+        beamData?.processings ||
+        beamData?.machining ||
         [];
     return Array.isArray(records) ? records : [];
 };
@@ -988,6 +1042,7 @@ const loadSingleBeam = async ({ preserveCamera = false } = {}) => {
     addOutline(geometry);
     await ensureBlankFrameOrigin(currentBeamData);
     await addBlankOverlay(currentBeamData);
+    await addFeatureOverlay(currentBeamData);
     addSelectedBeamOverlays(maxDim);
     centerScene({ preserveCamera: preserveCamera && !autoOrientBeamFrame.value });
     if (autoOrientBeamFrame.value) orientCameraToBeamFrame(maxDim);
@@ -1015,6 +1070,7 @@ const loadConnectedBeams = async ({ preserveCamera = false } = {}) => {
                 scene.add(makeMesh(geometry, color, opacity, id));
                 addOutline(geometry);
                 await addBlankOverlay(beamData);
+                await addFeatureOverlay(beamData);
                 if (!isCurrent) {
                     drawBeamFrame(beamData, 0.08, false);
                     addModuleBeamLabel(beamData, 0.05);
@@ -1058,6 +1114,7 @@ const loadModuleBeams = async ({ preserveCamera = false } = {}) => {
                     scene.add(makeMesh(geometry, color, opacity, id));
                     addOutline(geometry);
                     await addBlankOverlay(beamData);
+                    await addFeatureOverlay(beamData);
                     drawCenterline(beamData, isCurrentBeam);
                     if (!isCurrentBeam) {
                         drawBeamFrame(beamData, 0.08, false);
@@ -1101,6 +1158,7 @@ const loadPavilion = async ({ preserveCamera = false } = {}) => {
                     scene.add(makeMesh(geometry, color, opacity, id));
                     addOutline(geometry);
                     await addBlankOverlay(beamData);
+                    await addFeatureOverlay(beamData);
                     if (isCurrentBeam) drawCenterline(currentBeamData, true);
                     else if (beamData) addModuleBeamLabel(beamData, 0.045);
                 } catch (e) {
@@ -1345,6 +1403,10 @@ onMounted(async () => {
                 <label class="rotate-toggle">
                     <input v-model="showBlankBeams" type="checkbox" @change="setMode(viewMode)" />
                     Blank beams
+                </label>
+                <label class="rotate-toggle">
+                    <input v-model="showFeatures" type="checkbox" @change="setMode(viewMode)" />
+                    Features
                 </label>
                 <label v-if="viewMode !== 'single'" class="rotate-toggle">
                     <input v-model="colorCurrentModule" type="checkbox" @change="setMode(viewMode)" />

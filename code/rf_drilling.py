@@ -662,6 +662,23 @@ class DrillingProcessor:
         else:
             # REDIRECT RULE: Force all oversized (>150mm) pieces straight into the standard max 150mm inventory bin
             assigned_len = 150
+
+        def store_web_feature(beam, line):
+            attributes = getattr(beam, "attributes", None)
+            if attributes is None:
+                attributes = {}
+                setattr(beam, "attributes", attributes)
+            web_features = attributes.setdefault("web_features", [])
+            web_features.append({
+                "type": "Screw",
+                "joint_type": joint_label,
+                "start": [float(line.start.x), float(line.start.y), float(line.start.z)],
+                "end": [float(line.end.x), float(line.end.y), float(line.end.z)],
+                "diameter_m": float(self.screw_diameter),
+                "length_m": float(req_screw_length),
+                "length_mm": round(float(req_screw_length) * 1000.0, 1),
+                "assigned_length_mm": assigned_len,
+            })
             
         for i in range(len(hw_lines)):
             hw_line = hw_lines[i]
@@ -672,6 +689,7 @@ class DrillingProcessor:
                     drill = Drilling.from_line_and_element(hw_line, beam, diameter=self.screw_diameter)
                     if hasattr(beam, 'add_feature'): beam.add_feature(drill)
                     else: beam.features.append(drill)
+                    store_web_feature(beam, hw_line)
                     line_added_to_any = True
                 except Exception:
                     pass
