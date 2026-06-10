@@ -62,11 +62,11 @@
     "all": [
       "247",
       "256",
-      "261",
+      "260",
       "25"
     ],
     "xlap": [
-      "261"
+      "260"
     ],
     "tbutt": [
       "256",
@@ -74,6 +74,802 @@
     ],
     "lmiter": []
   },
+  "features": [
+    {
+      "id": 1,
+      "type": "Drilling",
+      "data": {
+        "ATTRIBUTE_MAP": {
+          "StartX": "AttributeSpec(python_name='start_x', type=<class 'float'>)",
+          "StartY": "AttributeSpec(python_name='start_y', type=<class 'float'>)",
+          "Angle": "AttributeSpec(python_name='angle', type=<class 'float'>)",
+          "Inclination": "AttributeSpec(python_name='inclination', type=<class 'float'>)",
+          "DepthLimited": "AttributeSpec(python_name='depth_limited', type=<class 'bool'>)",
+          "Depth": "AttributeSpec(python_name='depth', type=<class 'float'>)",
+          "Diameter": "AttributeSpec(python_name='diameter', type=<class 'float'>)"
+        },
+        "DATASCHEMA": {},
+        "HEADER_ATTRIBUTE_MAP": {
+          "ReferencePlaneID": [
+            "ref_side_index",
+            "<function BTLxProcessing.<lambda> at 0x22f27c4c0>"
+          ],
+          "Priority": [
+            "priority",
+            "<class 'int'>"
+          ],
+          "ProcessID": [
+            "process_id",
+            "<class 'int'>"
+          ],
+          "ToolID": [
+            "tool_id",
+            "<class 'int'>"
+          ],
+          "CounterSink": [
+            "counter_sink",
+            "<class 'bool'>"
+          ],
+          "ToolPosition": [
+            "tool_position",
+            "<class 'str'>"
+          ],
+          "Name": [
+            "name",
+            "<class 'str'>"
+          ],
+          "Process": [
+            "process",
+            "<class 'bool'>"
+          ]
+        },
+        "PROCESSING_NAME": "Drilling",
+        "angle": 176.8168721518615,
+        "depth": 0.0,
+        "depth_limited": false,
+        "diameter": 0.0064,
+        "inclination": 45.780724382619965,
+        "is_joinery": true,
+        "priority": 0,
+        "process_id": 0,
+        "ref_side_index": 2,
+        "start_x": 0.07244893407704261,
+        "start_y": 0.04286050276771061
+      },
+      "diameter_m": 0.0064,
+      "length_m": 0.0,
+      "length_mm": 0.0,
+      "has_stl_geometry": false
+    },
+    {
+      "id": 2,
+      "type": "Drilling",
+      "data": {
+        "ATTRIBUTE_MAP": {
+          "StartX": "AttributeSpec(python_name='start_x', type=<class 'float'>)",
+          "StartY": "AttributeSpec(python_name='start_y', type=<class 'float'>)",
+          "Angle": "AttributeSpec(python_name='angle', type=<class 'float'>)",
+          "Inclination": "AttributeSpec(python_name='inclination', type=<class 'float'>)",
+          "DepthLimited": "AttributeSpec(python_name='depth_limited', type=<class 'bool'>)",
+          "Depth": "AttributeSpec(python_name='depth', type=<class 'float'>)",
+          "Diameter": "AttributeSpec(python_name='diameter', type=<class 'float'>)"
+        },
+        "DATASCHEMA": {},
+        "HEADER_ATTRIBUTE_MAP": {
+          "ReferencePlaneID": [
+            "ref_side_index",
+            "<function BTLxProcessing.<lambda> at 0x22f27c4c0>"
+          ],
+          "Priority": [
+            "priority",
+            "<class 'int'>"
+          ],
+          "ProcessID": [
+            "process_id",
+            "<class 'int'>"
+          ],
+          "ToolID": [
+            "tool_id",
+            "<class 'int'>"
+          ],
+          "CounterSink": [
+            "counter_sink",
+            "<class 'bool'>"
+          ],
+          "ToolPosition": [
+            "tool_position",
+            "<class 'str'>"
+          ],
+          "Name": [
+            "name",
+            "<class 'str'>"
+          ],
+          "Process": [
+            "process",
+            "<class 'bool'>"
+          ]
+        },
+        "PROCESSING_NAME": "Drilling",
+        "angle": 176.81687215186162,
+        "depth": 0.0,
+        "depth_limited": false,
+        "diameter": 0.0064,
+        "inclination": 45.780724382619965,
+        "is_joinery": true,
+        "priority": 0,
+        "process_id": 0,
+        "ref_side_index": 2,
+        "start_x": 0.07087621360529328,
+        "start_y": 0.012816738813287862
+      },
+      "diameter_m": 0.0064,
+      "length_m": 0.0,
+      "length_mm": 0.0,
+      "has_stl_geometry": false
+    },
+    {
+      "id": 3,
+      "type": "Drilling",
+      "data": {
+        "ATTRIBUTE_MAP": {
+          "StartX": "AttributeSpec(python_name='start_x', type=<class 'float'>)",
+          "StartY": "AttributeSpec(python_name='start_y', type=<class 'float'>)",
+          "Angle": "AttributeSpec(python_name='angle', type=<class 'float'>)",
+          "Inclination": "AttributeSpec(python_name='inclination', type=<class 'float'>)",
+          "DepthLimited": "AttributeSpec(python_name='depth_limited', type=<class 'bool'>)",
+          "Depth": "AttributeSpec(python_name='depth', type=<class 'float'>)",
+          "Diameter": "AttributeSpec(python_name='diameter', type=<class 'float'>)"
+        },
+        "DATASCHEMA": {},
+        "HEADER_ATTRIBUTE_MAP": {
+          "ReferencePlaneID": [
+            "ref_side_index",
+            "<function BTLxProcessing.<lambda> at 0x22f27c4c0>"
+          ],
+          "Priority": [
+            "priority",
+            "<class 'int'>"
+          ],
+          "ProcessID": [
+            "process_id",
+            "<class 'int'>"
+          ],
+          "ToolID": [
+            "tool_id",
+            "<class 'int'>"
+          ],
+          "CounterSink": [
+            "counter_sink",
+            "<class 'bool'>"
+          ],
+          "ToolPosition": [
+            "tool_position",
+            "<class 'str'>"
+          ],
+          "Name": [
+            "name",
+            "<class 'str'>"
+          ],
+          "Process": [
+            "process",
+            "<class 'bool'>"
+          ]
+        },
+        "PROCESSING_NAME": "Drilling",
+        "angle": 356.18518923940076,
+        "depth": 0.0,
+        "depth_limited": false,
+        "diameter": 0.0064,
+        "inclination": 47.7548167681554,
+        "is_joinery": true,
+        "priority": 0,
+        "process_id": 0,
+        "ref_side_index": 3,
+        "start_x": 0.46707106098802914,
+        "start_y": 0.023915468309014337
+      },
+      "diameter_m": 0.0064,
+      "length_m": 0.0,
+      "length_mm": 0.0,
+      "has_stl_geometry": false
+    },
+    {
+      "id": 4,
+      "type": "Drilling",
+      "data": {
+        "ATTRIBUTE_MAP": {
+          "StartX": "AttributeSpec(python_name='start_x', type=<class 'float'>)",
+          "StartY": "AttributeSpec(python_name='start_y', type=<class 'float'>)",
+          "Angle": "AttributeSpec(python_name='angle', type=<class 'float'>)",
+          "Inclination": "AttributeSpec(python_name='inclination', type=<class 'float'>)",
+          "DepthLimited": "AttributeSpec(python_name='depth_limited', type=<class 'bool'>)",
+          "Depth": "AttributeSpec(python_name='depth', type=<class 'float'>)",
+          "Diameter": "AttributeSpec(python_name='diameter', type=<class 'float'>)"
+        },
+        "DATASCHEMA": {},
+        "HEADER_ATTRIBUTE_MAP": {
+          "ReferencePlaneID": [
+            "ref_side_index",
+            "<function BTLxProcessing.<lambda> at 0x22f27c4c0>"
+          ],
+          "Priority": [
+            "priority",
+            "<class 'int'>"
+          ],
+          "ProcessID": [
+            "process_id",
+            "<class 'int'>"
+          ],
+          "ToolID": [
+            "tool_id",
+            "<class 'int'>"
+          ],
+          "CounterSink": [
+            "counter_sink",
+            "<class 'bool'>"
+          ],
+          "ToolPosition": [
+            "tool_position",
+            "<class 'str'>"
+          ],
+          "Name": [
+            "name",
+            "<class 'str'>"
+          ],
+          "Process": [
+            "process",
+            "<class 'bool'>"
+          ]
+        },
+        "PROCESSING_NAME": "Drilling",
+        "angle": 183.81481076059933,
+        "depth": 0.05887906550961642,
+        "depth_limited": true,
+        "diameter": 0.0064,
+        "inclination": 47.7548167681554,
+        "is_joinery": true,
+        "priority": 0,
+        "process_id": 0,
+        "ref_side_index": 1,
+        "start_x": 0.4143404557482709,
+        "start_y": 0.029655200345663463
+      },
+      "diameter_m": 0.0064,
+      "length_m": 0.0589,
+      "length_mm": 58.9,
+      "has_stl_geometry": false
+    },
+    {
+      "id": 5,
+      "type": "Drilling",
+      "data": {
+        "ATTRIBUTE_MAP": {
+          "StartX": "AttributeSpec(python_name='start_x', type=<class 'float'>)",
+          "StartY": "AttributeSpec(python_name='start_y', type=<class 'float'>)",
+          "Angle": "AttributeSpec(python_name='angle', type=<class 'float'>)",
+          "Inclination": "AttributeSpec(python_name='inclination', type=<class 'float'>)",
+          "DepthLimited": "AttributeSpec(python_name='depth_limited', type=<class 'bool'>)",
+          "Depth": "AttributeSpec(python_name='depth', type=<class 'float'>)",
+          "Diameter": "AttributeSpec(python_name='diameter', type=<class 'float'>)"
+        },
+        "DATASCHEMA": {},
+        "HEADER_ATTRIBUTE_MAP": {
+          "ReferencePlaneID": [
+            "ref_side_index",
+            "<function BTLxProcessing.<lambda> at 0x22f27c4c0>"
+          ],
+          "Priority": [
+            "priority",
+            "<class 'int'>"
+          ],
+          "ProcessID": [
+            "process_id",
+            "<class 'int'>"
+          ],
+          "ToolID": [
+            "tool_id",
+            "<class 'int'>"
+          ],
+          "CounterSink": [
+            "counter_sink",
+            "<class 'bool'>"
+          ],
+          "ToolPosition": [
+            "tool_position",
+            "<class 'str'>"
+          ],
+          "Name": [
+            "name",
+            "<class 'str'>"
+          ],
+          "Process": [
+            "process",
+            "<class 'bool'>"
+          ]
+        },
+        "PROCESSING_NAME": "Drilling",
+        "angle": 90.0,
+        "depth": 0.0,
+        "depth_limited": false,
+        "diameter": 0.0064,
+        "inclination": 84.1140080303882,
+        "is_joinery": true,
+        "priority": 0,
+        "process_id": 0,
+        "ref_side_index": 2,
+        "start_x": 0.6917134284374311,
+        "start_y": 0.012926880319145819
+      },
+      "diameter_m": 0.0064,
+      "length_m": 0.0,
+      "length_mm": 0.0,
+      "has_stl_geometry": false
+    },
+    {
+      "id": 6,
+      "type": "Drilling",
+      "data": {
+        "ATTRIBUTE_MAP": {
+          "StartX": "AttributeSpec(python_name='start_x', type=<class 'float'>)",
+          "StartY": "AttributeSpec(python_name='start_y', type=<class 'float'>)",
+          "Angle": "AttributeSpec(python_name='angle', type=<class 'float'>)",
+          "Inclination": "AttributeSpec(python_name='inclination', type=<class 'float'>)",
+          "DepthLimited": "AttributeSpec(python_name='depth_limited', type=<class 'bool'>)",
+          "Depth": "AttributeSpec(python_name='depth', type=<class 'float'>)",
+          "Diameter": "AttributeSpec(python_name='diameter', type=<class 'float'>)"
+        },
+        "DATASCHEMA": {},
+        "HEADER_ATTRIBUTE_MAP": {
+          "ReferencePlaneID": [
+            "ref_side_index",
+            "<function BTLxProcessing.<lambda> at 0x22f27c4c0>"
+          ],
+          "Priority": [
+            "priority",
+            "<class 'int'>"
+          ],
+          "ProcessID": [
+            "process_id",
+            "<class 'int'>"
+          ],
+          "ToolID": [
+            "tool_id",
+            "<class 'int'>"
+          ],
+          "CounterSink": [
+            "counter_sink",
+            "<class 'bool'>"
+          ],
+          "ToolPosition": [
+            "tool_position",
+            "<class 'str'>"
+          ],
+          "Name": [
+            "name",
+            "<class 'str'>"
+          ],
+          "Process": [
+            "process",
+            "<class 'bool'>"
+          ]
+        },
+        "PROCESSING_NAME": "Drilling",
+        "angle": 90.00000000000017,
+        "depth": 0.07949776193451902,
+        "depth_limited": true,
+        "diameter": 0.0064,
+        "inclination": 84.1140080303882,
+        "is_joinery": true,
+        "priority": 0,
+        "process_id": 0,
+        "ref_side_index": 2,
+        "start_x": 0.6763411991367552,
+        "start_y": 0.038825691163295595
+      },
+      "diameter_m": 0.0064,
+      "length_m": 0.0795,
+      "length_mm": 79.5,
+      "has_stl_geometry": false
+    }
+  ],
+  "processing": [
+    {
+      "id": 1,
+      "type": "Drilling",
+      "data": {
+        "ATTRIBUTE_MAP": {
+          "StartX": "AttributeSpec(python_name='start_x', type=<class 'float'>)",
+          "StartY": "AttributeSpec(python_name='start_y', type=<class 'float'>)",
+          "Angle": "AttributeSpec(python_name='angle', type=<class 'float'>)",
+          "Inclination": "AttributeSpec(python_name='inclination', type=<class 'float'>)",
+          "DepthLimited": "AttributeSpec(python_name='depth_limited', type=<class 'bool'>)",
+          "Depth": "AttributeSpec(python_name='depth', type=<class 'float'>)",
+          "Diameter": "AttributeSpec(python_name='diameter', type=<class 'float'>)"
+        },
+        "DATASCHEMA": {},
+        "HEADER_ATTRIBUTE_MAP": {
+          "ReferencePlaneID": [
+            "ref_side_index",
+            "<function BTLxProcessing.<lambda> at 0x22f27c4c0>"
+          ],
+          "Priority": [
+            "priority",
+            "<class 'int'>"
+          ],
+          "ProcessID": [
+            "process_id",
+            "<class 'int'>"
+          ],
+          "ToolID": [
+            "tool_id",
+            "<class 'int'>"
+          ],
+          "CounterSink": [
+            "counter_sink",
+            "<class 'bool'>"
+          ],
+          "ToolPosition": [
+            "tool_position",
+            "<class 'str'>"
+          ],
+          "Name": [
+            "name",
+            "<class 'str'>"
+          ],
+          "Process": [
+            "process",
+            "<class 'bool'>"
+          ]
+        },
+        "PROCESSING_NAME": "Drilling",
+        "angle": 176.8168721518615,
+        "depth": 0.0,
+        "depth_limited": false,
+        "diameter": 0.0064,
+        "inclination": 45.780724382619965,
+        "is_joinery": true,
+        "priority": 0,
+        "process_id": 0,
+        "ref_side_index": 2,
+        "start_x": 0.07244893407704261,
+        "start_y": 0.04286050276771061
+      },
+      "diameter_m": 0.0064,
+      "length_m": 0.0,
+      "length_mm": 0.0,
+      "has_stl_geometry": false
+    },
+    {
+      "id": 2,
+      "type": "Drilling",
+      "data": {
+        "ATTRIBUTE_MAP": {
+          "StartX": "AttributeSpec(python_name='start_x', type=<class 'float'>)",
+          "StartY": "AttributeSpec(python_name='start_y', type=<class 'float'>)",
+          "Angle": "AttributeSpec(python_name='angle', type=<class 'float'>)",
+          "Inclination": "AttributeSpec(python_name='inclination', type=<class 'float'>)",
+          "DepthLimited": "AttributeSpec(python_name='depth_limited', type=<class 'bool'>)",
+          "Depth": "AttributeSpec(python_name='depth', type=<class 'float'>)",
+          "Diameter": "AttributeSpec(python_name='diameter', type=<class 'float'>)"
+        },
+        "DATASCHEMA": {},
+        "HEADER_ATTRIBUTE_MAP": {
+          "ReferencePlaneID": [
+            "ref_side_index",
+            "<function BTLxProcessing.<lambda> at 0x22f27c4c0>"
+          ],
+          "Priority": [
+            "priority",
+            "<class 'int'>"
+          ],
+          "ProcessID": [
+            "process_id",
+            "<class 'int'>"
+          ],
+          "ToolID": [
+            "tool_id",
+            "<class 'int'>"
+          ],
+          "CounterSink": [
+            "counter_sink",
+            "<class 'bool'>"
+          ],
+          "ToolPosition": [
+            "tool_position",
+            "<class 'str'>"
+          ],
+          "Name": [
+            "name",
+            "<class 'str'>"
+          ],
+          "Process": [
+            "process",
+            "<class 'bool'>"
+          ]
+        },
+        "PROCESSING_NAME": "Drilling",
+        "angle": 176.81687215186162,
+        "depth": 0.0,
+        "depth_limited": false,
+        "diameter": 0.0064,
+        "inclination": 45.780724382619965,
+        "is_joinery": true,
+        "priority": 0,
+        "process_id": 0,
+        "ref_side_index": 2,
+        "start_x": 0.07087621360529328,
+        "start_y": 0.012816738813287862
+      },
+      "diameter_m": 0.0064,
+      "length_m": 0.0,
+      "length_mm": 0.0,
+      "has_stl_geometry": false
+    },
+    {
+      "id": 3,
+      "type": "Drilling",
+      "data": {
+        "ATTRIBUTE_MAP": {
+          "StartX": "AttributeSpec(python_name='start_x', type=<class 'float'>)",
+          "StartY": "AttributeSpec(python_name='start_y', type=<class 'float'>)",
+          "Angle": "AttributeSpec(python_name='angle', type=<class 'float'>)",
+          "Inclination": "AttributeSpec(python_name='inclination', type=<class 'float'>)",
+          "DepthLimited": "AttributeSpec(python_name='depth_limited', type=<class 'bool'>)",
+          "Depth": "AttributeSpec(python_name='depth', type=<class 'float'>)",
+          "Diameter": "AttributeSpec(python_name='diameter', type=<class 'float'>)"
+        },
+        "DATASCHEMA": {},
+        "HEADER_ATTRIBUTE_MAP": {
+          "ReferencePlaneID": [
+            "ref_side_index",
+            "<function BTLxProcessing.<lambda> at 0x22f27c4c0>"
+          ],
+          "Priority": [
+            "priority",
+            "<class 'int'>"
+          ],
+          "ProcessID": [
+            "process_id",
+            "<class 'int'>"
+          ],
+          "ToolID": [
+            "tool_id",
+            "<class 'int'>"
+          ],
+          "CounterSink": [
+            "counter_sink",
+            "<class 'bool'>"
+          ],
+          "ToolPosition": [
+            "tool_position",
+            "<class 'str'>"
+          ],
+          "Name": [
+            "name",
+            "<class 'str'>"
+          ],
+          "Process": [
+            "process",
+            "<class 'bool'>"
+          ]
+        },
+        "PROCESSING_NAME": "Drilling",
+        "angle": 356.18518923940076,
+        "depth": 0.0,
+        "depth_limited": false,
+        "diameter": 0.0064,
+        "inclination": 47.7548167681554,
+        "is_joinery": true,
+        "priority": 0,
+        "process_id": 0,
+        "ref_side_index": 3,
+        "start_x": 0.46707106098802914,
+        "start_y": 0.023915468309014337
+      },
+      "diameter_m": 0.0064,
+      "length_m": 0.0,
+      "length_mm": 0.0,
+      "has_stl_geometry": false
+    },
+    {
+      "id": 4,
+      "type": "Drilling",
+      "data": {
+        "ATTRIBUTE_MAP": {
+          "StartX": "AttributeSpec(python_name='start_x', type=<class 'float'>)",
+          "StartY": "AttributeSpec(python_name='start_y', type=<class 'float'>)",
+          "Angle": "AttributeSpec(python_name='angle', type=<class 'float'>)",
+          "Inclination": "AttributeSpec(python_name='inclination', type=<class 'float'>)",
+          "DepthLimited": "AttributeSpec(python_name='depth_limited', type=<class 'bool'>)",
+          "Depth": "AttributeSpec(python_name='depth', type=<class 'float'>)",
+          "Diameter": "AttributeSpec(python_name='diameter', type=<class 'float'>)"
+        },
+        "DATASCHEMA": {},
+        "HEADER_ATTRIBUTE_MAP": {
+          "ReferencePlaneID": [
+            "ref_side_index",
+            "<function BTLxProcessing.<lambda> at 0x22f27c4c0>"
+          ],
+          "Priority": [
+            "priority",
+            "<class 'int'>"
+          ],
+          "ProcessID": [
+            "process_id",
+            "<class 'int'>"
+          ],
+          "ToolID": [
+            "tool_id",
+            "<class 'int'>"
+          ],
+          "CounterSink": [
+            "counter_sink",
+            "<class 'bool'>"
+          ],
+          "ToolPosition": [
+            "tool_position",
+            "<class 'str'>"
+          ],
+          "Name": [
+            "name",
+            "<class 'str'>"
+          ],
+          "Process": [
+            "process",
+            "<class 'bool'>"
+          ]
+        },
+        "PROCESSING_NAME": "Drilling",
+        "angle": 183.81481076059933,
+        "depth": 0.05887906550961642,
+        "depth_limited": true,
+        "diameter": 0.0064,
+        "inclination": 47.7548167681554,
+        "is_joinery": true,
+        "priority": 0,
+        "process_id": 0,
+        "ref_side_index": 1,
+        "start_x": 0.4143404557482709,
+        "start_y": 0.029655200345663463
+      },
+      "diameter_m": 0.0064,
+      "length_m": 0.0589,
+      "length_mm": 58.9,
+      "has_stl_geometry": false
+    },
+    {
+      "id": 5,
+      "type": "Drilling",
+      "data": {
+        "ATTRIBUTE_MAP": {
+          "StartX": "AttributeSpec(python_name='start_x', type=<class 'float'>)",
+          "StartY": "AttributeSpec(python_name='start_y', type=<class 'float'>)",
+          "Angle": "AttributeSpec(python_name='angle', type=<class 'float'>)",
+          "Inclination": "AttributeSpec(python_name='inclination', type=<class 'float'>)",
+          "DepthLimited": "AttributeSpec(python_name='depth_limited', type=<class 'bool'>)",
+          "Depth": "AttributeSpec(python_name='depth', type=<class 'float'>)",
+          "Diameter": "AttributeSpec(python_name='diameter', type=<class 'float'>)"
+        },
+        "DATASCHEMA": {},
+        "HEADER_ATTRIBUTE_MAP": {
+          "ReferencePlaneID": [
+            "ref_side_index",
+            "<function BTLxProcessing.<lambda> at 0x22f27c4c0>"
+          ],
+          "Priority": [
+            "priority",
+            "<class 'int'>"
+          ],
+          "ProcessID": [
+            "process_id",
+            "<class 'int'>"
+          ],
+          "ToolID": [
+            "tool_id",
+            "<class 'int'>"
+          ],
+          "CounterSink": [
+            "counter_sink",
+            "<class 'bool'>"
+          ],
+          "ToolPosition": [
+            "tool_position",
+            "<class 'str'>"
+          ],
+          "Name": [
+            "name",
+            "<class 'str'>"
+          ],
+          "Process": [
+            "process",
+            "<class 'bool'>"
+          ]
+        },
+        "PROCESSING_NAME": "Drilling",
+        "angle": 90.0,
+        "depth": 0.0,
+        "depth_limited": false,
+        "diameter": 0.0064,
+        "inclination": 84.1140080303882,
+        "is_joinery": true,
+        "priority": 0,
+        "process_id": 0,
+        "ref_side_index": 2,
+        "start_x": 0.6917134284374311,
+        "start_y": 0.012926880319145819
+      },
+      "diameter_m": 0.0064,
+      "length_m": 0.0,
+      "length_mm": 0.0,
+      "has_stl_geometry": false
+    },
+    {
+      "id": 6,
+      "type": "Drilling",
+      "data": {
+        "ATTRIBUTE_MAP": {
+          "StartX": "AttributeSpec(python_name='start_x', type=<class 'float'>)",
+          "StartY": "AttributeSpec(python_name='start_y', type=<class 'float'>)",
+          "Angle": "AttributeSpec(python_name='angle', type=<class 'float'>)",
+          "Inclination": "AttributeSpec(python_name='inclination', type=<class 'float'>)",
+          "DepthLimited": "AttributeSpec(python_name='depth_limited', type=<class 'bool'>)",
+          "Depth": "AttributeSpec(python_name='depth', type=<class 'float'>)",
+          "Diameter": "AttributeSpec(python_name='diameter', type=<class 'float'>)"
+        },
+        "DATASCHEMA": {},
+        "HEADER_ATTRIBUTE_MAP": {
+          "ReferencePlaneID": [
+            "ref_side_index",
+            "<function BTLxProcessing.<lambda> at 0x22f27c4c0>"
+          ],
+          "Priority": [
+            "priority",
+            "<class 'int'>"
+          ],
+          "ProcessID": [
+            "process_id",
+            "<class 'int'>"
+          ],
+          "ToolID": [
+            "tool_id",
+            "<class 'int'>"
+          ],
+          "CounterSink": [
+            "counter_sink",
+            "<class 'bool'>"
+          ],
+          "ToolPosition": [
+            "tool_position",
+            "<class 'str'>"
+          ],
+          "Name": [
+            "name",
+            "<class 'str'>"
+          ],
+          "Process": [
+            "process",
+            "<class 'bool'>"
+          ]
+        },
+        "PROCESSING_NAME": "Drilling",
+        "angle": 90.00000000000017,
+        "depth": 0.07949776193451902,
+        "depth_limited": true,
+        "diameter": 0.0064,
+        "inclination": 84.1140080303882,
+        "is_joinery": true,
+        "priority": 0,
+        "process_id": 0,
+        "ref_side_index": 2,
+        "start_x": 0.6763411991367552,
+        "start_y": 0.038825691163295595
+      },
+      "diameter_m": 0.0064,
+      "length_m": 0.0795,
+      "length_mm": 79.5,
+      "has_stl_geometry": false
+    }
+  ],
   "3d_model": "beams/b8/b8.stl",
   "geometry_model": "beams/b8/b8.stl",
   "blank_model": "beams/b8/b8_blank.stl"
