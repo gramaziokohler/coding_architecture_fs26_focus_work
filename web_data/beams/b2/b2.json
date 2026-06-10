@@ -1,0 +1,78 @@
+{
+  "beam ID": "b2",
+  "name": "B2",
+  "module": "B",
+  "width (m)": 0.06,
+  "height (m)": 0.08,
+  "length (m)": 1.18,
+  "volume (cm\u00b3)": 5642.45,
+  "weight (kg)": 2.82,
+  "local_frame": {
+    "origin": [
+      -0.0845,
+      1.7498,
+      0.7568
+    ],
+    "x_axis": [
+      0.49,
+      -0.8026,
+      0.3401
+    ],
+    "y_axis": [
+      -0.1772,
+      0.2903,
+      0.9404
+    ],
+    "z_axis": [
+      -0.8535,
+      -0.5211,
+      0.0
+    ]
+  },
+  "connected_beams": [
+    "b1",
+    "b3",
+    "b5",
+    "b8"
+  ],
+  "global_position": {
+    "centerline_start": [
+      -0.3725,
+      2.2215,
+      0.557
+    ],
+    "centerline_end": [
+      0.2035,
+      1.278,
+      0.9567
+    ],
+    "midpoint": [
+      -0.0845,
+      1.7498,
+      0.7568
+    ],
+    "midpoint_normalized": [
+      0.1452,
+      0.7025,
+      0.2744
+    ]
+  },
+  "joints": {
+    "all": [
+      "21",
+      "25",
+      "26",
+      "40"
+    ],
+    "xlap": [
+      "21",
+      "26"
+    ],
+    "tbutt": [
+      "25",
+      "40"
+    ],
+    "lmiter": []
+  },
+  "3d_model": "beams/b2/b2.stl"
+}

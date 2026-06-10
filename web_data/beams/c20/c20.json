@@ -1,0 +1,78 @@
+{
+  "beam ID": "c20",
+  "name": "C20",
+  "module": "C",
+  "width (m)": 0.06,
+  "height (m)": 0.08,
+  "length (m)": 1.05,
+  "volume (cm\u00b3)": 5034.65,
+  "weight (kg)": 2.52,
+  "local_frame": {
+    "origin": [
+      2.7841,
+      0.0463,
+      2.115
+    ],
+    "x_axis": [
+      -1.0,
+      0.0062,
+      0.0003
+    ],
+    "y_axis": [
+      0.0003,
+      -0.0,
+      1.0
+    ],
+    "z_axis": [
+      0.0062,
+      1.0,
+      -0.0
+    ]
+  },
+  "connected_beams": [
+    "c18",
+    "c19",
+    "c23",
+    "c24"
+  ],
+  "global_position": {
+    "centerline_start": [
+      3.3085,
+      0.0431,
+      2.1149
+    ],
+    "centerline_end": [
+      2.2597,
+      0.0496,
+      2.1152
+    ],
+    "midpoint": [
+      2.7841,
+      0.0463,
+      2.115
+    ],
+    "midpoint_normalized": [
+      0.5564,
+      0.3881,
+      0.7667
+    ]
+  },
+  "joints": {
+    "all": [
+      "150",
+      "132",
+      "131",
+      "120"
+    ],
+    "xlap": [
+      "150",
+      "131"
+    ],
+    "tbutt": [
+      "132",
+      "120"
+    ],
+    "lmiter": []
+  },
+  "3d_model": "beams/c20/c20.stl"
+}
