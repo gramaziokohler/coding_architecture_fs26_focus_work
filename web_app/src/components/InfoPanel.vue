@@ -30,10 +30,6 @@ const HIDDEN_KEYS = [
     "key_beam"
 ];
 
-const engravingText = computed(() =>
-    beamData.value?.engraving_text || beamData.value?.name || beamData.value?.["beam ID"]
-);
-
 const filteredJoints = computed(() => {
     if (!beamData.value?.joints) return null;
     const skip = ["all", "details"];
@@ -96,73 +92,77 @@ const formatJointValue = (jointData) => {
         <div v-if="loading" class="status">Loading...</div>
         <div v-else-if="error" class="error">Error: {{ error }}</div>
         <div v-else-if="beamData" class="beam-info">
+            <!-- HEADER CON NOME E MODULE -->
             <div class="panel-header">
                 <h2>{{ beamData.name }}</h2>
-                <span class="module-tag">Module {{ beamData.module }}</span>
+                <span class="module-tag">{{ beamData.module }}</span>
             </div>
 
-            <div class="info-grid">
-                <!-- LEFT COLUMN: BEAM -->
-                <div class="info-column">
-                    <h3>BEAM</h3>
-                    <ul class="specs-list">
-                        <li class="spec-item">
-                            <span class="label">beam ID</span>
-                            <span class="value">{{ beamData["beam ID"]?.toUpperCase() }}</span>
-                        </li>
-                        <li class="spec-item">
-                            <span class="label">module</span>
-                            <span class="value">{{ beamData.module }}</span>
-                        </li>
-                        <template v-for="(value, key) in beamData" :key="key">
-                            <li
-                                v-if="!HIDDEN_KEYS.includes(key) && key !== 'beam ID' && key !== 'module' && key !== 'engraving_text'"
-                                class="spec-item"
-                            >
-                                <span class="label">{{ formatLabel(key) }}</span>
-                                <span class="value">{{ formatValue(value) }}</span>
+            <!-- CONTENUTO SCROLLABILE -->
+            <div class="scrollable-content">
+                <div class="info-grid">
+                    <!-- LEFT COLUMN: BEAM -->
+                    <div class="info-column">
+                        <h3>BEAM</h3>
+                        <ul class="specs-list">
+                            <li class="spec-item">
+                                <span class="label">beam ID</span>
+                                <span class="value">{{ beamData["beam ID"]?.toUpperCase() }}</span>
                             </li>
-                        </template>
-                        <li v-if="beamData.connected_beams" class="spec-item">
-                            <span class="label">connected beams</span>
-                            <span class="value">
-                                {{ isArray(beamData.connected_beams)
-                                    ? beamData.connected_beams.map(b => b.toUpperCase()).join(", ")
-                                    : beamData.connected_beams.toUpperCase() }}
-                            </span>
-                        </li>
-                    </ul>
-                </div>
-
-                <!-- RIGHT COLUMN: MODULE -->
-                <div class="info-column">
-                    <h3>MODULE</h3>
-                    <ul class="specs-list">
-                        <li class="spec-item">
-                            <span class="label">engraving text</span>
-                            <span class="value">{{ engravingText }}</span>
-                        </li>
-
-                        <li v-if="filteredJoints" class="spec-item joints-section-title">
-                            <span>joints</span>
-                        </li>
-
-                        <template v-if="filteredJoints">
-                            <li
-                                v-for="(jointData, jointType) in filteredJoints"
-                                :key="jointType"
-                                class="spec-item"
-                            >
-                                <span class="joint-tag">{{ jointType }}</span>
-                                <span class="joint-values">{{ formatJointValue(jointData) }}</span>
+                            <li class="spec-item">
+                                <span class="label">module</span>
+                                <span class="value">{{ beamData.module }}</span>
                             </li>
-                        </template>
+                            <template v-for="(value, key) in beamData" :key="key">
+                                <li
+                                    v-if="!HIDDEN_KEYS.includes(key) && key !== 'beam ID' && key !== 'module' && key !== 'engraving_text'"
+                                    class="spec-item"
+                                >
+                                    <span class="label">{{ formatLabel(key) }}</span>
+                                    <span class="value">{{ formatValue(value) }}</span>
+                                </li>
+                            </template>
+                            <li v-if="beamData.connected_beams" class="spec-item">
+                                <span class="label">connected beams</span>
+                                <span class="value">
+                                    {{ isArray(beamData.connected_beams)
+                                        ? beamData.connected_beams.map(b => b.toUpperCase()).join(", ")
+                                        : beamData.connected_beams.toUpperCase() }}
+                                </span>
+                            </li>
+                        </ul>
+                    </div>
 
-                        <li v-if="beamData.is_key_beam === true" class="spec-item">
-                            <span class="label">key beams</span>
-                            <span class="value">Yes</span>
-                        </li>
-                    </ul>
+                    <!-- RIGHT COLUMN: MODULE -->
+                    <div class="info-column">
+                        <h3>MODULE</h3>
+                        <ul class="specs-list">
+                            <li class="spec-item">
+                                <span class="label">engraving text</span>
+                                <span class="value">{{ beamData.engraving_text || beamData.name }}</span>
+                            </li>
+
+                            <li v-if="filteredJoints" class="spec-item joints-section-title">
+                                <span>joints</span>
+                            </li>
+
+                            <template v-if="filteredJoints">
+                                <li
+                                    v-for="(jointData, jointType) in filteredJoints"
+                                    :key="jointType"
+                                    class="spec-item"
+                                >
+                                    <span class="joint-tag">{{ jointType }}</span>
+                                    <span class="joint-values">{{ formatJointValue(jointData) }}</span>
+                                </li>
+                            </template>
+
+                            <li v-if="beamData.is_key_beam === true" class="spec-item">
+                                <span class="label">key beams</span>
+                                <span class="value">Yes</span>
+                            </li>
+                        </ul>
+                    </div>
                 </div>
             </div>
         </div>
@@ -173,13 +173,10 @@ const formatJointValue = (jointData) => {
 .info-panel {
     display: flex;
     flex-direction: column;
-    background-color: #f9f9f9;
-    border: 1px solid #d0d0d0;
-    border-radius: 4px;
-    padding: 12px 16px;
-    max-height: 35vh;
-    overflow-y: auto;
-    font-family: "Helvetica Neue", sans-serif;
+    background-color: #f5f5f5;
+    border: 1px solid #ccc;
+    height: 100%;
+    font-family: "Helvetica Neue", Arial, sans-serif;
 }
 
 .status,
@@ -197,24 +194,24 @@ const formatJointValue = (jointData) => {
 .beam-info {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    height: 100%;
 }
 
 .panel-header {
     display: flex;
+    justify-content: space-between;
     align-items: center;
-    gap: 12px;
-    margin-bottom: 8px;
-    border-bottom: 2px solid #d0d0d0;
-    padding-bottom: 8px;
+    padding: 12px 16px;
+    background-color: #fff;
+    border-bottom: 2px solid #e0e0e0;
+    flex-shrink: 0;
 }
 
 h2 {
-    font-size: 16px;
+    font-size: 18px;
     font-weight: 600;
     margin: 0;
     color: #000;
-    flex-grow: 1;
 }
 
 h3 {
@@ -222,24 +219,30 @@ h3 {
     font-weight: 600;
     text-transform: uppercase;
     color: #666;
-    margin: 0 0 6px 0;
+    margin: 0 0 8px 0;
     letter-spacing: 0.5px;
 }
 
 .module-tag {
     background-color: #e8e8e8;
-    padding: 4px 8px;
+    padding: 6px 12px;
     border-radius: 3px;
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 600;
     color: #333;
     white-space: nowrap;
 }
 
+.scrollable-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+}
+
 .info-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 16px;
+    gap: 32px;
 }
 
 .info-column {
@@ -259,11 +262,11 @@ h3 {
 .spec-item {
     display: flex;
     justify-content: space-between;
-    align-items: center;
-    gap: 12px;
-    padding: 4px 0;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 6px 0;
     border-bottom: 1px solid #e0e0e0;
-    font-size: 12px;
+    font-size: 13px;
 }
 
 .spec-item:last-child {
@@ -274,97 +277,37 @@ h3 {
     color: #666;
     font-weight: 400;
     flex: 0 0 auto;
-    font-size: 12px;
+    font-size: 13px;
 }
 
 .joint-tag {
-    border: 1px solid #d0d0d0;
-    padding: 0 4px;
-    font-size: 12px;
+    border: 1px solid #999;
+    padding: 2px 6px;
+    font-size: 11px;
     font-weight: 600;
     color: #666;
-    line-height: 18px;
-    height: 18px;
-    display: inline-flex;
-    align-items: center;
+    line-height: 1.4;
     flex: 0 0 auto;
 }
 
 .value,
 .joint-values {
     color: #000;
-    font-family: "Helvetica Neue", sans-serif;
+    font-family: "Helvetica Neue", Arial, sans-serif;
     font-weight: 500;
     text-align: right;
     word-break: break-word;
+    flex: 1;
 }
 
 .joints-section-title {
     color: #666;
     font-size: 12px;
-    font-weight: 400;
-    text-transform: none;
-    padding: 6px 0;
-    border-bottom: 1px solid #e0e0e0;
+    font-weight: 600;
+    text-transform: uppercase;
+    padding: 12px 0 8px 0;
+    margin-top: 8px;
+    border-bottom: 2px solid #e0e0e0;
     justify-content: center;
-}
-
-@media (max-width: 900px) {
-    .info-grid {
-        grid-template-columns: 1fr;
-        gap: 12px;
-    }
-}
-
-@media (max-width: 760px) {
-    .info-panel {
-        max-height: 29vh;
-        padding: 8px 11px;
-    }
-
-    .panel-header {
-        gap: 8px;
-        margin-bottom: 6px;
-    }
-
-    h2 {
-        font-size: 14px;
-    }
-
-    h3 {
-        font-size: 10px;
-        margin-bottom: 3px;
-    }
-
-    .label {
-        font-size: 10px;
-    }
-
-    .joint-tag {
-        font-size: 9px;
-        font-weight: 600;
-        padding: 0 3px;
-        line-height: 16px;
-        height: 16px;
-    }
-
-    .joints-section-title {
-        font-size: 10px;
-    }
-
-    .module-tag {
-        padding: 2px 6px;
-        font-size: 10px;
-    }
-
-    .info-grid {
-        gap: 7px;
-    }
-
-    .spec-item {
-        gap: 8px;
-        padding: 4px 0;
-        font-size: 10px;
-    }
 }
 </style>
