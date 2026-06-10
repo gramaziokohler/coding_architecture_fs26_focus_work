@@ -160,8 +160,8 @@ class CutoffLLapJoint(LLapJoint):
         self.debug_negative_volume_a = negative_volume_a
         self.debug_negative_volume_b = negative_volume_b
 
-        lap_feature_a = LapProxy.from_volume_and_beam(negative_volume_a, self.beam_a, ref_side_index=self.ref_side_index_a)
-        lap_feature_b = LapProxy.from_volume_and_beam(negative_volume_b, self.beam_b, ref_side_index=self.ref_side_index_b)
+        lap_feature_a = LapProxy(negative_volume_a, self.beam_a, ref_side_index=self.ref_side_index_a)
+        lap_feature_b = LapProxy(negative_volume_b, self.beam_b, ref_side_index=self.ref_side_index_b)
         self._mark_feature_as_joinery(lap_feature_a)
         self._mark_feature_as_joinery(lap_feature_b)
 
