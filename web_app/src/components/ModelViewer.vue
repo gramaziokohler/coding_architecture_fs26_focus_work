@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref, watch } from "vue";
+import { computed, onMounted, ref } from "vue";
 import * as THREE from "three";
 import { STLLoader } from "three/examples/jsm/loaders/STLLoader.js";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
@@ -732,17 +732,6 @@ onMounted(async () => {
     };
     window.addEventListener("resize", handleResize);
 });
-
-// WATCH PER SINCRONIZZARE GLI STATI DI NAVIGAZIONE
-watch(
-    () => currentBeamData,
-    async (newBeamData) => {
-        if (newBeamData) {
-            await syncNavigationState();
-        }
-    },
-    { immediate: true }
-);
 </script>
 
 <template>
@@ -787,7 +776,7 @@ watch(
                 <button class="nav-arrow nav-arrow-prev" title="Prev module" aria-label="Prev module" @click="navigateModule(-1)">
                     <span></span>
                 </button>
-                <span>{{ currentModule ? `Module ${currentModule}` : 'Module' }} <template v-if="moduleCounter">({{ moduleCounter }})</template></span>
+                <span>Module {{ currentModule }} <template v-if="moduleCounter">({{ moduleCounter }})</template></span>
                 <button class="nav-arrow nav-arrow-next" title="Next module" aria-label="Next module" @click="navigateModule(1)">
                     <span></span>
                 </button>
@@ -796,7 +785,7 @@ watch(
                 <button class="nav-arrow nav-arrow-prev" title="Prev beam" aria-label="Prev beam" @click="navigateBeam(-1)">
                     <span></span>
                 </button>
-                <span>{{ currentBeamId || 'Beam' }} <template v-if="beamCounter">({{ beamCounter }})</template></span>
+                <span>{{ currentBeamId }} <template v-if="beamCounter">({{ beamCounter }})</template></span>
                 <button class="nav-arrow nav-arrow-next" title="Next beam" aria-label="Next beam" @click="navigateBeam(1)">
                     <span></span>
                 </button>
