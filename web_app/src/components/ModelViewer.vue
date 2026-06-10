@@ -394,7 +394,11 @@ const getDisplayFrame = (beamData = currentBeamData) => {
     const frame = getBeamFrame(beamData);
     if (!frame?.x_axis || !frame?.y_axis || !frame?.z_axis) return null;
 
-    const origin = beamData?._blankFrameOrigin || vectorFromArray(frame.origin || getCenterlineStart(beamData) || [0, 0, 0]);
+    // Only use the blank-derived origin when blank beams are actually shown,
+    // otherwise stale cached origins cause beams to appear offset in pavilion mode
+    const origin = (showBlankBeams.value && beamData?._blankFrameOrigin)
+        ? beamData._blankFrameOrigin
+        : vectorFromArray(frame.origin || getCenterlineStart(beamData) || [0, 0, 0]);
     const xAxis = vectorFromArray(frame.x_axis).normalize();
     const yAxis = vectorFromArray(frame.y_axis).normalize();
     const zAxis = vectorFromArray(frame.z_axis).normalize();
@@ -509,9 +513,10 @@ const ensureBlankFrameOrigin = async (beamData) => {
     if (!beamData || beamData._blankFrameOrigin) return beamData?._blankFrameOrigin || null;
     try {
         const blankGeometry = await loadBlankGeometry(beamData);
+        if (!blankGeometry) return null;
         const origin = computeBlankFrameOrigin(beamData, blankGeometry);
         if (origin) beamData._blankFrameOrigin = origin;
-        if (blankGeometry) blankGeometry.dispose();
+        blankGeometry.dispose();
         return origin;
     } catch (e) {
         console.warn(`Could not compute blank frame origin for ${getBeamId(beamData)}`, e);
@@ -1134,6 +1139,8 @@ const loadModuleBeams = async ({ preserveCamera = false } = {}) => {
     }
 };
 
+const PAVILION_CONCURRENCY = 12;
+
 const loadPavilion = async ({ preserveCamera = false } = {}) => {
     clearModelObjects();
     const currentId = getBeamId();
@@ -1141,31 +1148,38 @@ const loadPavilion = async ({ preserveCamera = false } = {}) => {
     try {
         const structure = await loadStructure();
         shownBeamIds.value = structure.beams.map((beam) => beam.beam_id);
-        await Promise.all(
-            structure.beams.map(async (beam) => {
-                const id = beam.beam_id;
-                const isCurrentBeam = id === currentId;
-                try {
-                    const [geometry, beamData] = await Promise.all([
-                        loadSTL(getBeamModelUrl(id)),
-                        loadBeamData(id),
-                    ]);
-                    await ensureBlankFrameOrigin(beamData);
-                    const isCurrentModule = colorCurrentModule.value && beam.module === currentModule.value;
-                    const isKey = showKeyBeams.value && isKeyBeam(beamData);
-                    const color = isCurrentBeam ? HIGHLIGHT_COLOR : (isKey ? KEY_BEAM_COLOR : (isCurrentModule ? MODULE_COLOR : (colorAllModules.value ? moduleColor(beam.module) : WOOD_COLOR)));
-                    const opacity = isCurrentBeam ? 0.62 : (isKey ? 0.72 : ((isCurrentModule || colorAllModules.value) ? 0.36 : 0.18));
-                    scene.add(makeMesh(geometry, color, opacity, id));
-                    addOutline(geometry);
-                    await addBlankOverlay(beamData);
-                    await addFeatureOverlay(beamData);
-                    if (isCurrentBeam) drawCenterline(currentBeamData, true);
-                    else if (beamData) addModuleBeamLabel(beamData, 0.045);
-                } catch (e) {
-                    console.warn(`Could not load STL for ${id}`, e);
-                }
-            })
-        );
+
+        // Process beams in batches to avoid opening hundreds of connections at once
+        const beams = structure.beams;
+        for (let i = 0; i < beams.length; i += PAVILION_CONCURRENCY) {
+            const batch = beams.slice(i, i + PAVILION_CONCURRENCY);
+            await Promise.all(
+                batch.map(async (beam) => {
+                    const id = beam.beam_id;
+                    const isCurrentBeam = id === currentId;
+                    try {
+                        const [geometry, beamData] = await Promise.all([
+                            loadSTL(getBeamModelUrl(id)),
+                            loadBeamData(id),
+                        ]);
+                        // Only compute blank frame origin when blank overlay is actually shown
+                        if (showBlankBeams.value) await ensureBlankFrameOrigin(beamData);
+                        const isCurrentModule = colorCurrentModule.value && beam.module === currentModule.value;
+                        const isKey = showKeyBeams.value && isKeyBeam(beamData);
+                        const color = isCurrentBeam ? HIGHLIGHT_COLOR : (isKey ? KEY_BEAM_COLOR : (isCurrentModule ? MODULE_COLOR : (colorAllModules.value ? moduleColor(beam.module) : WOOD_COLOR)));
+                        const opacity = isCurrentBeam ? 0.62 : (isKey ? 0.72 : ((isCurrentModule || colorAllModules.value) ? 0.36 : 0.18));
+                        scene.add(makeMesh(geometry, color, opacity, id));
+                        // Skip per-beam edge outlines in pavilion mode — too expensive at this scale
+                        await addBlankOverlay(beamData);
+                        await addFeatureOverlay(beamData);
+                        if (isCurrentBeam) drawCenterline(currentBeamData, true);
+                        else if (beamData) addModuleBeamLabel(beamData, 0.045);
+                    } catch (e) {
+                        console.warn(`Could not load STL for ${id}`, e);
+                    }
+                })
+            );
+        }
         addSelectedBeamOverlays(1);
         centerScene({ preserveCamera: preserveCamera && !autoOrientBeamFrame.value });
         if (autoOrientBeamFrame.value) orientCameraToBeamFrame();
