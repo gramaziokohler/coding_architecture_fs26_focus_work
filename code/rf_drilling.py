@@ -89,17 +89,18 @@ def _ray_obb_exit(origin, direction, beam):
     return tmax 
 
 class DrillingProcessor:
-    def __init__(self, timber_model, screw_diameter=0.006, screw_length=0.150, screw_spacing=0.030, max_drilling_depth=None, max_arch_penetration=None):
+    def __init__(self, timber_model, screw_diameter=0.006, screw_length=0.150, screw_spacing=0.030, max_drilling_depth=None, max_arch_penetration=None,drill_type="both"):
         self.timber_model = timber_model
         self.screw_diameter = screw_diameter
         self.screw_length = screw_length
         self.screw_spacing = screw_spacing 
         self.max_drilling_depth = max_drilling_depth
         self.max_arch_penetration = max_arch_penetration 
+        self.drill_type = drill_type
         
         self.drilling_count = 0
         self.screw_lines = []
-        self.screw_assigned_lengths = [] # NEW: Tracks standard length bin per screw
+        self.screw_assigned_lengths = []
         self.failed_screw_info = []
         self.summary_text = ""
         self.joinery_errors = [] 
@@ -432,7 +433,7 @@ class DrillingProcessor:
             final_tail = head + screw_dir * final_screw_length
             hw_lines.append(Line(head, final_tail))
 
-        return self._generate_features(hw_lines, abut_beam, cont_beam, joint_label, final_screw_length)
+        return self._generate_features(hw_lines, [abut_beam], joint_label, final_screw_length)
     
     def _apply_standard_butt_drilling(self, joint):
         elements = [joint.main_beam, joint.cross_beam]
@@ -484,8 +485,7 @@ class DrillingProcessor:
         
         self._generate_features(
             [hw_line_1, hw_line_2],
-            abut_beam,
-            cont_beam,
+            [cont_beam],
             joint_label,
             req_screw_length
         )
@@ -532,9 +532,58 @@ class DrillingProcessor:
         hw_line_1 = Line(hw_start_1, hw_end_1)
         hw_line_2 = Line(hw_start_2, hw_end_2)
         
-        return self._generate_features([hw_line_1, hw_line_2], beam_a, beam_b, joint_label, req_screw_length)
+        # 1. Determine spatial relationship (Top vs Bottom)
+        if pt_a.z > pt_b.z:
+            beam_top, beam_bottom = beam_a, beam_b
+        else:
+            beam_top, beam_bottom = beam_b, beam_a
 
-    def _generate_features(self, hw_lines, beam_1, beam_2, joint_label, req_screw_length):
+        # 2. Select targets strictly based on the GH Value List
+        if self.drill_type == "both":
+            target_beams = [beam_a, beam_b]
+        elif self.drill_type == "upper":
+            target_beams = [beam_top]
+        elif self.drill_type == "lower":
+            target_beams = [beam_bottom]
+        else:
+            # Fallback to your automatic majority face logic
+            target_beams = [self._evaluate_majority_faces(beam_top, beam_bottom, screw_dir)]
+
+        # 3. Pass ONLY the selected beam(s) to the generator
+        return self._generate_features([hw_line_1, hw_line_2], target_beams, joint_label, req_screw_length)
+    
+    def _evaluate_majority_faces(self, beam_top, beam_bottom, screw_dir):
+        """
+        Evaluates which beam should be drilled based on face hits.
+        Returns the selected beam.
+        """
+        def get_pierced_face_normal(beam):
+            # Calculate the dot product of the screw direction against the beam's local axes
+            if not hasattr(beam, 'frame'): 
+                return Vector(0,0,1)
+            
+            dots = {
+                "xaxis": abs(screw_dir.dot(beam.frame.xaxis)),
+                "yaxis": abs(screw_dir.dot(beam.frame.yaxis)),
+                "zaxis": abs(screw_dir.dot(beam.frame.zaxis))
+            }
+            # The face with the highest dot product is the one most perpendicular to the screw
+            max_axis = max(dots, key=dots.get)
+            return max_axis
+
+        top_hit = get_pierced_face_normal(beam_top)
+        bottom_hit = get_pierced_face_normal(beam_bottom)
+
+        # Priority: drill through the wider face (Z-axis in typical timber framing)
+        if top_hit == "zaxis":
+            return beam_top
+        elif bottom_hit == "zaxis":
+            return beam_bottom
+        
+        # Fallback to the top beam if equal
+        return beam_top
+
+    def _generate_features(self, hw_lines, target_beams, joint_label, req_screw_length):
         success = False
         
         if joint_label not in self.hardware_screws_by_type:
@@ -556,19 +605,10 @@ class DrillingProcessor:
             hw_line = hw_lines[i]
             line_added_to_any = False
             
-            for beam in [beam_1, beam_2]:
+            for beam in target_beams:
                 try:
                     drill = Drilling.from_line_and_element(hw_line, beam, diameter=self.screw_diameter)
-                    if self.max_drilling_depth is not None:
-                        try:
-                            ref_side = beam.side_as_surface(drill.ref_side_index)
-                            drill.depth = drill._calculate_depth(hw_line, ref_side)
-                        except Exception:
-                            drill.depth = hw_line.length
-                        drill.depth_limited = True
-                        if drill.depth > self.max_drilling_depth:
-                            drill.depth = self.max_drilling_depth
-                            
+                    
                     if hasattr(beam, 'add_feature'): beam.add_feature(drill)
                     else: beam.features.append(drill)
                     line_added_to_any = True

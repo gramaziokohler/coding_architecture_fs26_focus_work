@@ -1,3 +1,5 @@
+# venv: ca-fs26-final-project
+# keyword: timber-module, module-naming-update, attribute-sync
 import Rhino.Geometry as rg
 import math
 
@@ -54,17 +56,14 @@ def create_3d_text_engraving_inplace(text, text_height=0.03, engraving_depth=0.0
         if not final_3d:
             return None, 0.0, 0.0
 
-        # Calcoliamo il centro geometrico puro XYZ del solido estruso
         text_bbox = final_3d.GetBoundingBox(True)
         cx = (text_bbox.Max.X + text_bbox.Min.X) / 2.0
         cy = (text_bbox.Max.Y + text_bbox.Min.Y) / 2.0
         cz = text_bbox.Max.Z 
         
-        # Centra la scritta in modo speculare allineandola all'estrusione
         move_to_center = rg.Transform.Translation(-cx, -cy, -cz)
         final_3d.Transform(move_to_center)
 
-        # Scaliamo indietro alle dimensioni reali in metri
         downscale = rg.Transform.Scale(rg.Plane.WorldXY, 1.0/scale_factor, 1.0/scale_factor, 1.0/scale_factor)
         final_3d.Transform(downscale)
 
@@ -74,29 +73,55 @@ def create_3d_text_engraving_inplace(text, text_height=0.03, engraving_depth=0.0
     except:
         return None, 0.0, 0.0
 
+
 def run_module_naming(timber_model, TextHeight=0.03):
     """
-    Interroga il modello COMPAS, legge i nomi e orienta le scritte ENGRAVED sulla faccia superiore.
-    Resta inchiodato al centro perfetto (shift=0) se non incontra giunti. 
-    Se rileva una collisione, indietreggia lungo l'asse della trave.
+    Sincronizza i dati estratti dagli attributi di partizione del componente precedente
+    e genera le marcature 3D solide in-place basate sulla sequenza reale dei moduli.
     """
     all_named_labels = []      
     all_beam_geometries = []   
     all_text_solids = []  
     summary_report = []        
     
-    summary_report.append("=== REPORT STRUTTURALE NOMENCLATURA PERFETTA E REALE ===")
+    summary_report.append("=== REPORT STRUTTURALE NOMENCLATURA SINCRONIZZATA ===")
     t_height = float(TextHeight) if TextHeight else 0.03
     engrave_depth = 0.005 
     
     if not timber_model:
-        return [], [], [], "Errore: timber_model non collegato."
+        return [], [], [], "Errore: timber_model non collegato.", None
 
-    # Cicliamo su tutte le travi del modello nello stesso ordine nativo strutturale
     for i, beam in enumerate(timber_model.beams):
-        beam_name = getattr(beam, 'name', None)
-        if not beam_name or str(beam_name).isdigit():
-            continue
+        
+        # === STRATEGIA DI COERENZA SINCRO: LETTURA ATTRIBUTI NATIVI DI NUMBER_BEAMS ===
+        module_letter = None
+        sequence_number = None
+        
+        # Estraiamo il dizionario degli attributi interni memorizzato da set_beam_partitioning_attributes
+        attributes = getattr(beam, "attributes", {}) or {}
+        
+        if isinstance(attributes, dict):
+            module_letter = attributes.get("module")
+            sequence_number = attributes.get("number") or attributes.get("beam_number")
+            
+        # Fallback di sicurezza estremo se per qualche motivo gli attributi si sono svuotati nella cache
+        if not module_letter or sequence_number is None:
+            old_name = getattr(beam, 'name', None) or getattr(beam, 'id', '')
+            old_name_str = str(old_name).strip().upper()
+            if old_name_str and not old_name_str.isdigit():
+                module_letter = old_name_str[0]
+                # Estrae i numeri finali dalla stringa precedente
+                num_parts = "".join([c for c in old_name_str if c.isdigit()])
+                sequence_number = int(num_parts) if num_parts else (i + 1)
+            else:
+                module_letter = "M"
+                sequence_number = i + 1
+
+        # Componiamo la stringa pulita secondo le tue specifiche (Lettera Modulo + Sequenza di Costruzione)
+        beam_name = "{}{}".format(str(module_letter).upper(), int(sequence_number))
+        
+        # Sincronizziamo anche la proprietà nativa del beam per passarla ai moduli successivi di Nesting
+        beam.name = beam_name
             
         # Estrazione della geometria nativa di Rhino memorizzata in COMPAS
         rh_geo = None
@@ -114,63 +139,51 @@ def run_module_naming(timber_model, TextHeight=0.03):
         all_named_labels.append(beam_name)
         all_beam_geometries.append(rh_geo)
         
-        # === ORIENTAMENTO E CORREZIONE VETTORIALE IN-PLACE ===
         try:
-            # 1. Generiamo il solido 3D del testo centrato all'origine
             solid_text, t_width, t_height_box = create_3d_text_engraving_inplace(beam_name, text_height=t_height, engraving_depth=engrave_depth)
             if not solid_text:
                 continue
             
-            # 2. Ricaviamo i dati del Frame strutturale locale di COMPAS Timber
             c_origin = beam.frame.point
             c_xaxis = beam.frame.xaxis
             c_yaxis = beam.frame.yaxis
             c_zaxis = beam.frame.zaxis
             
-            # 3. Trasformiamo in vettori e punti nativi di RhinoCommon
             rh_origin = rg.Point3d(c_origin.x, c_origin.y, c_origin.z)
             rh_xaxis = rg.Vector3d(c_xaxis.x, c_xaxis.y, c_xaxis.z)
             rh_yaxis = rg.Vector3d(c_yaxis.x, c_yaxis.y, c_yaxis.z)
             rh_zaxis = rg.Vector3d(c_zaxis.x, c_zaxis.y, c_zaxis.z)
             
-            # === FORZATURA DELLA DIREZIONE DEL PIANO VERSO L'ALTO ===
             if rh_zaxis.Z < 0:
                 rh_zaxis = -rh_zaxis
                 rh_yaxis = -rh_yaxis
 
-            # Generiamo il piano locale provvisorio aderente all'asse del beam
             beam_plane = rg.Plane(rh_origin, rh_xaxis, rh_yaxis)
             
-            # 4. Calcoliamo l'altezza del pezzo per estrudere l'offset sulla faccia superiore
             h_offset = 0.0
             for h_attr in ['height', 'h', 'd', 'depth']:
                 if hasattr(beam, h_attr):
                     h_offset = float(getattr(beam, h_attr))
                     break
             
-            # Spostiamo l'origine del piano sulla pelle superiore della trave
             if h_offset > 0:
                 beam_plane.Translate(rh_zaxis * (h_offset / 2.0))
             else:
                 bbox = rh_geo.GetBoundingBox(True)
                 beam_plane.Translate(rh_zaxis * (bbox.Max.Z - rh_origin.Z))
 
-            # === CALCOLO LUNGHEZZA BEAM REALE ===
             try: beam_length = beam.centerline.length
             except: beam_length = 1.0
 
-            # === POSIZIONAMENTO INIZIALE: CENTRO GEOMETRICO REALE SPECCHIATO ===
             beam_plane.Translate(beam_plane.XAxis * (beam_length / 2.0))
             
-            # === LOGICA ADATTIVA: SPOSTAMENTO SOLO IN CASO DI COMPROVATO GIUNTO ===
-            step = 0.02  # Avanzamento a passi di 2 centimetri
+            step = 0.02  
             max_shift = (beam_length / 2.0) - 0.10  
             current_shift = 0.0
             
             scan_plane = rg.Plane(beam_plane)
             
             while current_shift < max_shift:
-                # Generiamo i 5 punti di controllo locali (Centro + 4 angoli del rettangolo testo)
                 test_points = [
                     scan_plane.Origin,
                     scan_plane.Origin - (scan_plane.XAxis * (t_width / 2.0)) - (scan_plane.YAxis * (t_height_box / 2.0)),
@@ -182,7 +195,6 @@ def run_module_naming(timber_model, TextHeight=0.03):
                 area_is_fully_solid = True
                 
                 for pt in test_points:
-                    # Il raggio parte perpendicolare rispetto alla faccia superiore reale (Z-locale del piano)
                     ray_start = pt + (scan_plane.Normal * 0.01)
                     ray_end = pt - (scan_plane.Normal * 0.01)
                     ray_line = rg.Line(ray_start, ray_end).ToNurbsCurve()
@@ -191,7 +203,6 @@ def run_module_naming(timber_model, TextHeight=0.03):
                     
                     point_hits_solid_wood = False
                     if intersections and len(intersections[2]) > 0:
-                        # Identifichiamo il punto di intersezione più vicino
                         highest_pt = min(intersections[2], key=lambda p: p.DistanceTo(pt))
                         if highest_pt.DistanceTo(pt) < 0.006:
                             point_hits_solid_wood = True
@@ -200,32 +211,26 @@ def run_module_naming(timber_model, TextHeight=0.03):
                         area_is_fully_solid = False
                         break
                 
-                # Se l'area è completamente integra (nessun giunto/vuoto), ci fermiamo immediatamente qui!
                 if area_is_fully_solid:
                     break  
                 
-                # C'è un giunto in mezzo: facciamo scivolare la scritta in avanti (+X locale)
                 scan_plane.Translate(scan_plane.XAxis * step)
                 current_shift += step
 
-            # Riaffidiamo il piano stabilizzato a beam_plane
             beam_plane = rg.Plane(scan_plane)
 
-            # === LEGGIBILITÀ SPECCHIATA (Lettura zenitale intatta) ===
             beam_plane.XAxis = -beam_plane.XAxis
             beam_plane.YAxis = -beam_plane.YAxis
             
-            # 5. Applichiamo la matrice di trasformazione rigida da WorldXY alla trave
             plane_to_plane_xform = rg.Transform.PlaneToPlane(rg.Plane.WorldXY, beam_plane)
             
             oriented_solid = solid_text.DuplicateBrep()
             oriented_solid.Transform(plane_to_plane_xform)
             
-            # Incisione: spingiamo il volume 3D dentro la faccia superiore
             oriented_solid.Transform(rg.Transform.Translation(-rh_zaxis * engrave_depth))
             
             all_text_solids.append(oriented_solid)
-            summary_report.append(" -> Trave {}: Allineata al centro esatto (Shift: {:.2f}m)".format(beam_name, current_shift))
+            summary_report.append(" -> Sincronizzato {}: (Shift: {:.2f}m)".format(beam_name, current_shift))
         except Exception as e:
             summary_report.append(" -> Errore trave {}: {}".format(beam_name, e))
             
