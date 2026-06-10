@@ -26,7 +26,8 @@ const HIDDEN_KEYS = [
     "processings",
     "features",
     "machining",
-    "key_beam"
+    "key_beam",
+    "is_key_beam"
 ];
 
 const engravingText = computed(() =>
@@ -51,6 +52,7 @@ const loadBeamInfo = async () => {
         const response = await fetch(jsonUrl);
         if (!response.ok) throw new Error(`Failed to fetch beam data: ${response.status} ${response.statusText}`);
         beamData.value = await response.json();
+        console.log("is_key_beam value:", beamData.value?.is_key_beam);
     } catch (e) {
         error.value = e.message;
         console.error("InfoPanel error:", e);
@@ -131,7 +133,7 @@ const formatJointValue = (jointData) => {
                                     : beamData.connected_beams.toUpperCase() }}
                             </span>
                         </li>
-                        <li v-if="beamData.is_key_beam" class="spec-item">
+                        <li v-if="beamData.is_key_beam === true || beamData.is_key_beam === 'true'" class="spec-item">
                             <span class="label">key beams</span>
                             <span class="value">Yes</span>
                         </li>
