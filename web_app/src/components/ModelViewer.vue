@@ -26,6 +26,8 @@ let pointerDown = null;
 const beamMeshMap = new Map();
 // Geometry cache: beamId → THREE.BufferGeometry (avoids re-parsing STL on color/overlay toggle)
 const geometryCache = new Map();
+// World-space offset applied by centerScene — must be subtracted from any object added after centering
+let sceneOffset = new THREE.Vector3();
 const raycaster = new THREE.Raycaster();
 const pointer = new THREE.Vector2();
 
@@ -296,6 +298,7 @@ const addOutline = (geometry) => {
 const clearModelObjects = () => {
     hoverInfo.value = null;
     beamMeshMap.clear();
+    sceneOffset.set(0, 0, 0);
     const toRemove = scene.children.filter((child) => child.userData.isModelObject);
     toRemove.forEach((child) => {
         scene.remove(child);
@@ -314,6 +317,12 @@ const clearOverlays = () => {
     });
 };
 
+// Add an object to the scene shifted by the current sceneOffset so it aligns with already-centered beams
+const addToScene = (object) => {
+    object.position.sub(sceneOffset);
+    scene.add(object);
+};
+
 const makeLine = (start, end, color, linewidth = 1) => {
     const geometry = new THREE.BufferGeometry().setFromPoints([start, end]);
     const line = new THREE.Line(
@@ -327,7 +336,7 @@ const makeLine = (start, end, color, linewidth = 1) => {
     );
     line.userData.isOverlay = true;
     makeModelObject(line);
-    scene.add(line);
+    addToScene(line);
     return line;
 };
 
@@ -375,7 +384,7 @@ const makeTextSprite = (text, position, color = "#111111", scale = 0.08, hoverIn
     sprite.userData.isOverlay = true;
     if (hoverInfoData) sprite.userData.hoverInfo = hoverInfoData;
     makeModelObject(sprite);
-    scene.add(sprite);
+    addToScene(sprite);
     return sprite;
 };
 
@@ -406,7 +415,7 @@ const makeTextPlane = (text, position, xAxis, yAxis, color = "#111111", scale = 
         lines: ["Beam label"],
     };
     makeModelObject(plane);
-    scene.add(plane);
+    addToScene(plane);
     return plane;
 };
 
@@ -469,7 +478,7 @@ const makeProcessingMarker = (record) => {
         lines: [record.type || "Processing", record.id ? `ID ${record.id}` : ""].filter(Boolean),
     };
     makeModelObject(marker);
-    scene.add(marker);
+    addToScene(marker);
 };
 
 const getDisplayFrame = (beamData = currentBeamData) => {
@@ -516,7 +525,7 @@ const drawBeamFrame = (beamData = currentBeamData, scale = 0.25, showAxisLabels 
         const arrow = new THREE.ArrowHelper(direction, origin, length, color, headLength, headWidth);
         arrow.userData.isOverlay = true;
         makeModelObject(arrow);
-        scene.add(arrow);
+        addToScene(arrow);
         if (showAxisLabels) {
             makeTextSprite(label, origin.clone().add(direction.multiplyScalar(length * 1.15)), `#${color.toString(16).padStart(6, "0")}`, scale * 0.16);
         }
@@ -626,7 +635,7 @@ const addBlankOverlay = async (beamData) => {
         mesh.userData.isModelObject = true;
         mesh.userData.isBlank = true;
         makeModelObject(mesh);
-        scene.add(mesh);
+        addToScene(mesh);
 
         const edges = new THREE.EdgesGeometry(blankGeometry, 18);
         const outline = new THREE.LineSegments(
@@ -642,7 +651,7 @@ const addBlankOverlay = async (beamData) => {
         outline.computeLineDistances();
         outline.userData.isOverlay = true;
         makeModelObject(outline);
-        scene.add(outline);
+        addToScene(outline);
 
         const origin = computeBlankFrameOrigin(beamData, blankGeometry);
         if (origin) beamData._blankFrameOrigin = origin;
@@ -678,7 +687,7 @@ const addFeatureOverlay = async (beamData) => {
                 .slice(0, 8),
         };
         makeModelObject(mesh);
-        scene.add(mesh);
+        addToScene(mesh);
 
         const edges = new THREE.EdgesGeometry(geometry, 18);
         const outline = new THREE.LineSegments(
@@ -691,7 +700,7 @@ const addFeatureOverlay = async (beamData) => {
         );
         outline.userData.isOverlay = true;
         makeModelObject(outline);
-        scene.add(outline);
+        addToScene(outline);
     } catch (e) {
         if (beamData.features_model) console.warn(`Could not load feature STL for ${getBeamId(beamData)}`, e);
     }
@@ -976,7 +985,7 @@ const drawJointLabels = (scale = 0.13) => {
         hitZone.userData.isJointHitZone = true;
         hitZone.userData.hoverInfo = hoverData;
         makeModelObject(hitZone);
-        scene.add(hitZone);
+        addToScene(hitZone);
 
         makeTextSprite(displayLabel, point, "#111111", scale, {
             ...hoverData,
@@ -1033,6 +1042,9 @@ const centerScene = ({ preserveCamera = false } = {}) => {
     const size = new THREE.Vector3();
     box.getCenter(center);
     box.getSize(size);
+
+    // Record the offset so objects added later (overlays) can be shifted to match
+    sceneOffset.copy(center);
 
     scene.children
         .filter((child) => child.userData.isModelObject)
