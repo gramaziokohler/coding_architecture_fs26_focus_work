@@ -6,7 +6,6 @@ from compas_timber.connections import (
     TButtJoint,
     TLapJoint,
     XLapJoint,
-    TStepJoint
 )
 
 # ---------------------------------------------------------------------------
@@ -90,13 +89,12 @@ def _ray_obb_exit(origin, direction, beam):
     return tmax 
 
 class DrillingProcessor:
-    def __init__(self, timber_model, screw_diameter=0.006, screw_length=0.150, screw_spacing=0.030, max_drilling_depth=None, run_joinery=True, max_arch_penetration=None):
+    def __init__(self, timber_model, screw_diameter=0.006, screw_length=0.150, screw_spacing=0.030, max_drilling_depth=None, max_arch_penetration=None):
         self.timber_model = timber_model
         self.screw_diameter = screw_diameter
         self.screw_length = screw_length
         self.screw_spacing = screw_spacing 
         self.max_drilling_depth = max_drilling_depth
-        self.run_joinery = run_joinery 
         self.max_arch_penetration = max_arch_penetration 
         
         self.drilling_count = 0
@@ -137,14 +135,6 @@ class DrillingProcessor:
         self.miter_counts = {}
         self.inventory_counts = {100: 0, 130: 0, 150: 0, "Oversized": 0}
 
-        if self.run_joinery:
-            try:
-                errors = self.timber_model.process_joinery(stop_on_first_error=False)
-                self.joinery_errors = errors or []
-                print(f"Joinery processed. {len(self.joinery_errors)} joining error(s).")
-            except Exception as e:
-                print(f"process_joinery() failed: {e}")
-                self.joinery_errors = [str(e)]
         
         for beam in self.timber_model.beams:
             if hasattr(beam, 'features'):
