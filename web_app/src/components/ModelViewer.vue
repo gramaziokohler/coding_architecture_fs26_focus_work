@@ -394,11 +394,7 @@ const getDisplayFrame = (beamData = currentBeamData) => {
     const frame = getBeamFrame(beamData);
     if (!frame?.x_axis || !frame?.y_axis || !frame?.z_axis) return null;
 
-    // Only use the blank-derived origin when blank beams are actually shown,
-    // otherwise stale cached origins cause beams to appear offset in pavilion mode
-    const origin = (showBlankBeams.value && beamData?._blankFrameOrigin)
-        ? beamData._blankFrameOrigin
-        : vectorFromArray(frame.origin || getCenterlineStart(beamData) || [0, 0, 0]);
+    const origin = beamData?._blankFrameOrigin || vectorFromArray(frame.origin || getCenterlineStart(beamData) || [0, 0, 0]);
     const xAxis = vectorFromArray(frame.x_axis).normalize();
     const yAxis = vectorFromArray(frame.y_axis).normalize();
     const zAxis = vectorFromArray(frame.z_axis).normalize();
@@ -510,7 +506,13 @@ const loadBlankGeometry = async (beamData) => {
 };
 
 const ensureBlankFrameOrigin = async (beamData) => {
-    if (!beamData || beamData._blankFrameOrigin) return beamData?._blankFrameOrigin || null;
+    if (!beamData) return null;
+    if (beamData._blankFrameOrigin) return beamData._blankFrameOrigin;
+    // Use pre-baked origin from JSON export when available — no blank STL fetch needed
+    if (beamData.blank_frame_origin) {
+        beamData._blankFrameOrigin = vectorFromArray(beamData.blank_frame_origin);
+        return beamData._blankFrameOrigin;
+    }
     try {
         const blankGeometry = await loadBlankGeometry(beamData);
         if (!blankGeometry) return null;
@@ -1169,7 +1171,7 @@ const loadPavilion = async ({ preserveCamera = false } = {}) => {
                         const color = isCurrentBeam ? HIGHLIGHT_COLOR : (isKey ? KEY_BEAM_COLOR : (isCurrentModule ? MODULE_COLOR : (colorAllModules.value ? moduleColor(beam.module) : WOOD_COLOR)));
                         const opacity = isCurrentBeam ? 0.62 : (isKey ? 0.72 : ((isCurrentModule || colorAllModules.value) ? 0.36 : 0.18));
                         scene.add(makeMesh(geometry, color, opacity, id));
-                        // Skip per-beam edge outlines in pavilion mode — too expensive at this scale
+                        addOutline(geometry);
                         await addBlankOverlay(beamData);
                         await addFeatureOverlay(beamData);
                         if (isCurrentBeam) drawCenterline(currentBeamData, true);

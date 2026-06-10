@@ -894,6 +894,66 @@ def get_beam_local_frame(beam):
     except:
         return None
 
+def get_blank_frame_origin(beam):
+    """Compute the start-face center of beam.blank in world space.
+
+    This is the midpoint of the blank's Y/Z cross-section at the end closest
+    to the beam centerline start — the same value the web viewer previously
+    computed at load time by fetching and parsing the blank STL.  Baking it
+    into the JSON removes that runtime fetch entirely.
+    """
+    try:
+        blank = getattr(beam, "blank", None)
+        if blank is None:
+            return None
+        mesh_data = geometry_to_vertices_and_faces(blank)
+        if not mesh_data:
+            return None
+        vertices, _ = mesh_data
+
+        frame = beam_frame_data(beam)
+        origin = frame["origin"]
+        x_axis = vector_normalize(frame["x_axis"])
+        y_axis = vector_normalize(frame["y_axis"])
+        z_axis = vector_normalize(frame["z_axis"])
+
+        def dot(a, b):
+            return sum(a[i] * b[i] for i in range(3))
+
+        local_coords = [(dot(vector_sub(v, origin), x_axis),
+                         dot(vector_sub(v, origin), y_axis),
+                         dot(vector_sub(v, origin), z_axis)) for v in vertices]
+
+        min_x = min(lc[0] for lc in local_coords)
+        max_x = max(lc[0] for lc in local_coords)
+        mid_y = sum(lc[1] for lc in local_coords) / len(local_coords)
+        mid_z = sum(lc[2] for lc in local_coords) / len(local_coords)
+
+        # Pick the face (min or max X) closest to the centerline start
+        cl = beam.centerline
+        start = get_line_start(cl)
+        start_pt = [float(start.x), float(start.y), float(start.z)]
+
+        def face_center(x_local):
+            return vector_add(
+                vector_add(
+                    vector_add(origin[:], vector_scale(x_axis, x_local)),
+                    vector_scale(y_axis, mid_y)
+                ),
+                vector_scale(z_axis, mid_z)
+            )
+
+        min_face = face_center(min_x)
+        max_face = face_center(max_x)
+
+        def dist_sq(a, b):
+            return sum((a[i] - b[i]) ** 2 for i in range(3))
+
+        result = min_face if dist_sq(min_face, start_pt) <= dist_sq(max_face, start_pt) else max_face
+        return [round(v, 4) for v in result]
+    except:
+        return None
+
 # =========================
 # STL EXPORT FUNCTIONS
 # =========================
@@ -1855,6 +1915,7 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
                     os.makedirs(beam_folder)
 
                 local_frame = get_beam_local_frame(beam)
+                blank_frame_origin = get_blank_frame_origin(beam)
 
                 # STL Export
                 stl_path = os.path.join(beam_folder, "{}.stl".format(beam_id))
@@ -1901,6 +1962,7 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
                     "volume (cm³)": round(volume_m3 * 1_000_000, 2),
                     "weight (kg)": round(weight, 2),
                     "local_frame": local_frame,
+                    "blank_frame_origin": blank_frame_origin,
                     "connected_beams": sorted([
                         beam_label_by_guid[nbr].lower()
                         for nbr in g.neighbors(node)
