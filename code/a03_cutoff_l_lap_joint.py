@@ -162,6 +162,8 @@ class CutoffLLapJoint(LLapJoint):
 
         lap_feature_a = LapProxy.from_volume_and_beam(negative_volume_a, self.beam_a, ref_side_index=self.ref_side_index_a)
         lap_feature_b = LapProxy.from_volume_and_beam(negative_volume_b, self.beam_b, ref_side_index=self.ref_side_index_b)
+        self._mark_feature_as_joinery(lap_feature_a)
+        self._mark_feature_as_joinery(lap_feature_b)
 
         cut_feature_a = JackRafterCutProxy.from_plane_and_beam(self.cutting_plane_a, self.beam_a)
         cut_feature_b = JackRafterCutProxy.from_plane_and_beam(self.cutting_plane_b, self.beam_b)
@@ -172,6 +174,16 @@ class CutoffLLapJoint(LLapJoint):
         self.beam_a.add_features(features_a)
         self.beam_b.add_features(features_b)
         self.features.extend(features_a + features_b)
+
+    @staticmethod
+    def _mark_feature_as_joinery(feature):
+        try:
+            feature.is_joinery = True
+        except Exception:
+            try:
+                feature.__dict__["is_joinery"] = True
+            except Exception:
+                pass
 
     @property
     def extension_plane_a(self):
