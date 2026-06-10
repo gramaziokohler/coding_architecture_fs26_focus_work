@@ -656,20 +656,68 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
 
         return order
 
+    ordered_by_module = {}
+    for k in labels_keys:
+        ordered_by_module[k] = connected_growth(seeds[k], groups[k])
+
+    # =========================================================================
+    # POST-PROCESSING: SPOSTAMENTO ELEMENTI ED INTEGRAZIONE LOGICA NELL'ASSEMBLY
+    # =========================================================================
+    guid_by_initial_name = {}
+    for k, nodes_list in ordered_by_module.items():
+        for i, node in enumerate(nodes_list):
+            initial_name = "{}{}".format(k, i + 1)
+            guid_by_initial_name[initial_name] = node
+
+    manual_moves = {
+        "B19": "D", "B22": "D", "B23": "D", "B24": "D",
+        "A28": "C", "A29": "C", "E36": "C"
+    }
+
+    for initial_name, target_mod in manual_moves.items():
+        if initial_name in guid_by_initial_name:
+            node_to_move = guid_by_initial_name[initial_name]
+            for mod_k, nodes_list in ordered_by_module.items():
+                if node_to_move in nodes_list:
+                    nodes_list.remove(node_to_move)
+                    break
+
+    for initial_name, target_mod in manual_moves.items():
+        if initial_name in guid_by_initial_name:
+            node_to_move = guid_by_initial_name[initial_name]
+            target_list = ordered_by_module[target_mod]
+            
+            if not target_list:
+                target_list.append(node_to_move)
+                assignment[node_to_move] = target_mod
+                continue
+
+            best_idx = 0
+            min_d2 = 1e99
+            px, py, pz = pts[node_to_move]
+
+            for idx, existing_node in enumerate(target_list):
+                ex, ey, ez = pts[existing_node]
+                d2 = (px - ex)**2 + (py - ey)**2 + (pz - ez)**2
+                if d2 < min_d2:
+                    min_d2 = d2
+                    best_idx = idx
+
+            target_list.insert(best_idx + 1, node_to_move)
+            assignment[node_to_move] = target_mod
+
     # =========================
     # 7. GENERAZIONE BEAM OUTPUT
     # =========================
     geom = {k: [] for k in labels_keys}
-    ordered_by_module = {}
     beam_label_by_guid = {}
 
     for k in labels_keys:
-        ordered = connected_growth(seeds[k], groups[k])
-        ordered_by_module[k] = ordered
+        ordered = ordered_by_module[k]
 
         for i, node in enumerate(ordered):
-            beam = timber_model.get_element(node)
             name = "{}{}".format(k, i + 1)
+            beam = timber_model.get_element(node)
             set_beam_partitioning_attributes(beam, k, i + 1, beam_id=name.lower(), display_name=name)
 
             rhino_geom = beam.geometry
