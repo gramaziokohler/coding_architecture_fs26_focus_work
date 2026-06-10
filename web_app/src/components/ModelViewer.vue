@@ -22,10 +22,15 @@ let currentBeamData = null;
 let structureData = null;
 let gizmoRenderer, gizmoScene, gizmoCamera;
 let pointerDown = null;
+// Maps beamId → THREE.Mesh for the main beam body (survives color/overlay updates)
+const beamMeshMap = new Map();
+// Geometry cache: beamId → THREE.BufferGeometry (avoids re-parsing STL on color/overlay toggle)
+const geometryCache = new Map();
 const raycaster = new THREE.Raycaster();
 const pointer = new THREE.Vector2();
 
 const BASE_URL = "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data";
+const PAVILION_CONCURRENCY = 12;
 
 const viewMode = ref("single");
 const isLoading = ref(false);
@@ -96,13 +101,19 @@ const totalShownWeight = computed(() => {
     return total.toFixed(2);
 });
 
-const loadSTL = (url) =>
-    fetch(url, { mode: "cors" })
+const loadSTL = (url) => {
+    if (geometryCache.has(url)) return Promise.resolve(geometryCache.get(url).clone());
+    return fetch(url, { mode: "cors" })
         .then((r) => {
             if (!r.ok) throw new Error(`HTTP ${r.status}`);
             return r.arrayBuffer();
         })
-        .then((buf) => STLLoader.prototype.parse(buf));
+        .then((buf) => {
+            const geometry = STLLoader.prototype.parse(buf);
+            geometryCache.set(url, geometry);
+            return geometry.clone();
+        });
+};
 
 const loadJson = async (url) => {
     const response = await fetch(url);
@@ -204,7 +215,67 @@ const makeMesh = (geometry, color, opacity = 0.45, beamId = "") => {
         lines: ["Beam", beamId ? `ID ${beamId}` : ""].filter(Boolean),
     };
     makeModelObject(mesh);
+    if (beamId) beamMeshMap.set(beamId, mesh);
     return mesh;
+};
+
+const beamColorAndOpacity = (id, isCurrentBeam, beamData, beamEntry) => {
+    const module = beamEntry?.module || beamData?.module;
+    const isCurrentModule = colorCurrentModule.value && module === currentModule.value;
+    const isKey = showKeyBeams.value && isKeyBeam(beamData);
+    const color = isCurrentBeam
+        ? HIGHLIGHT_COLOR
+        : isKey ? KEY_BEAM_COLOR
+        : isCurrentModule ? MODULE_COLOR
+        : colorAllModules.value ? moduleColor(module)
+        : WOOD_COLOR;
+    const opacity = isCurrentBeam ? 0.62
+        : isKey ? 0.72
+        : (isCurrentModule || colorAllModules.value) ? 0.36
+        : 0.18;
+    return { color, opacity };
+};
+
+// Update only colors on existing meshes — no fetches, instant
+const updateColors = () => {
+    const currentId = getBeamId();
+    beamMeshMap.forEach((mesh, id) => {
+        const beamData = beamDataCache.get(id);
+        const beamEntry = structureData?.beams?.find((b) => b.beam_id === id);
+        const { color, opacity } = beamColorAndOpacity(id, id === currentId, beamData, beamEntry);
+        mesh.material.color.set(color);
+        mesh.material.opacity = opacity;
+        mesh.material.transparent = opacity < 1;
+        mesh.material.needsUpdate = true;
+    });
+};
+
+// Add/remove blank and feature overlays without reloading main meshes
+const updateOverlays = async () => {
+    // Remove only overlay objects (blank + feature + annotation overlays), keep beam meshes
+    clearOverlays();
+    const currentId = getBeamId();
+    const ids = [...beamMeshMap.keys()];
+    isLoading.value = true;
+    try {
+        for (let i = 0; i < ids.length; i += PAVILION_CONCURRENCY) {
+            const batch = ids.slice(i, i + PAVILION_CONCURRENCY);
+            await Promise.all(batch.map(async (id) => {
+                try {
+                    const beamData = beamDataCache.get(id) || await loadBeamData(id);
+                    if (showBlankBeams.value) await ensureBlankFrameOrigin(beamData);
+                    await addBlankOverlay(beamData);
+                    await addFeatureOverlay(beamData);
+                    if (id !== currentId) addModuleBeamLabel(beamData, 0.045);
+                } catch (e) {
+                    console.warn(`Overlay update failed for ${id}`, e);
+                }
+            }));
+        }
+        addSelectedBeamOverlays(1);
+    } finally {
+        isLoading.value = false;
+    }
 };
 
 const addOutline = (geometry) => {
@@ -217,14 +288,25 @@ const addOutline = (geometry) => {
             opacity: 0.9,
         })
     );
-    line.userData.isOverlay = true;
+    line.userData.isBeamOutline = true;
     makeModelObject(line);
     scene.add(line);
 };
 
 const clearModelObjects = () => {
     hoverInfo.value = null;
+    beamMeshMap.clear();
     const toRemove = scene.children.filter((child) => child.userData.isModelObject);
+    toRemove.forEach((child) => {
+        scene.remove(child);
+        if (child.geometry) child.geometry.dispose();
+        if (child.material) child.material.dispose();
+    });
+};
+
+const clearOverlays = () => {
+    hoverInfo.value = null;
+    const toRemove = scene.children.filter((child) => child.userData.isOverlay || child.userData.isBlank || child.userData.isFeatureOverlay);
     toRemove.forEach((child) => {
         scene.remove(child);
         if (child.geometry) child.geometry.dispose();
@@ -1141,8 +1223,6 @@ const loadModuleBeams = async ({ preserveCamera = false } = {}) => {
     }
 };
 
-const PAVILION_CONCURRENCY = 12;
-
 const loadPavilion = async ({ preserveCamera = false } = {}) => {
     clearModelObjects();
     const currentId = getBeamId();
@@ -1164,12 +1244,8 @@ const loadPavilion = async ({ preserveCamera = false } = {}) => {
                             loadSTL(getBeamModelUrl(id)),
                             loadBeamData(id),
                         ]);
-                        // Only compute blank frame origin when blank overlay is actually shown
                         if (showBlankBeams.value) await ensureBlankFrameOrigin(beamData);
-                        const isCurrentModule = colorCurrentModule.value && beam.module === currentModule.value;
-                        const isKey = showKeyBeams.value && isKeyBeam(beamData);
-                        const color = isCurrentBeam ? HIGHLIGHT_COLOR : (isKey ? KEY_BEAM_COLOR : (isCurrentModule ? MODULE_COLOR : (colorAllModules.value ? moduleColor(beam.module) : WOOD_COLOR)));
-                        const opacity = isCurrentBeam ? 0.62 : (isKey ? 0.72 : ((isCurrentModule || colorAllModules.value) ? 0.36 : 0.18));
+                        const { color, opacity } = beamColorAndOpacity(id, isCurrentBeam, beamData, beam);
                         scene.add(makeMesh(geometry, color, opacity, id));
                         addOutline(geometry);
                         await addBlankOverlay(beamData);
@@ -1417,23 +1493,23 @@ onMounted(async () => {
                     Flat beam view
                 </label>
                 <label class="rotate-toggle">
-                    <input v-model="showBlankBeams" type="checkbox" @change="setMode(viewMode)" />
+                    <input v-model="showBlankBeams" type="checkbox" @change="updateOverlays" />
                     Blank beams
                 </label>
                 <label class="rotate-toggle">
-                    <input v-model="showFeatures" type="checkbox" @change="setMode(viewMode)" />
+                    <input v-model="showFeatures" type="checkbox" @change="updateOverlays" />
                     Features
                 </label>
                 <label v-if="viewMode !== 'single'" class="rotate-toggle">
-                    <input v-model="colorCurrentModule" type="checkbox" @change="setMode(viewMode)" />
+                    <input v-model="colorCurrentModule" type="checkbox" @change="updateColors" />
                     Color module
                 </label>
                 <label v-if="viewMode === 'pavilion'" class="rotate-toggle">
-                    <input v-model="colorAllModules" type="checkbox" @change="setMode('pavilion')" />
+                    <input v-model="colorAllModules" type="checkbox" @change="updateColors" />
                     Color all
                 </label>
                 <label v-if="viewMode === 'pavilion'" class="rotate-toggle">
-                    <input v-model="showKeyBeams" type="checkbox" @change="setMode('pavilion')" />
+                    <input v-model="showKeyBeams" type="checkbox" @change="updateColors" />
                     Key beams
                 </label>
             </div>

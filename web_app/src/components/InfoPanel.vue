@@ -42,22 +42,6 @@ const moduleRows = computed(() => {
     ].filter(([, value]) => value !== undefined && value !== null && value !== "");
 });
 
-const featureRows = computed(() => {
-    const beam = beamData.value || {};
-    const features = beam.features || beam.processing || [];
-    if (!Array.isArray(features) || !features.length) return [];
-    return features.map((f, i) => {
-        const type = f.type || f.name || "Feature";
-        const lengthMm = f.length_mm ?? (f.length_m != null ? Math.round(f.length_m * 1000) : null);
-        const diamMm = f.diameter_m != null ? Math.round(f.diameter_m * 1000) : null;
-        const label = [
-            type,
-            lengthMm != null ? `L=${lengthMm} mm` : null,
-            diamMm != null ? `Ø${diamMm} mm` : null,
-        ].filter(Boolean).join(" · ");
-        return [String(i + 1), label];
-    });
-});
 
 const loadBeamInfo = async () => {
     loading.value = true;
@@ -129,15 +113,7 @@ const formatLabel = (key) => key.replace(/_/g, " ");
                     </ul>
                 </section>
 
-                <section v-if="featureRows.length" class="info-section info-section-full">
-                    <h3>Features</h3>
-                    <ul class="specs-list">
-                        <li v-for="[index, label] in featureRows" :key="index" class="spec-item">
-                            <span class="label">{{ index }}</span>
-                            <span class="value">{{ label }}</span>
-                        </li>
-                    </ul>
-                </section>
+
             </div>
         </div>
     </div>
@@ -202,10 +178,6 @@ h3 {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 18px;
-}
-
-.info-section-full {
-    grid-column: 1 / -1;
 }
 
 .specs-list {
