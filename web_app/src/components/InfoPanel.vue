@@ -27,7 +27,6 @@ const HIDDEN_KEYS = [
     "features",
     "machining",
     "key_beam",
-    "is_key_beam"
 ];
 
 const engravingText = computed(() =>
@@ -134,7 +133,7 @@ const formatJointValue = (jointData) => {
                             </span>
                         </li>
                         <li v-if="beamData.is_key_beam === true || beamData.is_key_beam === 'true'" class="spec-item">
-                            <span class="label">key beams</span>
+                            <span class="label">key beam</span>
                             <span class="value">Yes</span>
                         </li>
                     </ul>
