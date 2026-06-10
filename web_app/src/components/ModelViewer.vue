@@ -559,6 +559,82 @@ const numericBeamValue = (beamData, key, fallback = 0) => {
     return Number.isFinite(value) ? value : fallback;
 };
 
+const numericRecordValue = (record, keys) => {
+    for (const key of keys) {
+        const value = Number(record?.[key]);
+        if (Number.isFinite(value)) return value;
+    }
+    const data = record?.data || {};
+    for (const key of keys) {
+        const value = Number(data?.[key]);
+        if (Number.isFinite(value)) return value;
+    }
+    return null;
+};
+
+const featureCenter = (record) => {
+    const start = record?.start || record?.line?.start || record?.data?.start;
+    const end = record?.end || record?.line?.end || record?.data?.end;
+    if (start && end) {
+        return vectorFromArray(start).add(vectorFromArray(end)).multiplyScalar(0.5);
+    }
+    const location = record?.location || record?.position || record?.point || record?.origin || record?.data?.location || record?.data?.position;
+    return location ? vectorFromArray(location) : null;
+};
+
+const featureLengthMm = (record) => {
+    const lengthMm = numericRecordValue(record, ["length_mm", "screw_length_mm"]);
+    if (lengthMm !== null) return lengthMm;
+    const lengthM = numericRecordValue(record, ["length_m", "length", "screw_length", "drilling_depth", "depth", "line_length_m"]);
+    return lengthM !== null ? lengthM * 1000 : null;
+};
+
+const currentFeatureRecords = () => {
+    const records =
+        currentBeamData?.features ||
+        currentBeamData?.processing ||
+        currentBeamData?.processings ||
+        currentBeamData?.machining ||
+        [];
+    return Array.isArray(records) ? records : [];
+};
+
+const nearbyFeatureRecords = (location, radius = 0.18) => {
+    if (!location) return [];
+    const radiusSq = radius * radius;
+    return currentFeatureRecords().filter((record) => {
+        const center = featureCenter(record);
+        return center && center.distanceToSquared(location) <= radiusSq;
+    });
+};
+
+const uniqueSortedLengths = (records) => {
+    const values = records
+        .map(featureLengthMm)
+        .filter((value) => Number.isFinite(value))
+        .map((value) => Math.round(value));
+    return [...new Set(values)].sort((a, b) => a - b);
+};
+
+const jointHoverInfo = (joint, location) => {
+    const type = formatJointType(joint.type);
+    const nearbyFeatures = nearbyFeatureRecords(location);
+    const screwLengths = uniqueSortedLengths(nearbyFeatures);
+    const screwCount = nearbyFeatures.filter((record) => /drill|screw|hole|fastener/i.test(record.type || record.name || "")).length;
+    const lines = [
+        `Type: ${type}`,
+        joint.id ? `Joint ${joint.id}` : "",
+        joint.connectedBeamId ? `Connected: ${getBeamDisplayName(joint.connectedBeamId)}` : "",
+        screwCount ? `Screws: ${screwCount}` : "",
+        screwLengths.length ? `Screw length: ${screwLengths.join(", ")} mm` : "",
+    ].filter(Boolean);
+
+    return {
+        title: joint.label || "Joint",
+        lines,
+    };
+};
+
 const getEngravingPlacement = () => {
     const position = getGlobalPosition();
     const frame = getDisplayFrame();
@@ -741,10 +817,26 @@ const drawJointLabels = (scale = 0.13) => {
         const label = joint.label || `${getBeamDisplayName(getBeamId())} - ${getBeamDisplayName(joint.connectedBeamId)}`;
         const type = formatJointType(joint.type);
         const displayLabel = `${label}\n${type}`;
-        const point = location.add(normal.clone().multiplyScalar(scale * 0.9));
+        const hoverData = jointHoverInfo({ ...joint, label }, location);
+        const point = location.clone().add(normal.clone().multiplyScalar(scale * 0.9));
+        const hitZone = new THREE.Mesh(
+            new THREE.SphereGeometry(Math.max(scale * 2.2, 0.055), 16, 8),
+            new THREE.MeshBasicMaterial({
+                color: 0x000000,
+                transparent: true,
+                opacity: 0,
+                depthWrite: false,
+            })
+        );
+        hitZone.position.copy(location);
+        hitZone.userData.isOverlay = true;
+        hitZone.userData.isJointHitZone = true;
+        hitZone.userData.hoverInfo = hoverData;
+        makeModelObject(hitZone);
+        scene.add(hitZone);
+
         makeTextSprite(displayLabel, point, "#111111", scale, {
-            title: label,
-            lines: [type, joint.id ? `Joint ${joint.id}` : ""].filter(Boolean),
+            ...hoverData,
         }, {
             fontSize: 34,
             fontWeight: 400,

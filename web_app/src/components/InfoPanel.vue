@@ -14,8 +14,6 @@ const error = ref(null);
 
 const HIDDEN_KEYS = ["name", "3d_model", "geometry_model", "blank_model", "frame", "local_frame", "global_position", "connected_beams", "joints"];
 
-const frameData = computed(() => beamData.value?.local_frame || beamData.value?.frame || null);
-const positionData = computed(() => beamData.value?.global_position || {});
 const engravingText = computed(() => beamData.value?.engraving_text || beamData.value?.name || beamData.value?.["beam ID"]);
 
 const beamRows = computed(() => {
@@ -113,32 +111,6 @@ const formatLabel = (key) => key.replace(/_/g, " ");
                         </li>
                     </ul>
                 </section>
-
-                <section class="info-section frame-section">
-                    <h3>Beam Frame</h3>
-                    <ul class="specs-list">
-                        <li v-if="frameData?.origin" class="spec-item">
-                            <span class="label">origin</span>
-                            <span class="value">{{ formatValue(frameData.origin) }}</span>
-                        </li>
-                        <li v-if="frameData?.x_axis" class="spec-item">
-                            <span class="label">x / y / z</span>
-                            <span class="value">
-                                {{ formatValue(frameData.x_axis) }}<br />
-                                {{ formatValue(frameData.y_axis) }}<br />
-                                {{ formatValue(frameData.z_axis) }}
-                            </span>
-                        </li>
-                        <li v-if="positionData.centerline_start" class="spec-item">
-                            <span class="label">centerline start</span>
-                            <span class="value">{{ formatValue(positionData.centerline_start) }}</span>
-                        </li>
-                        <li v-if="positionData.centerline_end" class="spec-item">
-                            <span class="label">centerline end</span>
-                            <span class="value">{{ formatValue(positionData.centerline_end) }}</span>
-                        </li>
-                    </ul>
-                </section>
             </div>
         </div>
     </div>
@@ -201,7 +173,7 @@ h3 {
 
 .info-grid {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 18px;
 }
 
