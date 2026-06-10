@@ -435,6 +435,97 @@ class DrillingProcessor:
 
         return self._generate_features(hw_lines, [abut_beam], joint_label, final_screw_length)
     
+
+    def _resolve_shallow_drilling(self, abut_beam, cont_beam, intersection_pt):
+        # 1. Establish coordinate vectors
+        dir_into_abut = abut_beam.centerline.direction.copy()
+        vec_to_mid = Vector.from_start_end(intersection_pt, abut_beam.centerline.midpoint)
+        if dir_into_abut.dot(vec_to_mid) < 0: 
+            dir_into_abut.scale(-1)
+        dir_into_abut.unitize()
+        
+        dir_cont = cont_beam.centerline.direction.copy()
+        dir_cont.unitize()
+        if dir_cont.dot(dir_into_abut) < 0:
+            dir_cont.scale(-1)
+            
+        # Define the local plane of the joint
+        plane_normal = dir_cont.cross(dir_into_abut)
+        if plane_normal.length < 1e-5: 
+            plane_normal = Vector(0, 0, 1)
+        plane_normal.unitize()
+        
+        # Vector perpendicular to dir_cont, pointing "down" into the continuous beam
+        v_perp = plane_normal.cross(dir_cont)
+        v_perp.unitize()
+        if v_perp.dot(dir_into_abut) > 0: 
+            v_perp.scale(-1)
+            
+        # 2. Construct the primary 40-degree target vector (Pitch)
+        target_angle_rad = math.radians(40.0)
+        base_screw_dir = dir_cont * math.cos(target_angle_rad) + v_perp * math.sin(target_angle_rad)
+        base_screw_dir.unitize()
+        
+        # Ensure it points generally towards the continuous beam
+        if base_screw_dir.dot(dir_into_abut * -1) < 0:
+             base_screw_dir = (dir_cont * -1) * math.cos(target_angle_rad) + v_perp * math.sin(target_angle_rad)
+             base_screw_dir.unitize()
+
+        # 3. Iteration Setup (Higher Resolution)
+        thickness_c = max(cont_beam.width, cont_beam.height)
+        anchor_depth = 0.060
+        required_penetration = thickness_c + anchor_depth
+        
+        walk_step = 0.005  # Finer 5mm increments
+        max_steps = 60     # Still walks back up to 300mm total
+        
+        # Sweep from center outward in 5-degree increments to find the absolute edge of the timber
+        yaws = [0, 5, -5, 10, -10, 15, -15, 20, -20, 25, -25] 
+        
+        cat_a = abut_beam.attributes.get("category", "inner")
+        cat_c = cont_beam.attributes.get("category", "inner")
+        joint_label = "TButtJoint - arch (40° Corrected)" if cat_a == "arch" or cat_c == "arch" else "TButtJoint - inner (40° Corrected)"
+        
+        # 4. The "Walk Back" Loop
+        for step in range(max_steps):
+            offset_dist = step * walk_step
+            # Move the starting point of the ray further up the abutting beam
+            entry_pt = intersection_pt + (dir_into_abut * offset_dist)
+            
+            for yaw in yaws:
+                yaw_rad = math.radians(yaw)
+                # Apply lateral skew (yaw) by rotating the vector around the perpendicular axis
+                current_screw_dir = base_screw_dir * math.cos(yaw_rad) + plane_normal * math.sin(yaw_rad)
+                current_screw_dir.unitize()
+                
+                # Check volumetric boundaries: Does it exit the abutting beam prematurely?
+                exit_dist = _ray_obb_exit(entry_pt, current_screw_dir, abut_beam)
+                
+                if exit_dist is not None:
+                    # Calculate total screw length needed from this new, higher origin point
+                    req_screw_length = math.ceil((offset_dist + required_penetration) / 0.010) * 0.010
+                    
+                    # If the distance the screw travels INSIDE the abutting beam is greater 
+                    # than the required length minus the anchor, it means it doesn't poke out the sides.
+                    if exit_dist >= (req_screw_length - anchor_depth):
+                        
+                        # Generate the corrected trajectories
+                        offset_vec = plane_normal * (self.screw_spacing / 2.0)
+                        end_pt = entry_pt + (current_screw_dir * req_screw_length)
+                        
+                        hw_line_1 = Line(entry_pt + offset_vec, end_pt + offset_vec)
+                        hw_line_2 = Line(entry_pt - offset_vec, end_pt - offset_vec)
+                        
+                        self._generate_features(
+                            [hw_line_1, hw_line_2],
+                            [cont_beam],
+                            joint_label,
+                            req_screw_length
+                        )
+                        return True
+                        
+        return False
+
     def _apply_standard_butt_drilling(self, joint):
         elements = [joint.main_beam, joint.cross_beam]
         line1, line2 = elements[0].centerline, elements[1].centerline
@@ -455,6 +546,27 @@ class DrillingProcessor:
             abut_beam, cont_beam = elements[1], elements[0]
             intersection_pt = pt_b
 
+        dir_abut = abut_beam.centerline.direction.copy()
+        dir_cont = cont_beam.centerline.direction.copy()
+        
+        angle_rad = dir_abut.angle(dir_cont)
+        angle_deg = math.degrees(angle_rad)
+        acute_angle_deg = min(angle_deg, 180.0 - angle_deg)
+
+        # --- THE 40-DEGREE REROUTE ---
+        if acute_angle_deg < 40.0:
+            success = self._resolve_shallow_drilling(abut_beam, cont_beam, intersection_pt)
+            
+            # If the solver couldn't find a valid geometry without breaching, throw the visual flag
+            if not success:
+                flag_line = Line(intersection_pt, intersection_pt + Vector(0, 0, 0.2))
+                self.failed_screw_info.append({
+                    "line": flag_line,
+                    "type": f"FAILED 40° SOLVE: {acute_angle_deg:.1f}°"
+                })
+            return
+        # -----------------------------
+
         centerline = abut_beam.centerline
         dir_into_abut = centerline.direction.copy()
         vec_to_mid = Vector.from_start_end(intersection_pt, centerline.midpoint)
@@ -469,7 +581,6 @@ class DrillingProcessor:
         req_screw_length = math.ceil(raw_screw_length / 0.010) * 0.010
         end_pt = start_pt + (dir_into_abut * req_screw_length)
 
-        dir_cont = cont_beam.centerline.direction.copy()
         dir_cont.unitize()
         offset_dir = dir_into_abut.cross(dir_cont)
         if offset_dir.length < 1e-5: offset_dir = Vector(0, 0, 1) 
