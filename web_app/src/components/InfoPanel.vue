@@ -15,7 +15,7 @@ const error = ref(null);
 const HIDDEN_KEYS = [
     "name", "3d_model", "frame", "local_frame", "global_position",
     "connected_beams", "joints", "processing", "processings", "features", "machining",
-    "is_key_beam", "key_beam" // Nascosti dalla lista generica
+    "is_key_beam", "key_beam"
 ];
 
 const engravingText = computed(() =>
@@ -90,7 +90,7 @@ const formatLabel = (key) => key.replace(/_/g, " ").replace("cm3", "cm³");
                             <span class="label">module</span>
                             <span class="value">{{ beamData.module }}</span>
                         </li>
-                        <!-- Key Beam - mostra SOLO se true, senza evidenziazione -->
+                        <!-- Key Beam - mostra SOLO se true -->
                         <li v-if="isKeyBeam" class="spec-item">
                             <span class="label">Key beam</span>
                             <span class="value">true</span>
