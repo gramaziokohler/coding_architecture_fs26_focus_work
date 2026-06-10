@@ -2,6 +2,7 @@
   "beam ID": "b17",
   "name": "B17",
   "module": "B",
+  "is_key_beam": false,
   "width (m)": 0.08,
   "height (m)": 0.1,
   "length (m)": 1.37,
@@ -9,9 +10,9 @@
   "weight (kg)": 5.46,
   "local_frame": {
     "origin": [
-      0.1973,
-      3.208,
-      1.3711
+      0.1986,
+      3.2083,
+      1.3722
     ],
     "x_axis": [
       0.7751,
@@ -19,20 +20,20 @@
       0.6074
     ],
     "y_axis": [
-      -0.5926,
-      -0.1333,
-      0.7944
+      0.1307,
+      0.8962,
+      -0.424
     ],
     "z_axis": [
-      0.2194,
-      -0.9756,
-      0.0
+      -0.6182,
+      0.408,
+      0.6718
     ]
   },
   "connected_beams": [
     "b15",
-    "b27",
-    "d28"
+    "b23",
+    "d32"
   ],
   "global_position": {
     "centerline_start": [
@@ -69,5 +70,7 @@
       "59"
     ]
   },
-  "3d_model": "beams/b17/b17.stl"
+  "3d_model": "beams/b17/b17.stl",
+  "geometry_model": "beams/b17/b17.stl",
+  "blank_model": "beams/b17/b17_blank.stl"
 }

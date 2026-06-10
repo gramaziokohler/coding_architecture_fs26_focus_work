@@ -2,6 +2,7 @@
   "beam ID": "f15",
   "name": "F15",
   "module": "F",
+  "is_key_beam": false,
   "width (m)": 0.12,
   "height (m)": 0.14,
   "length (m)": 0.84,
@@ -9,8 +10,8 @@
   "weight (kg)": 7.09,
   "local_frame": {
     "origin": [
-      5.8746,
-      1.5373,
+      5.8744,
+      1.536,
       0.0
     ],
     "x_axis": [
@@ -19,14 +20,14 @@
       0.0
     ],
     "y_axis": [
-      -0.0,
-      0.0,
-      1.0
+      -0.9925,
+      0.1222,
+      0.0
     ],
     "z_axis": [
-      0.9925,
-      -0.1222,
-      0.0
+      0.0,
+      -0.0,
+      1.0
     ]
   },
   "connected_beams": [
@@ -70,5 +71,7 @@
       "334"
     ]
   },
-  "3d_model": "beams/f15/f15.stl"
+  "3d_model": "beams/f15/f15.stl",
+  "geometry_model": "beams/f15/f15.stl",
+  "blank_model": "beams/f15/f15_blank.stl"
 }

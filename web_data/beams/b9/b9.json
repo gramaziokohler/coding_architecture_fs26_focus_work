@@ -2,6 +2,7 @@
   "beam ID": "b9",
   "name": "B9",
   "module": "B",
+  "is_key_beam": false,
   "width (m)": 0.06,
   "height (m)": 0.08,
   "length (m)": 1.25,
@@ -9,9 +10,9 @@
   "weight (kg)": 3.0,
   "local_frame": {
     "origin": [
-      -0.6024,
-      1.9602,
-      0.3373
+      -0.5994,
+      1.9565,
+      0.3388
     ],
     "x_axis": [
       -0.5955,
@@ -19,18 +20,18 @@
       -0.3082
     ],
     "y_axis": [
-      -0.1929,
-      0.2403,
-      0.9513
+      0.4407,
+      0.6224,
+      0.6468
     ],
     "z_axis": [
-      0.7798,
-      0.626,
-      -0.0
+      0.6717,
+      0.2494,
+      -0.6976
     ]
   },
   "connected_beams": [
-    "b25",
+    "b21",
     "b3",
     "b8"
   ],
@@ -71,5 +72,7 @@
     ],
     "lmiter": []
   },
-  "3d_model": "beams/b9/b9.stl"
+  "3d_model": "beams/b9/b9.stl",
+  "geometry_model": "beams/b9/b9.stl",
+  "blank_model": "beams/b9/b9_blank.stl"
 }

@@ -2,70 +2,72 @@
   "beam ID": "c31",
   "name": "C31",
   "module": "C",
-  "width (m)": 0.08,
-  "height (m)": 0.1,
-  "length (m)": 1.2,
-  "volume (cm\u00b3)": 9586.84,
-  "weight (kg)": 4.79,
+  "is_key_beam": false,
+  "width (m)": 0.06,
+  "height (m)": 0.08,
+  "length (m)": 0.87,
+  "volume (cm\u00b3)": 4197.68,
+  "weight (kg)": 2.1,
   "local_frame": {
     "origin": [
-      2.3723,
-      -2.0567,
-      2.7586
+      0.9353,
+      -1.6437,
+      2.1788
     ],
     "x_axis": [
-      0.9968,
-      0.0787,
-      -0.0111
+      -0.2759,
+      0.8069,
+      -0.5223
     ],
     "y_axis": [
-      0.0111,
-      0.0009,
-      0.9999
+      0.852,
+      0.4568,
+      0.2557
     ],
     "z_axis": [
-      0.0787,
-      -0.9969,
-      0.0
+      0.4449,
+      -0.3745,
+      -0.8135
     ]
   },
   "connected_beams": [
-    "c29",
-    "e36"
+    "c30",
+    "c33"
   ],
   "global_position": {
     "centerline_start": [
-      1.775,
-      -2.1038,
-      2.7652
+      1.0516,
+      -1.9839,
+      2.399
     ],
     "centerline_end": [
-      2.9696,
-      -2.0095,
-      2.7519
+      0.8103,
+      -1.2782,
+      1.9423
     ],
     "midpoint": [
-      2.3723,
-      -2.0567,
-      2.7586
+      0.931,
+      -1.631,
+      2.1706
     ],
     "midpoint_normalized": [
-      0.4974,
-      0.0,
-      1.0
+      0.2908,
+      0.0786,
+      0.7869
     ]
   },
   "joints": {
     "all": [
-      "289",
-      "297"
+      "282",
+      "65"
     ],
     "xlap": [],
-    "tbutt": [],
-    "lmiter": [
-      "289",
-      "297"
-    ]
+    "tbutt": [
+      "65"
+    ],
+    "lmiter": []
   },
-  "3d_model": "beams/c31/c31.stl"
+  "3d_model": "beams/c31/c31.stl",
+  "geometry_model": "beams/c31/c31.stl",
+  "blank_model": "beams/c31/c31_blank.stl"
 }

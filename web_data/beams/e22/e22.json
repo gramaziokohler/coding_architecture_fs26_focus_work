@@ -2,6 +2,7 @@
   "beam ID": "e22",
   "name": "E22",
   "module": "E",
+  "is_key_beam": false,
   "width (m)": 0.12,
   "height (m)": 0.14,
   "length (m)": 0.76,
@@ -9,8 +10,8 @@
   "weight (kg)": 6.36,
   "local_frame": {
     "origin": [
-      5.879,
-      -0.4063,
+      5.8788,
+      -0.4049,
       0.0
     ],
     "x_axis": [
@@ -19,14 +20,14 @@
       0.0
     ],
     "y_axis": [
+      -0.9901,
+      -0.14,
+      0.0
+    ],
+    "z_axis": [
       0.0,
       0.0,
       1.0
-    ],
-    "z_axis": [
-      0.9901,
-      0.14,
-      -0.0
     ]
   },
   "connected_beams": [
@@ -68,5 +69,7 @@
       "335"
     ]
   },
-  "3d_model": "beams/e22/e22.stl"
+  "3d_model": "beams/e22/e22.stl",
+  "geometry_model": "beams/e22/e22.stl",
+  "blank_model": "beams/e22/e22_blank.stl"
 }

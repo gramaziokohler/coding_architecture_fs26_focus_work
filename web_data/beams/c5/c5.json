@@ -2,6 +2,7 @@
   "beam ID": "c5",
   "name": "C5",
   "module": "C",
+  "is_key_beam": false,
   "width (m)": 0.06,
   "height (m)": 0.08,
   "length (m)": 1.2,
@@ -9,9 +10,9 @@
   "weight (kg)": 2.89,
   "local_frame": {
     "origin": [
-      1.1873,
-      -0.8192,
-      1.9773
+      1.1828,
+      -0.8187,
+      1.9752
     ],
     "x_axis": [
       0.9029,
@@ -19,19 +20,19 @@
       0.4184
     ],
     "y_axis": [
-      -0.4159,
-      0.0455,
-      0.9083
+      -0.2061,
+      -0.9535,
+      0.2198
     ],
     "z_axis": [
-      -0.1087,
-      -0.9941,
-      0.0
+      0.3772,
+      -0.2846,
+      -0.8813
     ]
   },
   "connected_beams": [
-    "a29",
     "c2",
+    "c33",
     "c4",
     "c6"
   ],
@@ -74,5 +75,7 @@
     ],
     "lmiter": []
   },
-  "3d_model": "beams/c5/c5.stl"
+  "3d_model": "beams/c5/c5.stl",
+  "geometry_model": "beams/c5/c5.stl",
+  "blank_model": "beams/c5/c5_blank.stl"
 }

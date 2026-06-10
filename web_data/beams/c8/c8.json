@@ -2,6 +2,7 @@
   "beam ID": "c8",
   "name": "C8",
   "module": "C",
+  "is_key_beam": false,
   "width (m)": 0.06,
   "height (m)": 0.08,
   "length (m)": 1.33,
@@ -9,9 +10,9 @@
   "weight (kg)": 3.18,
   "local_frame": {
     "origin": [
-      2.1128,
-      -1.5579,
-      2.499
+      2.111,
+      -1.5581,
+      2.4989
     ],
     "x_axis": [
       -0.993,
@@ -19,14 +20,14 @@
       -0.0584
     ],
     "y_axis": [
+      0.1024,
+      -0.9947,
+      0.0
+    ],
+    "z_axis": [
       -0.0581,
       -0.006,
       0.9983
-    ],
-    "z_axis": [
-      -0.1024,
-      0.9947,
-      0.0
     ]
   },
   "connected_beams": [
@@ -74,5 +75,7 @@
     ],
     "lmiter": []
   },
-  "3d_model": "beams/c8/c8.stl"
+  "3d_model": "beams/c8/c8.stl",
+  "geometry_model": "beams/c8/c8.stl",
+  "blank_model": "beams/c8/c8_blank.stl"
 }

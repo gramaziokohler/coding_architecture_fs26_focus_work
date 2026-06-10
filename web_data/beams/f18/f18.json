@@ -2,6 +2,7 @@
   "beam ID": "f18",
   "name": "F18",
   "module": "F",
+  "is_key_beam": false,
   "width (m)": 0.06,
   "height (m)": 0.08,
   "length (m)": 1.11,
@@ -9,9 +10,9 @@
   "weight (kg)": 2.66,
   "local_frame": {
     "origin": [
-      4.2938,
-      0.9741,
-      1.4184
+      4.2898,
+      0.9746,
+      1.4214
     ],
     "x_axis": [
       0.8012,
@@ -19,14 +20,14 @@
       -0.5899
     ],
     "y_axis": [
-      0.5854,
-      -0.0733,
-      0.8075
+      -0.0814,
+      -0.995,
+      0.0586
     ],
     "z_axis": [
-      -0.1242,
-      -0.9923,
-      0.0
+      -0.5928,
+      0.0011,
+      -0.8053
     ]
   },
   "connected_beams": [
@@ -74,5 +75,7 @@
     ],
     "lmiter": []
   },
-  "3d_model": "beams/f18/f18.stl"
+  "3d_model": "beams/f18/f18.stl",
+  "geometry_model": "beams/f18/f18.stl",
+  "blank_model": "beams/f18/f18_blank.stl"
 }

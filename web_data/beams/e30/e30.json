@@ -2,6 +2,7 @@
   "beam ID": "e30",
   "name": "E30",
   "module": "E",
+  "is_key_beam": false,
   "width (m)": 0.06,
   "height (m)": 0.08,
   "length (m)": 0.98,
@@ -9,9 +10,9 @@
   "weight (kg)": 2.34,
   "local_frame": {
     "origin": [
-      3.7883,
-      -0.7195,
-      1.9675
+      3.7855,
+      -0.7154,
+      1.9679
     ],
     "x_axis": [
       0.5724,
@@ -19,18 +20,18 @@
       -0.0663
     ],
     "y_axis": [
-      0.038,
-      -0.0543,
-      0.9978
+      -0.6891,
+      -0.5233,
+      0.5012
     ],
     "z_axis": [
-      -0.8191,
-      -0.5737,
-      0.0
+      -0.4443,
+      -0.2412,
+      -0.8628
     ]
   },
   "connected_beams": [
-    "c15",
+    "c16",
     "e29",
     "e31",
     "e34"
@@ -74,5 +75,7 @@
     ],
     "lmiter": []
   },
-  "3d_model": "beams/e30/e30.stl"
+  "3d_model": "beams/e30/e30.stl",
+  "geometry_model": "beams/e30/e30.stl",
+  "blank_model": "beams/e30/e30_blank.stl"
 }

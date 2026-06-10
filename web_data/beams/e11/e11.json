@@ -2,6 +2,7 @@
   "beam ID": "e11",
   "name": "E11",
   "module": "E",
+  "is_key_beam": false,
   "width (m)": 0.06,
   "height (m)": 0.08,
   "length (m)": 0.93,
@@ -9,9 +10,9 @@
   "weight (kg)": 2.23,
   "local_frame": {
     "origin": [
-      4.71,
-      0.0036,
-      1.1829
+      4.7071,
+      0.0072,
+      1.1848
     ],
     "x_axis": [
       0.5787,
@@ -19,14 +20,14 @@
       -0.3829
     ],
     "y_axis": [
-      0.2399,
-      -0.2985,
-      0.9238
+      -0.502,
+      -0.6846,
+      0.5285
     ],
     "z_axis": [
-      -0.7794,
-      -0.6265,
-      0.0
+      -0.6427,
+      -0.1136,
+      -0.7577
     ]
   },
   "connected_beams": [
@@ -74,5 +75,7 @@
     ],
     "lmiter": []
   },
-  "3d_model": "beams/e11/e11.stl"
+  "3d_model": "beams/e11/e11.stl",
+  "geometry_model": "beams/e11/e11.stl",
+  "blank_model": "beams/e11/e11_blank.stl"
 }

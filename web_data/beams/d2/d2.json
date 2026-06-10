@@ -2,6 +2,7 @@
   "beam ID": "d2",
   "name": "D2",
   "module": "D",
+  "is_key_beam": false,
   "width (m)": 0.06,
   "height (m)": 0.08,
   "length (m)": 1.15,
@@ -9,9 +10,9 @@
   "weight (kg)": 2.75,
   "local_frame": {
     "origin": [
-      1.8335,
-      1.794,
-      1.9445
+      1.8312,
+      1.7985,
+      1.9442
     ],
     "x_axis": [
       0.4524,
@@ -19,21 +20,21 @@
       0.0669
     ],
     "y_axis": [
-      -0.0303,
-      0.0596,
-      0.9978
+      -0.845,
+      -0.4514,
+      -0.2868
     ],
     "z_axis": [
-      -0.8913,
-      -0.4534,
-      0.0
+      0.2852,
+      0.0732,
+      -0.9557
     ]
   },
   "connected_beams": [
     "d1",
     "d3",
-    "d6",
-    "d8"
+    "d7",
+    "d9"
   ],
   "global_position": {
     "centerline_start": [
@@ -74,5 +75,7 @@
     ],
     "lmiter": []
   },
-  "3d_model": "beams/d2/d2.stl"
+  "3d_model": "beams/d2/d2.stl",
+  "geometry_model": "beams/d2/d2.stl",
+  "blank_model": "beams/d2/d2_blank.stl"
 }

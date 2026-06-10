@@ -2,6 +2,7 @@
   "beam ID": "f24",
   "name": "F24",
   "module": "F",
+  "is_key_beam": false,
   "width (m)": 0.06,
   "height (m)": 0.08,
   "length (m)": 0.98,
@@ -9,9 +10,9 @@
   "weight (kg)": 2.36,
   "local_frame": {
     "origin": [
-      4.0072,
-      1.6936,
-      1.629
+      4.0044,
+      1.6896,
+      1.6302
     ],
     "x_axis": [
       0.562,
@@ -19,14 +20,14 @@
       -0.2245
     ],
     "y_axis": [
-      0.1294,
-      0.1834,
-      0.9745
+      0.6774,
+      -0.5987,
+      -0.4274
     ],
     "z_axis": [
-      0.817,
-      -0.5767,
-      0.0
+      -0.4747,
+      0.0881,
+      -0.8757
     ]
   },
   "connected_beams": [
@@ -74,5 +75,7 @@
     ],
     "lmiter": []
   },
-  "3d_model": "beams/f24/f24.stl"
+  "3d_model": "beams/f24/f24.stl",
+  "geometry_model": "beams/f24/f24.stl",
+  "blank_model": "beams/f24/f24_blank.stl"
 }

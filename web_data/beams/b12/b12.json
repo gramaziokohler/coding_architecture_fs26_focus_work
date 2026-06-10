@@ -2,6 +2,7 @@
   "beam ID": "b12",
   "name": "B12",
   "module": "B",
+  "is_key_beam": false,
   "width (m)": 0.06,
   "height (m)": 0.08,
   "length (m)": 1.16,
@@ -9,9 +10,9 @@
   "weight (kg)": 2.78,
   "local_frame": {
     "origin": [
-      -0.4028,
-      0.8444,
-      0.3866
+      -0.4005,
+      0.8404,
+      0.3886
     ],
     "x_axis": [
       -0.4574,
@@ -19,14 +20,14 @@
       -0.3957
     ],
     "y_axis": [
-      -0.1971,
-      0.3431,
-      0.9184
+      0.5224,
+      0.6007,
+      0.6052
     ],
     "z_axis": [
-      0.8672,
-      0.498,
-      -0.0
+      0.7196,
+      0.07,
+      -0.6908
     ]
   },
   "connected_beams": [
@@ -71,5 +72,7 @@
     ],
     "lmiter": []
   },
-  "3d_model": "beams/b12/b12.stl"
+  "3d_model": "beams/b12/b12.stl",
+  "geometry_model": "beams/b12/b12.stl",
+  "blank_model": "beams/b12/b12_blank.stl"
 }

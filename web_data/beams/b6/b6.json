@@ -2,6 +2,7 @@
   "beam ID": "b6",
   "name": "B6",
   "module": "B",
+  "is_key_beam": false,
   "width (m)": 0.06,
   "height (m)": 0.08,
   "length (m)": 1.16,
@@ -9,9 +10,9 @@
   "weight (kg)": 2.8,
   "local_frame": {
     "origin": [
-      0.3973,
-      1.169,
-      1.1127
+      0.3933,
+      1.1689,
+      1.1098
     ],
     "x_axis": [
       0.8068,
@@ -19,21 +20,21 @@
       0.5908
     ],
     "y_axis": [
-      -0.5907,
-      -0.0071,
-      0.8069
+      0.0213,
+      -0.9997,
+      -0.0128
     ],
     "z_axis": [
-      0.012,
-      -0.9999,
-      0.0
+      0.5904,
+      0.0229,
+      -0.8068
     ]
   },
   "connected_beams": [
     "a21",
-    "b22",
     "b4",
-    "b5"
+    "b5",
+    "d19"
   ],
   "global_position": {
     "centerline_start": [
@@ -74,5 +75,7 @@
     ],
     "lmiter": []
   },
-  "3d_model": "beams/b6/b6.stl"
+  "3d_model": "beams/b6/b6.stl",
+  "geometry_model": "beams/b6/b6.stl",
+  "blank_model": "beams/b6/b6_blank.stl"
 }

@@ -2,6 +2,7 @@
   "beam ID": "a9",
   "name": "A9",
   "module": "A",
+  "is_key_beam": false,
   "width (m)": 0.06,
   "height (m)": 0.08,
   "length (m)": 1.09,
@@ -9,9 +10,9 @@
   "weight (kg)": 2.61,
   "local_frame": {
     "origin": [
-      1.038,
-      0.0416,
-      1.6652
+      1.0355,
+      0.0373,
+      1.6645
     ],
     "x_axis": [
       0.4876,
@@ -19,20 +20,20 @@
       0.1384
     ],
     "y_axis": [
-      -0.0681,
-      -0.1204,
-      0.9904
+      0.708,
+      -0.4831,
+      0.5151
     ],
     "z_axis": [
-      0.8704,
-      -0.4923,
-      0.0
+      0.5109,
+      -0.1532,
+      -0.8459
     ]
   },
   "connected_beams": [
     "a7",
     "a8",
-    "c28",
+    "c29",
     "c4"
   ],
   "global_position": {
@@ -74,5 +75,7 @@
     ],
     "lmiter": []
   },
-  "3d_model": "beams/a9/a9.stl"
+  "3d_model": "beams/a9/a9.stl",
+  "geometry_model": "beams/a9/a9.stl",
+  "blank_model": "beams/a9/a9_blank.stl"
 }

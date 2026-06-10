@@ -2,6 +2,7 @@
   "beam ID": "f31",
   "name": "F31",
   "module": "F",
+  "is_key_beam": false,
   "width (m)": 0.08,
   "height (m)": 0.1,
   "length (m)": 1.28,
@@ -9,9 +10,9 @@
   "weight (kg)": 5.11,
   "local_frame": {
     "origin": [
-      3.5933,
-      3.0173,
-      2.0148
+      3.5912,
+      3.018,
+      2.0157
     ],
     "x_axis": [
       0.8608,
@@ -19,19 +20,19 @@
       -0.3999
     ],
     "y_axis": [
-      0.3756,
-      -0.1373,
-      0.9165
+      0.1307,
+      0.8962,
+      -0.424
     ],
     "z_axis": [
-      -0.3434,
-      -0.9392,
-      0.0
+      0.4919,
+      0.3127,
+      0.8126
     ]
   },
   "connected_beams": [
-    "d20",
-    "d23",
+    "d24",
+    "d27",
     "f28",
     "f30",
     "f5"
@@ -73,5 +74,7 @@
       "234"
     ]
   },
-  "3d_model": "beams/f31/f31.stl"
+  "3d_model": "beams/f31/f31.stl",
+  "geometry_model": "beams/f31/f31.stl",
+  "blank_model": "beams/f31/f31_blank.stl"
 }

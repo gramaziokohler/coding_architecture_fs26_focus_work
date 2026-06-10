@@ -2,6 +2,7 @@
   "beam ID": "e33",
   "name": "E33",
   "module": "E",
+  "is_key_beam": false,
   "width (m)": 0.06,
   "height (m)": 0.08,
   "length (m)": 1.31,
@@ -9,9 +10,9 @@
   "weight (kg)": 3.15,
   "local_frame": {
     "origin": [
-      4.2731,
-      -1.1326,
-      1.8052
+      4.2696,
+      -1.1341,
+      1.8085
     ],
     "x_axis": [
       -0.7011,
@@ -19,14 +20,14 @@
       0.6445
     ],
     "y_axis": [
+      0.399,
+      -0.9169,
+      -0.0
+    ],
+    "z_axis": [
       0.5909,
       0.2572,
       0.7646
-    ],
-    "z_axis": [
-      -0.399,
-      0.9169,
-      0.0
     ]
   },
   "connected_beams": [
@@ -74,5 +75,7 @@
     ],
     "lmiter": []
   },
-  "3d_model": "beams/e33/e33.stl"
+  "3d_model": "beams/e33/e33.stl",
+  "geometry_model": "beams/e33/e33.stl",
+  "blank_model": "beams/e33/e33_blank.stl"
 }

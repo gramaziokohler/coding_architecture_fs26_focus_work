@@ -2,6 +2,7 @@
   "beam ID": "f12",
   "name": "F12",
   "module": "F",
+  "is_key_beam": false,
   "width (m)": 0.06,
   "height (m)": 0.08,
   "length (m)": 1.0,
@@ -9,9 +10,9 @@
   "weight (kg)": 2.4,
   "local_frame": {
     "origin": [
-      5.5102,
-      1.1975,
-      0.3853
+      5.5092,
+      1.1994,
+      0.3865
     ],
     "x_axis": [
       0.401,
@@ -19,14 +20,14 @@
       -0.4846
     ],
     "y_axis": [
-      0.2222,
-      -0.4307,
-      0.8747
+      -0.551,
+      -0.6273,
+      0.5504
     ],
     "z_axis": [
-      -0.8887,
-      -0.4584,
-      0.0
+      -0.7319,
+      0.0463,
+      -0.6799
     ]
   },
   "connected_beams": [
@@ -71,5 +72,7 @@
     ],
     "lmiter": []
   },
-  "3d_model": "beams/f12/f12.stl"
+  "3d_model": "beams/f12/f12.stl",
+  "geometry_model": "beams/f12/f12.stl",
+  "blank_model": "beams/f12/f12_blank.stl"
 }

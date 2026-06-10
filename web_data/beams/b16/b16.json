@@ -2,6 +2,7 @@
   "beam ID": "b16",
   "name": "B16",
   "module": "B",
+  "is_key_beam": false,
   "width (m)": 0.06,
   "height (m)": 0.08,
   "length (m)": 0.74,
@@ -9,9 +10,9 @@
   "weight (kg)": 1.77,
   "local_frame": {
     "origin": [
-      -0.2357,
-      2.7675,
-      0.9307
+      -0.247,
+      2.7799,
+      0.9266
     ],
     "x_axis": [
       0.6535,
@@ -19,19 +20,19 @@
       0.2383
     ],
     "y_axis": [
-      -0.1603,
-      0.1763,
-      0.9712
+      -0.4664,
+      -0.6301,
+      -0.6208
     ],
     "z_axis": [
-      -0.7398,
-      -0.6729,
-      0.0
+      0.5962,
+      0.2946,
+      -0.7468
     ]
   },
   "connected_beams": [
     "b13",
-    "b27"
+    "b23"
   ],
   "global_position": {
     "centerline_start": [
@@ -66,5 +67,7 @@
     ],
     "lmiter": []
   },
-  "3d_model": "beams/b16/b16.stl"
+  "3d_model": "beams/b16/b16.stl",
+  "geometry_model": "beams/b16/b16.stl",
+  "blank_model": "beams/b16/b16_blank.stl"
 }

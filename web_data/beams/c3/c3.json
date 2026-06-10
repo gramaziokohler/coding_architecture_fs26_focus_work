@@ -2,6 +2,7 @@
   "beam ID": "c3",
   "name": "C3",
   "module": "C",
+  "is_key_beam": false,
   "width (m)": 0.06,
   "height (m)": 0.08,
   "length (m)": 1.1,
@@ -9,9 +10,9 @@
   "weight (kg)": 2.64,
   "local_frame": {
     "origin": [
-      1.704,
-      -0.604,
-      2.1298
+      1.7086,
+      -0.6044,
+      2.1319
     ],
     "x_axis": [
       -0.9078,
@@ -19,20 +20,20 @@
       -0.4099
     ],
     "y_axis": [
-      -0.408,
-      0.0397,
-      0.9121
+      0.1891,
+      0.9588,
+      -0.212
     ],
     "z_axis": [
-      0.0969,
-      0.9953,
-      -0.0
+      0.3743,
+      -0.27,
+      -0.8871
     ]
   },
   "connected_beams": [
     "c1",
     "c2",
-    "c22",
+    "c23",
     "c4"
   ],
   "global_position": {
@@ -74,5 +75,7 @@
     ],
     "lmiter": []
   },
-  "3d_model": "beams/c3/c3.stl"
+  "3d_model": "beams/c3/c3.stl",
+  "geometry_model": "beams/c3/c3.stl",
+  "blank_model": "beams/c3/c3_blank.stl"
 }

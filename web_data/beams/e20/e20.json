@@ -2,6 +2,7 @@
   "beam ID": "e20",
   "name": "E20",
   "module": "E",
+  "is_key_beam": false,
   "width (m)": 0.06,
   "height (m)": 0.08,
   "length (m)": 0.89,
@@ -9,9 +10,9 @@
   "weight (kg)": 2.14,
   "local_frame": {
     "origin": [
-      5.5032,
-      -0.1676,
-      0.4323
+      5.5023,
+      -0.167,
+      0.433
     ],
     "x_axis": [
       0.6412,
@@ -19,14 +20,14 @@
       -0.5976
     ],
     "y_axis": [
-      0.478,
-      -0.3588,
-      0.8018
+      -0.2431,
+      -0.8661,
+      0.4368
     ],
     "z_axis": [
-      -0.6003,
-      -0.7998,
-      0.0
+      -0.7278,
+      -0.1348,
+      -0.6724
     ]
   },
   "connected_beams": [
@@ -71,5 +72,7 @@
     ],
     "lmiter": []
   },
-  "3d_model": "beams/e20/e20.stl"
+  "3d_model": "beams/e20/e20.stl",
+  "geometry_model": "beams/e20/e20.stl",
+  "blank_model": "beams/e20/e20_blank.stl"
 }

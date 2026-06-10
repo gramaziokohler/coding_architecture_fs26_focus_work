@@ -2,6 +2,7 @@
   "beam ID": "e18",
   "name": "E18",
   "module": "E",
+  "is_key_beam": false,
   "width (m)": 0.12,
   "height (m)": 0.14,
   "length (m)": 0.56,
@@ -10,7 +11,7 @@
   "local_frame": {
     "origin": [
       5.8126,
-      0.2493,
+      0.2492,
       0.0
     ],
     "x_axis": [
@@ -19,14 +20,14 @@
       0.0
     ],
     "y_axis": [
+      -0.9989,
+      -0.0476,
+      0.0
+    ],
+    "z_axis": [
       0.0,
       0.0,
       1.0
-    ],
-    "z_axis": [
-      0.9989,
-      0.0476,
-      -0.0
     ]
   },
   "connected_beams": [
@@ -71,5 +72,7 @@
       "331"
     ]
   },
-  "3d_model": "beams/e18/e18.stl"
+  "3d_model": "beams/e18/e18.stl",
+  "geometry_model": "beams/e18/e18.stl",
+  "blank_model": "beams/e18/e18_blank.stl"
 }

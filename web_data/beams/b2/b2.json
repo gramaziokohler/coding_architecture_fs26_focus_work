@@ -2,6 +2,7 @@
   "beam ID": "b2",
   "name": "B2",
   "module": "B",
+  "is_key_beam": false,
   "width (m)": 0.06,
   "height (m)": 0.08,
   "length (m)": 1.18,
@@ -9,9 +10,9 @@
   "weight (kg)": 2.82,
   "local_frame": {
     "origin": [
-      -0.0845,
-      1.7498,
-      0.7568
+      -0.087,
+      1.7538,
+      0.7551
     ],
     "x_axis": [
       0.49,
@@ -19,14 +20,14 @@
       0.3401
     ],
     "y_axis": [
-      -0.1772,
-      0.2903,
-      0.9404
+      -0.546,
+      -0.5867,
+      -0.5981
     ],
     "z_axis": [
-      -0.8535,
-      -0.5211,
-      0.0
+      0.6796,
+      0.1074,
+      -0.7257
     ]
   },
   "connected_beams": [
@@ -74,5 +75,7 @@
     ],
     "lmiter": []
   },
-  "3d_model": "beams/b2/b2.stl"
+  "3d_model": "beams/b2/b2.stl",
+  "geometry_model": "beams/b2/b2.stl",
+  "blank_model": "beams/b2/b2_blank.stl"
 }

@@ -2,6 +2,7 @@
   "beam ID": "c1",
   "name": "C1",
   "module": "C",
+  "is_key_beam": false,
   "width (m)": 0.06,
   "height (m)": 0.08,
   "length (m)": 1.25,
@@ -9,9 +10,9 @@
   "weight (kg)": 3.0,
   "local_frame": {
     "origin": [
-      1.9468,
-      -0.7479,
-      2.2478
+      1.9443,
+      -0.7522,
+      2.2485
     ],
     "x_axis": [
       0.5027,
@@ -19,19 +20,19 @@
       -0.1311
     ],
     "y_axis": [
-      0.0665,
-      0.113,
-      0.9914
+      0.836,
+      -0.4419,
+      0.3254
     ],
     "z_axis": [
-      0.8619,
-      -0.5071,
-      0.0
+      0.2201,
+      -0.2732,
+      -0.9364
     ]
   },
   "connected_beams": [
     "c2",
-    "c21",
+    "c22",
     "c3",
     "c7"
   ],
@@ -74,5 +75,7 @@
     ],
     "lmiter": []
   },
-  "3d_model": "beams/c1/c1.stl"
+  "3d_model": "beams/c1/c1.stl",
+  "geometry_model": "beams/c1/c1.stl",
+  "blank_model": "beams/c1/c1_blank.stl"
 }

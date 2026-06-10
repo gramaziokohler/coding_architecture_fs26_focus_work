@@ -13,8 +13,21 @@ const loading = ref(true);
 const error = ref(null);
 
 const HIDDEN_KEYS = [
-    "name", "3d_model", "frame", "local_frame", "global_position",
-    "connected_beams", "joints", "processing", "processings", "features", "machining"
+    "name",
+    "3d_model",
+    "geometry_model",
+    "blank_model",
+    "frame",
+    "local_frame",
+    "global_position",
+    "connected_beams",
+    "joints",
+    "processing",
+    "processings",
+    "features",
+    "machining",
+    "is_key_beam",
+    "key_beam"
 ];
 
 const engravingText = computed(() =>

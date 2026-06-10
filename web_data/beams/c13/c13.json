@@ -2,6 +2,7 @@
   "beam ID": "c13",
   "name": "C13",
   "module": "C",
+  "is_key_beam": false,
   "width (m)": 0.06,
   "height (m)": 0.08,
   "length (m)": 1.09,
@@ -9,9 +10,9 @@
   "weight (kg)": 2.61,
   "local_frame": {
     "origin": [
-      2.8079,
-      -1.5393,
-      2.5687
+      2.8144,
+      -1.5481,
+      2.5715
     ],
     "x_axis": [
       0.5775,
@@ -19,21 +20,21 @@
       0.2462
     ],
     "y_axis": [
-      -0.1467,
-      0.1977,
-      0.9692
+      -0.8091,
+      -0.5056,
+      0.2995
     ],
     "z_axis": [
-      -0.8031,
-      -0.5959,
-      0.0
+      -0.1087,
+      -0.3722,
+      -0.9218
     ]
   },
   "connected_beams": [
     "c11",
     "c12",
-    "c8",
-    "e36"
+    "c15",
+    "c8"
   ],
   "global_position": {
     "centerline_start": [
@@ -73,5 +74,7 @@
     ],
     "lmiter": []
   },
-  "3d_model": "beams/c13/c13.stl"
+  "3d_model": "beams/c13/c13.stl",
+  "geometry_model": "beams/c13/c13.stl",
+  "blank_model": "beams/c13/c13_blank.stl"
 }

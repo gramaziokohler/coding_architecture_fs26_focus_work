@@ -2,6 +2,7 @@
   "beam ID": "d3",
   "name": "D3",
   "module": "D",
+  "is_key_beam": false,
   "width (m)": 0.06,
   "height (m)": 0.08,
   "length (m)": 1.09,
@@ -9,9 +10,9 @@
   "weight (kg)": 2.62,
   "local_frame": {
     "origin": [
-      1.7405,
-      2.1372,
-      1.9505
+      1.7451,
+      2.1373,
+      1.9524
     ],
     "x_axis": [
       -0.9283,
@@ -19,20 +20,20 @@
       -0.3715
     ],
     "y_axis": [
-      -0.3714,
-      -0.0068,
-      0.9284
+      -0.0655,
+      0.9908,
+      0.1185
     ],
     "z_axis": [
-      -0.0183,
-      0.9998,
-      0.0
+      0.366,
+      0.1344,
+      -0.9208
     ]
   },
   "connected_beams": [
     "d1",
     "d2",
-    "d26",
+    "d30",
     "d4"
   ],
   "global_position": {
@@ -74,5 +75,7 @@
     ],
     "lmiter": []
   },
-  "3d_model": "beams/d3/d3.stl"
+  "3d_model": "beams/d3/d3.stl",
+  "geometry_model": "beams/d3/d3.stl",
+  "blank_model": "beams/d3/d3_blank.stl"
 }
