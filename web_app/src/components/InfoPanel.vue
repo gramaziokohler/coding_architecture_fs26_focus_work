@@ -109,7 +109,7 @@ const formatJointValue = (jointData) => {
                     <ul class="specs-list">
                         <li class="spec-item">
                             <span class="label">beam ID</span>
-                            <span class="value">{{ beamData["beam ID"] }}</span>
+                            <span class="value">{{ beamData["beam ID"]?.toUpperCase() }}</span>
                         </li>
                         <li class="spec-item">
                             <span class="label">module</span>
