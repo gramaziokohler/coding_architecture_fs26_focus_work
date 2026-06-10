@@ -1,5 +1,5 @@
 # venv: ca-fs26-focus-work
-# keyword: timber-packing, 3d-engraving, fixed-z-height
+# keyword: timber-packing, text-hatch-fill, unit-conversion-cm
 import Rhino.Geometry as rg
 import math
 from importlib import reload
@@ -17,7 +17,7 @@ class CutItem:
 
 
 def create_geometry_text(text, position, text_height=0.03):
-    """Genera le curve di un testo perfettamente piatto in Top View (XY) e centrato."""
+    """Genera le curve di un testo riempite con un tratteggio (Hatch) solido continuo."""
     te = rg.TextEntity()
     te.Text = text
     te.FontIndex = 0
@@ -33,6 +33,8 @@ def create_geometry_text(text, position, text_height=0.03):
         
     joined = rg.Curve.JoinCurves(curves, 0.001) or curves
     bbox = te.GetBoundingBox(True)
+    
+    # Applichiamo il centraggio geometrico
     if bbox.IsValid:
         center_x = (bbox.Max.X + bbox.Min.X) / 2.0
         center_y = (bbox.Max.Y + bbox.Min.Y) / 2.0
@@ -40,7 +42,18 @@ def create_geometry_text(text, position, text_height=0.03):
         for crv in joined:
             crv.Transform(move_to_center)
             
-    return joined
+    # === GENERAZIONE RIEMPIMENTO SOLIDO (HATCH) ===
+    output_objects = []
+    if joined:
+        # Genera un riempimento solido usando la tolleranza e il pattern standard di Rhino
+        hatches = rg.Hatch.Create(joined, 0, 0.0, 1.0, 0.001)
+        if hatches:
+            output_objects.extend(hatches)
+        else:
+            # Se il riempimento fallisce su caratteri particolari, restituisce le curve esterne
+            output_objects.extend(joined)
+            
+    return output_objects
 
 
 def create_3d_text_engraving(text, position, text_height=0.03, engraving_depth=0.005):
@@ -324,19 +337,25 @@ def run_packing(timber_model, origin, stock_length_beam_6x8, stock_length_beam_1
             max_len_boxes.append(raw_box_geo)
 
             new_bbox = pure_beam_geo.GetBoundingBox(True)
-            
-            # BLOCCAGGIO CRITICO DEL PIANO Z: Corrisponde esattamente all'altezza nominale reale della sezione
             exact_top_z = base_pt.Z + item["height_z"]
             
             max_len_lines.append(rg.Line(rg.Point3d(new_bbox.Min.X, new_bbox.Min.Y, exact_top_z + 0.01), rg.Point3d(new_bbox.Min.X + item["length_x"], new_bbox.Min.Y, exact_top_z + 0.01)))
             arranged_names.append(item["name"])
 
-            lbl_x, lbl_y = (new_bbox.Min.X + new_bbox.Max.X) / 2.0, (new_bbox.Min.Y + new_bbox.Max.Y) / 2.0
-            
-            label_curves.extend(create_geometry_text(item["name"], rg.Point3d(lbl_x, lbl_y, exact_top_z + l_off), text_height=0.04))
-            max_len_num_txt.extend(create_geometry_text("{:.2f}m".format(item["length_x"]), rg.Point3d(lbl_x, lbl_y - 0.08, exact_top_z + l_off), text_height=0.04))
+            lbl_x = (new_bbox.Min.X + new_bbox.Max.X) / 2.0
+            lbl_y_center = (new_bbox.Min.Y + new_bbox.Max.Y) / 2.0
+            lbl_y_under = lbl_y_center - (sec_w / 2.0) - l_off
+
+            # === FORMATTAZIONE LUNGHEZZA IN CM (1 DECIMALE) ===
+            length_in_cm = item["length_x"] * 100.0
+
+            # Nome pezzo con riempimento continuo sotto la trave
+            label_curves.extend(create_geometry_text(item["name"], rg.Point3d(lbl_x, lbl_y_under, exact_top_z), text_height=0.04))
+            # Lunghezza convertita in cm sotto al nome con riempimento continuo
+            max_len_num_txt.extend(create_geometry_text("{:.1f}cm".format(length_in_cm), rg.Point3d(lbl_x, lbl_y_under - 0.06, exact_top_z), text_height=0.04))
 
             # === LOGICA DI CONTROLLO MATRICE A 5 PUNTI SUL PIANO Z BLOCATO ===
+            lbl_y = lbl_y_center
             test_x = lbl_x
             step = 0.02  
             max_shift = (item["length_x"] / 2.0) - 0.10  
@@ -346,7 +365,6 @@ def run_packing(timber_model, origin, stock_length_beam_6x8, stock_length_beam_1
             t_width_approx = len(item["name"]) * (t_height * 0.7) 
             
             while current_shift < max_shift:
-                # I 5 raggi virtuali partono ora partendo in riferimento all'altezza nominale Z esatta
                 test_points = [
                     rg.Point3d(test_x, lbl_y, exact_top_z + 0.01),                       
                     rg.Point3d(test_x - t_width_approx/2, lbl_y - t_height/2, exact_top_z + 0.01), 
@@ -364,7 +382,6 @@ def run_packing(timber_model, origin, stock_length_beam_6x8, stock_length_beam_1
                     point_hits_solid_wood = False
                     if intersections and len(intersections[2]) > 0:
                         highest_z = max(p.Z for p in intersections[2])
-                        # Controllo coerente rispetto al piano esatto Z dell'altezza beam
                         if abs(highest_z - exact_top_z) < 0.002:
                             point_hits_solid_wood = True
                             
@@ -378,7 +395,6 @@ def run_packing(timber_model, origin, stock_length_beam_6x8, stock_length_beam_1
                 test_x -= step
                 current_shift += step
 
-            # Generiamo il testo solido posizionandolo sulla quota Z nominale della sezione
             pt_engrave_loc = rg.Point3d(test_x, lbl_y, exact_top_z)
             solid_text = create_3d_text_engraving(text=item["name"], position=pt_engrave_loc, text_height=t_height, engraving_depth=0.005)
             
