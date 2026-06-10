@@ -160,6 +160,12 @@ const getCenterlineDirection = (beamData = currentBeamData) => {
     return frame?.x_axis ? vectorFromArray(frame.x_axis).normalize() : null;
 };
 
+const getStructureCenter = () => {
+    const bounds = structureData?.bounding_box;
+    if (!bounds?.min || !bounds?.max) return null;
+    return vectorFromArray(bounds.min).add(vectorFromArray(bounds.max)).multiplyScalar(0.5);
+};
+
 const getBeamDisplayName = (beamId) => {
     if (!beamId) return "";
     const cached = beamDataCache.get(beamId);
@@ -313,6 +319,51 @@ const makeTextPlane = (text, position, xAxis, yAxis, color = "#111111", scale = 
     makeModelObject(plane);
     scene.add(plane);
     return plane;
+};
+
+const outwardVectorForBeam = (beamData = currentBeamData) => {
+    const position = getGlobalPosition(beamData);
+    const midpoint = vectorFromArray(position?.midpoint || getBeamFrame(beamData)?.origin || [0, 0, 0]);
+    const center = getStructureCenter() || new THREE.Vector3(0, 0, 0);
+    const outward = midpoint.clone().sub(center);
+    if (outward.lengthSq() < 1e-8) return new THREE.Vector3(0, 0, 1);
+    return outward.normalize();
+};
+
+const outwardFaceFrame = (beamData = currentBeamData) => {
+    const frame = getDisplayFrame(beamData);
+    if (!frame) return null;
+
+    const outward = outwardVectorForBeam(beamData);
+    const candidates = [
+        { normal: frame.y_axis.clone(), widthKey: "width (m)" },
+        { normal: frame.y_axis.clone().negate(), widthKey: "width (m)" },
+        { normal: frame.z_axis.clone(), widthKey: "height (m)" },
+        { normal: frame.z_axis.clone().negate(), widthKey: "height (m)" },
+    ];
+    candidates.sort((a, b) => b.normal.dot(outward) - a.normal.dot(outward));
+
+    const picked = candidates[0];
+    const normal = picked.normal.normalize();
+    const faceOffset = numericBeamValue(beamData, picked.widthKey, picked.widthKey === "height (m)" ? 0.08 : 0.06) * 0.5;
+    let xAxis = frame.x_axis.clone().normalize();
+    let yAxis = new THREE.Vector3().crossVectors(normal, xAxis).normalize();
+
+    if (yAxis.lengthSq() < 1e-8) {
+        yAxis = frame.z_axis.clone().normalize();
+    }
+
+    if (yAxis.z < -0.05) {
+        xAxis.negate();
+        yAxis.negate();
+    }
+
+    return {
+        normal,
+        xAxis,
+        yAxis,
+        offset: faceOffset,
+    };
 };
 
 const makeProcessingMarker = (record) => {
@@ -524,19 +575,18 @@ const getEngravingPlacement = () => {
     }
 
     const midpoint = vectorFromArray(position?.midpoint || getBeamFrame()?.origin || [0, 0, 0]);
-    const width = numericBeamValue(currentBeamData, "width (m)", 0.06);
-    const height = numericBeamValue(currentBeamData, "height (m)", 0.08);
-    const normal = frame.y_axis.clone().normalize();
+    const outwardFrame = outwardFaceFrame(currentBeamData);
+    if (!outwardFrame) return null;
     const origin = midpoint
         .clone()
-        .add(normal.clone().multiplyScalar(width * 0.5 + 0.003))
-        .add(frame.z_axis.clone().multiplyScalar(height * 0.18));
+        .add(outwardFrame.normal.clone().multiplyScalar(outwardFrame.offset + 0.003))
+        .add(outwardFrame.yAxis.clone().multiplyScalar(numericBeamValue(currentBeamData, "height (m)", 0.08) * 0.18));
 
     return {
         origin,
-        xAxis: frame.x_axis,
-        yAxis: frame.z_axis,
-        normal,
+        xAxis: outwardFrame.xAxis,
+        yAxis: outwardFrame.yAxis,
+        normal: outwardFrame.normal,
     };
 };
 
