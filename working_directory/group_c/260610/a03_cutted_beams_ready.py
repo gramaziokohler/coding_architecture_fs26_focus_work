@@ -132,6 +132,57 @@ def get_pure_brep(cb):
     return cb
 
 
+def get_rhino_brep_from_compas_geometry(geo):
+    """Converts COMPAS/Rhino wrapped geometry to a native Rhino Brep when possible."""
+    if geo is None:
+        return None
+    if hasattr(geo, "to_rhino"):
+        return geo.to_rhino()
+    if hasattr(geo, "to_brep"):
+        brep = geo.to_brep()
+        if hasattr(brep, "to_rhino"):
+            return brep.to_rhino()
+        return get_pure_brep(brep)
+    return get_pure_brep(geo)
+
+
+def duplicate_rhino_geometry(geo):
+    if geo is None:
+        return None
+    if hasattr(geo, "DuplicateBrep"):
+        return geo.DuplicateBrep()
+    if hasattr(geo, "Duplicate"):
+        return geo.Duplicate()
+    return None
+
+
+def get_longest_brep_edge_length(brep):
+    if brep is None or not hasattr(brep, "Edges"):
+        return None
+    edge_lengths = []
+    for edge in brep.Edges:
+        try:
+            edge_lengths.append(float(edge.GetLength()))
+        except:
+            try:
+                edge_lengths.append(float(edge.EdgeCurve.GetLength()))
+            except:
+                pass
+    return max(edge_lengths) if edge_lengths else None
+
+
+def get_native_blank_length(beam):
+    if hasattr(beam, "blank_length") and getattr(beam, "blank_length") is not None:
+        return float(getattr(beam, "blank_length")), "PROPRIETÀ_NATIVA (.blank_length)"
+    if hasattr(beam, "attributes") and isinstance(beam.attributes, dict) and "blank_length" in beam.attributes:
+        return float(beam.attributes["blank_length"]), "DIZIONARIO_ATTRIBUTI (['blank_length'])"
+    if hasattr(beam, "blank_len") and getattr(beam, "blank_len") is not None:
+        return float(getattr(beam, "blank_len")), "PROPRIETÀ_NATIVA_CORTA (.blank_len)"
+    if hasattr(beam, "attributes") and isinstance(beam.attributes, dict) and "blank_len" in beam.attributes:
+        return float(beam.attributes["blank_len"]), "DIZIONARIO_ATTRIBUTI_CORTO (['blank_len'])"
+    return None, "MISSING"
+
+
 def compas_frame_to_rhino_plane(compas_frame):
     """Converte un Frame di COMPAS in un Plane di Rhino."""
     pt = rg.Point3d(compas_frame.point.x, compas_frame.point.y, compas_frame.point.z)
@@ -238,56 +289,66 @@ def run_packing(timber_model, origin, stock_length_beam_6x8, stock_length_beam_1
     for idx, beam in enumerate(timber_model.beams):
         b_guid = str(beam.guid)
         correct_name = guid_to_custom_name.get(b_guid, "B{:02d}".format(idx + 1))
-        raw_brep = get_pure_brep(beam.geometry)
-        if raw_brep is None: continue
-        straight_brep = raw_brep.DuplicateBrep()
+
+        blank_geo = getattr(beam, "blank", None)
+        raw_blank_brep = get_rhino_brep_from_compas_geometry(blank_geo)
+        if raw_blank_brep is None:
+            raise ValueError("Beam {} has no usable beam.blank geometry for packing.".format(correct_name))
+
+        straight_blank_brep = duplicate_rhino_geometry(raw_blank_brep)
+        if straight_blank_brep is None:
+            raise ValueError("Beam {} beam.blank could not be duplicated as Rhino geometry.".format(correct_name))
         
-        if hasattr(beam, "frame") and beam.frame:
-            local_plane = compas_frame_to_rhino_plane(beam.frame)
+        blank_frame = getattr(blank_geo, "frame", None) or getattr(beam, "frame", None)
+        if blank_frame:
+            local_plane = compas_frame_to_rhino_plane(blank_frame)
             flatten_trans = rg.Transform.PlaneToPlane(local_plane, rg.Plane.WorldXY)
-            straight_brep.Transform(flatten_trans)
+            straight_blank_brep.Transform(flatten_trans)
             
         # === FILP LONGITUDINALE DI 90 GRADI ALLINEATO ALL'ASSE X ===
         rotate_90_x = rg.Transform.Rotation(math.pi / 2.0, rg.Vector3d.XAxis, rg.Point3d(0, 0, 0))
-        straight_brep.Transform(rotate_90_x)
+        straight_blank_brep.Transform(rotate_90_x)
         
-        local_bbox = straight_brep.GetBoundingBox(True)
+        blank_edge_len = get_longest_brep_edge_length(straight_blank_brep)
+        if blank_edge_len is None:
+            raise ValueError("Beam {} beam.blank has no measurable Brep edges.".format(correct_name))
+
+        local_bbox = straight_blank_brep.GetBoundingBox(True)
         if local_bbox and local_bbox.IsValid:
             size_box = local_bbox.Max - local_bbox.Min
-            beam_length = size_box.X
             width_box, height_box = round(size_box.Y, 4), round(size_box.Z, 4)
         else:
-            beam_length, width_box, height_box = beam.centerline.length, 0.12, 0.14
+            width_box, height_box = 0.12, 0.14
 
-        # === DIAGNOSTICA DI TRACCIAMENTO SORGENTE BLANK_LENGTH ===
-        compas_blank_len = None
-        blank_source = "FALLBACK (Misura Taglio)"
-        
-        if hasattr(beam, "blank_length") and getattr(beam, "blank_length") is not None:
-            compas_blank_len = getattr(beam, "blank_length")
-            blank_source = "PROPRIETÀ_NATIVA (.blank_length)"
-        elif hasattr(beam, "attributes") and isinstance(beam.attributes, dict) and "blank_length" in beam.attributes:
-            compas_blank_len = beam.attributes["blank_length"]
-            blank_source = "DIZIONARIO_ATTRIBUTI (['blank_length'])"
-        elif hasattr(beam, "blank_len") and getattr(beam, "blank_len") is not None:
-            compas_blank_len = getattr(beam, "blank_len")
-            blank_source = "PROPRIETÀ_NATIVA_CORTA (.blank_len)"
-        elif hasattr(beam, "attributes") and isinstance(beam.attributes, dict) and "blank_len" in beam.attributes:
-            compas_blank_len = beam.attributes["blank_len"]
-            blank_source = "DIZIONARIO_ATTRIBUTI_CORTO (['blank_len'])"
-            
-        if compas_blank_len is None:
-            compas_blank_len = beam_length
+        native_blank_len, blank_source = get_native_blank_length(beam)
+        if native_blank_len is None:
+            print("BLANK LENGTH CHECK | {} | beam.blank_length missing | beam.blank longest edge = {:.6f}m".format(correct_name, blank_edge_len))
         else:
-            compas_blank_len = float(compas_blank_len)
+            blank_delta = native_blank_len - blank_edge_len
+            print("BLANK LENGTH CHECK | {} | beam.blank_length = {:.6f}m | beam.blank longest edge = {:.6f}m | delta = {:.6f}m".format(
+                correct_name, native_blank_len, blank_edge_len, blank_delta
+            ))
 
-        needed_len = compas_blank_len + total_target_gap
+        cut_length = None
+        raw_cut_brep = get_pure_brep(beam.geometry)
+        if raw_cut_brep is not None:
+            cut_brep = duplicate_rhino_geometry(raw_cut_brep)
+            if cut_brep is not None:
+                if hasattr(beam, "frame") and beam.frame:
+                    cut_brep.Transform(rg.Transform.PlaneToPlane(compas_frame_to_rhino_plane(beam.frame), rg.Plane.WorldXY))
+                cut_brep.Transform(rotate_90_x)
+                cut_bbox = cut_brep.GetBoundingBox(True)
+                if cut_bbox and cut_bbox.IsValid:
+                    cut_length = (cut_bbox.Max - cut_bbox.Min).X
+
+        needed_len = blank_edge_len + total_target_gap
         
         section_key = (width_box, height_box)
         if section_key not in beams_by_section: beams_by_section[section_key] = []
         beams_by_section[section_key].append({
-            "beam_obj": beam, "geo_brep": straight_brep, "name": correct_name,
-            "length_x": beam_length, "blank_length": compas_blank_len, "blank_source": blank_source,
+            "beam_obj": beam, "geo_brep": straight_blank_brep, "name": correct_name,
+            "length_x": blank_edge_len, "blank_length": blank_edge_len, "blank_length_attr": native_blank_len,
+            "cut_length": cut_length, "blank_source": "beam.blank longest Brep edge; check source: {}".format(blank_source),
             "width_y": width_box, "height_z": height_box, "needed_len": needed_len
         })
 
@@ -503,8 +564,10 @@ def run_packing(timber_model, origin, stock_length_beam_6x8, stock_length_beam_1
                 failed_vacuums.append(item["name"])
 
             # === AGGIUNTA LOG DI TRACCIAMENTO SUL PIN DIMENSIONS ===
-            dimensions.append("Stock bar n°: {} | {} | Sezione: {:.1f}x{:.1f}cm | L_taglio: {:.3f}m | L_grezzo: {:.3f}m -> [SORGENTE DATI: {}]".format(
-                bar["id"], item["name"], sec_w*100.0, sec_h*100.0, item["length_x"], item["blank_length"], item["blank_source"]
+            cut_length_txt = "{:.3f}m".format(item["cut_length"]) if item["cut_length"] is not None else "n/a"
+            attr_blank_txt = "{:.3f}m".format(item["blank_length_attr"]) if item["blank_length_attr"] is not None else "n/a"
+            dimensions.append("Stock bar n°: {} | {} | Sezione: {:.1f}x{:.1f}cm | L_cut_geom: {} | L_blank_edge: {:.3f}m | L_blank_attr: {} -> [SORGENTE DATI: {}]".format(
+                bar["id"], item["name"], sec_w*100.0, sec_h*100.0, cut_length_txt, item["blank_length"], attr_blank_txt, item["blank_source"]
             ))
 
     # 5. RENDICONTO STATISTICO

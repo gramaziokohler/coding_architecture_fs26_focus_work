@@ -26,7 +26,7 @@ let pointerDown = null;
 const beamDataCache = new Map();
 const beamDataCacheVersion = ref(0);
 
-const BASE_URL = "https://example.com/data";
+const BASE_URL = "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data";
 
 const WOOD_COLOR = 0x8b7355;
 const HIGHLIGHT_COLOR = 0xff6b6b;
@@ -71,11 +71,19 @@ const pointer = new THREE.Vector2();
 const raycaster = new THREE.Raycaster();
 
 const getBeamId = (beam = currentBeamData) => {
-    return beam?.beam_id || beam?.id || "";
+    return beam?.beam_id || beam?.["beam ID"] || beam?.id || "";
 };
 
 const getDisplayFrame = (beam = currentBeamData) => {
-    return beam?.beam_frame || beam?.frame;
+    return beam?.beam_frame || beam?.local_frame || beam?.frame;
+};
+
+const getBeamLength = (beam = currentBeamData) => {
+    return Number(beam?.length ?? beam?.["length (m)"] ?? 1);
+};
+
+const getBeamWeight = (beam = currentBeamData) => {
+    return Number(beam?.weight ?? beam?.["weight (kg)"] ?? 0);
 };
 
 const mobileOverlayScale = () => {
@@ -96,9 +104,10 @@ const moduleCounter = computed(() => {
 });
 
 const totalShownWeight = computed(() => {
+    beamDataCacheVersion.value;
     return shownBeamIds.value.reduce((sum, id) => {
         const cached = beamDataCache.get(id);
-        return sum + (cached?.weight || 0);
+        return sum + getBeamWeight(cached);
     }, 0).toFixed(2);
 });
 
@@ -164,10 +173,13 @@ const drawCenterline = (beamData, isSelected = false) => {
 
     const frame = getDisplayFrame(beamData);
 
-    const start = new THREE.Vector3(...(frame.origin || [0, 0, 0]));
-    const direction = new THREE.Vector3(...(frame.y_axis || [0, 1, 0])).normalize();
-    const length = beamData.length || 1;
-    const end = start.clone().add(direction.clone().multiplyScalar(length));
+    const centerline = beamData.global_position;
+    const start = centerline?.centerline_start
+        ? new THREE.Vector3(...centerline.centerline_start)
+        : new THREE.Vector3(...(frame.origin || [0, 0, 0]));
+    const end = centerline?.centerline_end
+        ? new THREE.Vector3(...centerline.centerline_end)
+        : start.clone().add(new THREE.Vector3(...(frame.x_axis || [1, 0, 0])).normalize().multiplyScalar(getBeamLength(beamData)));
 
     const points = [start, end];
     const geometry = new THREE.BufferGeometry().setFromPoints(points);
