@@ -235,5 +235,6 @@ def run_module_naming(timber_model, TextHeight=0.03):
         all_named_labels,      
         all_beam_geometries,   
         all_text_solids,       
-        report_string          
+        report_string,
+        timber_model          
     )

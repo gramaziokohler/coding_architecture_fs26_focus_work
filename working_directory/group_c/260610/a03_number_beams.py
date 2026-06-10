@@ -20,6 +20,9 @@ NAME_KEYS = ("beam_id", "beam ID", "beam_name", "name", "label", "mark")
 MODULE_KEYS = ("module", "module_id", "module_name", "fabrication_module", "assembly_module", "group")
 NUMBER_KEYS = ("beam_number", "number", "sequence", "fabrication_number", "element_number", "index")
 
+# Elenco dei Key Beams originari (identificati prima dello spostamento moduli)
+KEY_BEAMS_LIST = ["A10", "A21", "A27", "B21", "C28", "D18", "D27", "E35", "F23"]
+
 # =========================
 # UTILITY FUNCTIONS
 # =========================
@@ -656,21 +659,76 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
 
         return order
 
+    ordered_by_module = {}
+    for k in labels_keys:
+        ordered_by_module[k] = connected_growth(seeds[k], groups[k])
+
+    # =========================================================================
+    # POST-PROCESSING: SPOSTAMENTO ELEMENTI ED INTEGRAZIONE LOGICA NELL'ASSEMBLY
+    # =========================================================================
+    guid_by_initial_name = {}
+    node_initial_name = {}  # Mappatura per tracciare il nome iniziale assoluto del nodo
+    for k, nodes_list in ordered_by_module.items():
+        for i, node in enumerate(nodes_list):
+            initial_name = "{}{}".format(k, i + 1)
+            guid_by_initial_name[initial_name] = node
+            node_initial_name[node] = initial_name
+
+    manual_moves = {
+        "B19": "D", "B22": "D", "B23": "D", "B24": "D",
+        "A28": "C", "A29": "C", "E36": "C"
+    }
+
+    for initial_name, target_mod in manual_moves.items():
+        if initial_name in guid_by_initial_name:
+            node_to_move = guid_by_initial_name[initial_name]
+            for mod_k, nodes_list in ordered_by_module.items():
+                if node_to_move in nodes_list:
+                    nodes_list.remove(node_to_move)
+                    break
+
+    for initial_name, target_mod in manual_moves.items():
+        if initial_name in guid_by_initial_name:
+            node_to_move = guid_by_initial_name[initial_name]
+            target_list = ordered_by_module[target_mod]
+            
+            if not target_list:
+                target_list.append(node_to_move)
+                assignment[node_to_move] = target_mod
+                continue
+
+            best_idx = 0
+            min_d2 = 1e99
+            px, py, pz = pts[node_to_move]
+
+            for idx, existing_node in enumerate(target_list):
+                ex, ey, ez = pts[existing_node]
+                d2 = (px - ex)**2 + (py - ey)**2 + (pz - ez)**2
+                if d2 < min_d2:
+                    min_d2 = d2
+                    best_idx = idx
+
+            target_list.insert(best_idx + 1, node_to_move)
+            assignment[node_to_move] = target_mod
+
     # =========================
     # 7. GENERAZIONE BEAM OUTPUT
     # =========================
     geom = {k: [] for k in labels_keys}
-    ordered_by_module = {}
     beam_label_by_guid = {}
+    is_key_beam_by_guid = {} # Tiene traccia se il nodo corrisponde ad un pezzo speciale chiave
 
     for k in labels_keys:
-        ordered = connected_growth(seeds[k], groups[k])
-        ordered_by_module[k] = ordered
+        ordered = ordered_by_module[k]
 
         for i, node in enumerate(ordered):
-            beam = timber_model.get_element(node)
             name = "{}{}".format(k, i + 1)
+            beam = timber_model.get_element(node)
             set_beam_partitioning_attributes(beam, k, i + 1, beam_id=name.lower(), display_name=name)
+
+            # Verifica se il pezzo basandosi sul suo nome originario è marcato come key beam
+            orig_name = node_initial_name.get(node, "")
+            is_key_beam_by_guid[node] = (orig_name in KEY_BEAMS_LIST)
 
             rhino_geom = beam.geometry
             if hasattr(beam.geometry, "native_brep") and beam.geometry.native_brep:
@@ -720,6 +778,10 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
     for k in labels_keys:
         for node in ordered_by_module.get(k, []):
             name = beam_label_by_guid.get(node, "?")
+            
+            # Se è un pezzo speciale aggiunge il tag visivo leggibile nelle Info
+            display_info_name = "{} [KEY BEAM]".format(name) if is_key_beam_by_guid.get(node, False) else name
+            
             beam = timber_model.get_element(node)
             try:
                 length = beam.centerline.length
@@ -734,7 +796,7 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
             volume_m3 = w_m * h_m * length if (w_m and h_m) else 0.0
 
             full_info = "{} | L={:.2f}m | Sez={} | Vol={:.2f}cm3 | Peso={:.1f}kg".format(
-                name, length, orientation, volume_m3 * 1_000_000, weight
+                display_info_name, length, orientation, volume_m3 * 1_000_000, weight
             )
             summary_by_category[k].append(full_info)
             info_lines_master.append(full_info)
@@ -898,6 +960,7 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
                     "beam ID": beam_id,
                     "name": name,
                     "module": k,
+                    "is_key_beam": is_key_beam_by_guid.get(node, False), # Inserito flag booleano pulito nel JSON singolo
                     "width (m)": round(w_m, 4) if w_m else None,
                     "height (m)": round(h_m, 4) if h_m else None,
                     "length (m)": round(length, 2),
@@ -938,6 +1001,7 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
                 all_beams_list.append({
                     "beam_id": label.lower(),
                     "module": k,
+                    "is_key_beam": is_key_beam_by_guid.get(node, False), # Inserito flag booleano nel JSON di struttura globale
                     "centerline_start": gpos.get("centerline_start"),
                     "centerline_end": gpos.get("centerline_end"),
                     "midpoint": gpos.get("midpoint"),
