@@ -131,11 +131,13 @@ const makeMesh = (geometry, color, opacity, beamId) => {
         side: THREE.DoubleSide,
         transparent: opacity < 1,
         opacity,
+        depthWrite: opacity >= 1,
     });
 
     const mesh = new THREE.Mesh(geometry, material);
 
     mesh.userData.isBeam = true;
+    mesh.userData.isModelObject = true;
     mesh.userData.beamId = beamId;
 
     return mesh;
@@ -148,9 +150,11 @@ const addOutline = (geometry) => {
         edges,
         new THREE.LineBasicMaterial({
             color: 0x999999,
-            linewidth: 1,
         })
     );
+
+    line.userData.isModelObject = true;
+    line.userData.isOutline = true;
 
     scene.add(line);
 };
@@ -400,7 +404,10 @@ const centerScene = ({ preserveCamera = false } = {}) => {
         .filter((child) => child.userData.isBeam)
         .forEach((child) => box.expandByObject(child));
 
-    if (box.isEmpty()) return;
+    if (box.isEmpty()) {
+        console.warn("centerScene: no beam objects found in scene.");
+        return;
+    }
 
     const center = new THREE.Vector3();
     const size = new THREE.Vector3();
@@ -408,9 +415,12 @@ const centerScene = ({ preserveCamera = false } = {}) => {
     box.getCenter(center);
     box.getSize(size);
 
+    // Sposta TUTTO il modello, inclusi STL, outlines, labels e overlays
     scene.children
         .filter((child) => child.userData.isModelObject)
-        .forEach((child) => child.position.sub(center));
+        .forEach((child) => {
+            child.position.sub(center);
+        });
 
     if (preserveCamera) {
         controls.update();
@@ -418,7 +428,7 @@ const centerScene = ({ preserveCamera = false } = {}) => {
     }
 
     const maxDim = Math.max(size.x, size.y, size.z);
-    const dist = maxDim * 2.2;
+    const dist = Math.max(maxDim * 2.2, 1);
 
     camera.up.set(0, 0, 1);
     camera.position.set(0, -dist, dist * 0.65);
