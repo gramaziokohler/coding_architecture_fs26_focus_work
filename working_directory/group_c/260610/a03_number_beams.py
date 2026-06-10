@@ -1281,7 +1281,7 @@ def collect_non_joinery_features(beam):
 
     for index, raw_record in enumerate((getattr(beam, "attributes", {}) or {}).get("web_features", []) or [], start=1):
         raw = raw_record if isinstance(raw_record, dict) else {}
-        pts = feature_line(raw, raw)
+        pts = line_points(raw) or feature_line(raw, raw)
         diameter = feature_number(raw, raw, ("diameter", "diameter_m", "screw_diameter"))
         length = feature_number(raw, raw, ("length", "length_m", "depth", "screw_length", "drilling_depth"))
         record = {

@@ -77,801 +77,478 @@
   },
   "features": [
     {
-      "id": 2,
-      "type": "Drilling",
+      "id": "web-1",
+      "type": "Screw",
       "data": {
-        "ATTRIBUTE_MAP": {
-          "StartX": "AttributeSpec(python_name='start_x', type=<class 'float'>)",
-          "StartY": "AttributeSpec(python_name='start_y', type=<class 'float'>)",
-          "Angle": "AttributeSpec(python_name='angle', type=<class 'float'>)",
-          "Inclination": "AttributeSpec(python_name='inclination', type=<class 'float'>)",
-          "DepthLimited": "AttributeSpec(python_name='depth_limited', type=<class 'bool'>)",
-          "Depth": "AttributeSpec(python_name='depth', type=<class 'float'>)",
-          "Diameter": "AttributeSpec(python_name='diameter', type=<class 'float'>)"
-        },
-        "DATASCHEMA": {},
-        "HEADER_ATTRIBUTE_MAP": {
-          "ReferencePlaneID": [
-            "ref_side_index",
-            "<function BTLxProcessing.<lambda> at 0x22f27c4c0>"
-          ],
-          "Priority": [
-            "priority",
-            "<class 'int'>"
-          ],
-          "ProcessID": [
-            "process_id",
-            "<class 'int'>"
-          ],
-          "ToolID": [
-            "tool_id",
-            "<class 'int'>"
-          ],
-          "CounterSink": [
-            "counter_sink",
-            "<class 'bool'>"
-          ],
-          "ToolPosition": [
-            "tool_position",
-            "<class 'str'>"
-          ],
-          "Name": [
-            "name",
-            "<class 'str'>"
-          ],
-          "Process": [
-            "process",
-            "<class 'bool'>"
-          ]
-        },
-        "PROCESSING_NAME": "Drilling",
-        "angle": 89.99999999999928,
-        "depth": 0.0,
-        "depth_limited": false,
-        "diameter": 0.0064,
-        "inclination": 84.98036252146302,
-        "is_joinery": true,
-        "priority": 0,
-        "process_id": 0,
-        "ref_side_index": 0,
-        "start_x": 0.2583753728242703,
-        "start_y": 0.013709596891768096
+        "type": "Screw",
+        "joint_type": "XLapJoint",
+        "start": [
+          3.6589788070413944,
+          -0.5217319471377121,
+          2.0293076903117653
+        ],
+        "end": [
+          3.620746310045076,
+          -0.5411833951233563,
+          1.9389754294926742
+        ],
+        "diameter_m": 0.0064,
+        "length_m": 0.1,
+        "length_mm": 100.0,
+        "assigned_length_mm": 100
       },
+      "start": [
+        3.659,
+        -0.5217,
+        2.0293
+      ],
+      "end": [
+        3.6207,
+        -0.5412,
+        1.939
+      ],
+      "line_length_m": 0.1,
       "diameter_m": 0.0064,
-      "length_m": 0.0,
-      "length_mm": 0.0,
-      "has_stl_geometry": false
+      "length_m": 0.1,
+      "length_mm": 100.0,
+      "assigned_length_mm": 100,
+      "joint_type": "XLapJoint",
+      "has_stl_geometry": true
     },
     {
-      "id": 3,
-      "type": "Drilling",
+      "id": "web-2",
+      "type": "Screw",
       "data": {
-        "ATTRIBUTE_MAP": {
-          "StartX": "AttributeSpec(python_name='start_x', type=<class 'float'>)",
-          "StartY": "AttributeSpec(python_name='start_y', type=<class 'float'>)",
-          "Angle": "AttributeSpec(python_name='angle', type=<class 'float'>)",
-          "Inclination": "AttributeSpec(python_name='inclination', type=<class 'float'>)",
-          "DepthLimited": "AttributeSpec(python_name='depth_limited', type=<class 'bool'>)",
-          "Depth": "AttributeSpec(python_name='depth', type=<class 'float'>)",
-          "Diameter": "AttributeSpec(python_name='diameter', type=<class 'float'>)"
-        },
-        "DATASCHEMA": {},
-        "HEADER_ATTRIBUTE_MAP": {
-          "ReferencePlaneID": [
-            "ref_side_index",
-            "<function BTLxProcessing.<lambda> at 0x22f27c4c0>"
-          ],
-          "Priority": [
-            "priority",
-            "<class 'int'>"
-          ],
-          "ProcessID": [
-            "process_id",
-            "<class 'int'>"
-          ],
-          "ToolID": [
-            "tool_id",
-            "<class 'int'>"
-          ],
-          "CounterSink": [
-            "counter_sink",
-            "<class 'bool'>"
-          ],
-          "ToolPosition": [
-            "tool_position",
-            "<class 'str'>"
-          ],
-          "Name": [
-            "name",
-            "<class 'str'>"
-          ],
-          "Process": [
-            "process",
-            "<class 'bool'>"
-          ]
-        },
-        "PROCESSING_NAME": "Drilling",
-        "angle": 89.99999999999936,
-        "depth": 0.0,
-        "depth_limited": false,
-        "diameter": 0.0064,
-        "inclination": 84.98036252146301,
-        "is_joinery": true,
-        "priority": 0,
-        "process_id": 0,
-        "ref_side_index": 0,
-        "start_x": 0.24250123919938046,
-        "start_y": 0.03926368023096034
+        "type": "Screw",
+        "joint_type": "XLapJoint",
+        "start": [
+          3.6683572850883386,
+          -0.49495044789154197,
+          2.0195713949356797
+        ],
+        "end": [
+          3.63012478809202,
+          -0.5144018958771862,
+          1.9292391341165886
+        ],
+        "diameter_m": 0.0064,
+        "length_m": 0.1,
+        "length_mm": 100.0,
+        "assigned_length_mm": 100
       },
+      "start": [
+        3.6684,
+        -0.495,
+        2.0196
+      ],
+      "end": [
+        3.6301,
+        -0.5144,
+        1.9292
+      ],
+      "line_length_m": 0.1,
       "diameter_m": 0.0064,
-      "length_m": 0.0,
-      "length_mm": 0.0,
-      "has_stl_geometry": false
+      "length_m": 0.1,
+      "length_mm": 100.0,
+      "assigned_length_mm": 100,
+      "joint_type": "XLapJoint",
+      "has_stl_geometry": true
     },
     {
-      "id": 4,
-      "type": "Drilling",
+      "id": "web-3",
+      "type": "Screw",
       "data": {
-        "ATTRIBUTE_MAP": {
-          "StartX": "AttributeSpec(python_name='start_x', type=<class 'float'>)",
-          "StartY": "AttributeSpec(python_name='start_y', type=<class 'float'>)",
-          "Angle": "AttributeSpec(python_name='angle', type=<class 'float'>)",
-          "Inclination": "AttributeSpec(python_name='inclination', type=<class 'float'>)",
-          "DepthLimited": "AttributeSpec(python_name='depth_limited', type=<class 'bool'>)",
-          "Depth": "AttributeSpec(python_name='depth', type=<class 'float'>)",
-          "Diameter": "AttributeSpec(python_name='diameter', type=<class 'float'>)"
-        },
-        "DATASCHEMA": {},
-        "HEADER_ATTRIBUTE_MAP": {
-          "ReferencePlaneID": [
-            "ref_side_index",
-            "<function BTLxProcessing.<lambda> at 0x22f27c4c0>"
-          ],
-          "Priority": [
-            "priority",
-            "<class 'int'>"
-          ],
-          "ProcessID": [
-            "process_id",
-            "<class 'int'>"
-          ],
-          "ToolID": [
-            "tool_id",
-            "<class 'int'>"
-          ],
-          "CounterSink": [
-            "counter_sink",
-            "<class 'bool'>"
-          ],
-          "ToolPosition": [
-            "tool_position",
-            "<class 'str'>"
-          ],
-          "Name": [
-            "name",
-            "<class 'str'>"
-          ],
-          "Process": [
-            "process",
-            "<class 'bool'>"
-          ]
-        },
-        "PROCESSING_NAME": "Drilling",
-        "angle": 10.270870749560531,
-        "depth": 0.0,
-        "depth_limited": false,
-        "diameter": 0.0064,
-        "inclination": 65.27325575209935,
-        "is_joinery": true,
-        "priority": 0,
-        "process_id": 0,
-        "ref_side_index": 3,
-        "start_x": 0.5241502823930788,
-        "start_y": 0.022486200657135004
+        "type": "Screw",
+        "joint_type": "TButtJoint - inner",
+        "start": [
+          3.8366906364177362,
+          -0.7199534583498951,
+          1.9635237071697644
+        ],
+        "end": [
+          3.702486776877131,
+          -0.7434958303565297,
+          2.0262539295885214
+        ],
+        "diameter_m": 0.0064,
+        "length_m": 0.15,
+        "length_mm": 150.0,
+        "assigned_length_mm": 150
       },
+      "start": [
+        3.8367,
+        -0.72,
+        1.9635
+      ],
+      "end": [
+        3.7025,
+        -0.7435,
+        2.0263
+      ],
+      "line_length_m": 0.15,
       "diameter_m": 0.0064,
-      "length_m": 0.0,
-      "length_mm": 0.0,
-      "has_stl_geometry": false
+      "length_m": 0.15,
+      "length_mm": 150.0,
+      "assigned_length_mm": 150,
+      "joint_type": "TButtJoint - inner",
+      "has_stl_geometry": true
     },
     {
-      "id": 5,
-      "type": "Drilling",
+      "id": "web-4",
+      "type": "Screw",
       "data": {
-        "ATTRIBUTE_MAP": {
-          "StartX": "AttributeSpec(python_name='start_x', type=<class 'float'>)",
-          "StartY": "AttributeSpec(python_name='start_y', type=<class 'float'>)",
-          "Angle": "AttributeSpec(python_name='angle', type=<class 'float'>)",
-          "Inclination": "AttributeSpec(python_name='inclination', type=<class 'float'>)",
-          "DepthLimited": "AttributeSpec(python_name='depth_limited', type=<class 'bool'>)",
-          "Depth": "AttributeSpec(python_name='depth', type=<class 'float'>)",
-          "Diameter": "AttributeSpec(python_name='diameter', type=<class 'float'>)"
-        },
-        "DATASCHEMA": {},
-        "HEADER_ATTRIBUTE_MAP": {
-          "ReferencePlaneID": [
-            "ref_side_index",
-            "<function BTLxProcessing.<lambda> at 0x22f27c4c0>"
-          ],
-          "Priority": [
-            "priority",
-            "<class 'int'>"
-          ],
-          "ProcessID": [
-            "process_id",
-            "<class 'int'>"
-          ],
-          "ToolID": [
-            "tool_id",
-            "<class 'int'>"
-          ],
-          "CounterSink": [
-            "counter_sink",
-            "<class 'bool'>"
-          ],
-          "ToolPosition": [
-            "tool_position",
-            "<class 'str'>"
-          ],
-          "Name": [
-            "name",
-            "<class 'str'>"
-          ],
-          "Process": [
-            "process",
-            "<class 'bool'>"
-          ]
-        },
-        "PROCESSING_NAME": "Drilling",
-        "angle": 10.270870749560387,
-        "depth": 0.0,
-        "depth_limited": false,
-        "diameter": 0.0064,
-        "inclination": 65.27325575209935,
-        "is_joinery": true,
-        "priority": 0,
-        "process_id": 0,
-        "ref_side_index": 3,
-        "start_x": 0.5230378109223992,
-        "start_y": 0.05258716303905085
+        "type": "Screw",
+        "joint_type": "TButtJoint - inner",
+        "start": [
+          3.8250974178134127,
+          -0.7258812654875458,
+          1.9364967135350448
+        ],
+        "end": [
+          3.6908935582728075,
+          -0.7494236374941804,
+          1.9992269359538017
+        ],
+        "diameter_m": 0.0064,
+        "length_m": 0.15,
+        "length_mm": 150.0,
+        "assigned_length_mm": 150
       },
+      "start": [
+        3.8251,
+        -0.7259,
+        1.9365
+      ],
+      "end": [
+        3.6909,
+        -0.7494,
+        1.9992
+      ],
+      "line_length_m": 0.15,
       "diameter_m": 0.0064,
-      "length_m": 0.0,
-      "length_mm": 0.0,
-      "has_stl_geometry": false
+      "length_m": 0.15,
+      "length_mm": 150.0,
+      "assigned_length_mm": 150,
+      "joint_type": "TButtJoint - inner",
+      "has_stl_geometry": true
     },
     {
-      "id": 6,
-      "type": "Drilling",
+      "id": "web-5",
+      "type": "Screw",
       "data": {
-        "ATTRIBUTE_MAP": {
-          "StartX": "AttributeSpec(python_name='start_x', type=<class 'float'>)",
-          "StartY": "AttributeSpec(python_name='start_y', type=<class 'float'>)",
-          "Angle": "AttributeSpec(python_name='angle', type=<class 'float'>)",
-          "Inclination": "AttributeSpec(python_name='inclination', type=<class 'float'>)",
-          "DepthLimited": "AttributeSpec(python_name='depth_limited', type=<class 'bool'>)",
-          "Depth": "AttributeSpec(python_name='depth', type=<class 'float'>)",
-          "Diameter": "AttributeSpec(python_name='diameter', type=<class 'float'>)"
-        },
-        "DATASCHEMA": {},
-        "HEADER_ATTRIBUTE_MAP": {
-          "ReferencePlaneID": [
-            "ref_side_index",
-            "<function BTLxProcessing.<lambda> at 0x22f27c4c0>"
-          ],
-          "Priority": [
-            "priority",
-            "<class 'int'>"
-          ],
-          "ProcessID": [
-            "process_id",
-            "<class 'int'>"
-          ],
-          "ToolID": [
-            "tool_id",
-            "<class 'int'>"
-          ],
-          "CounterSink": [
-            "counter_sink",
-            "<class 'bool'>"
-          ],
-          "ToolPosition": [
-            "tool_position",
-            "<class 'str'>"
-          ],
-          "Name": [
-            "name",
-            "<class 'str'>"
-          ],
-          "Process": [
-            "process",
-            "<class 'bool'>"
-          ]
-        },
-        "PROCESSING_NAME": "Drilling",
-        "angle": 269.99999999986176,
-        "depth": 0.0,
-        "depth_limited": false,
-        "diameter": 0.0064,
-        "inclination": 89.95684867146586,
-        "is_joinery": true,
-        "priority": 0,
-        "process_id": 0,
-        "ref_side_index": 2,
-        "start_x": 0.6357461797442093,
-        "start_y": 0.017567939344308028
+        "type": "Screw",
+        "joint_type": "XLapJoint",
+        "start": [
+          3.8545636983606273,
+          -0.8369094367733857,
+          1.9112314491484916
+        ],
+        "end": [
+          3.894599798170034,
+          -0.8151633784179687,
+          1.9888472958426688
+        ],
+        "diameter_m": 0.0064,
+        "length_m": 0.09,
+        "length_mm": 90.0,
+        "assigned_length_mm": 100
       },
+      "start": [
+        3.8546,
+        -0.8369,
+        1.9112
+      ],
+      "end": [
+        3.8946,
+        -0.8152,
+        1.9888
+      ],
+      "line_length_m": 0.09,
       "diameter_m": 0.0064,
-      "length_m": 0.0,
-      "length_mm": 0.0,
-      "has_stl_geometry": false
+      "length_m": 0.09,
+      "length_mm": 90.0,
+      "assigned_length_mm": 100,
+      "joint_type": "XLapJoint",
+      "has_stl_geometry": true
     },
     {
-      "id": 7,
-      "type": "Drilling",
+      "id": "web-6",
+      "type": "Screw",
       "data": {
-        "ATTRIBUTE_MAP": {
-          "StartX": "AttributeSpec(python_name='start_x', type=<class 'float'>)",
-          "StartY": "AttributeSpec(python_name='start_y', type=<class 'float'>)",
-          "Angle": "AttributeSpec(python_name='angle', type=<class 'float'>)",
-          "Inclination": "AttributeSpec(python_name='inclination', type=<class 'float'>)",
-          "DepthLimited": "AttributeSpec(python_name='depth_limited', type=<class 'bool'>)",
-          "Depth": "AttributeSpec(python_name='depth', type=<class 'float'>)",
-          "Diameter": "AttributeSpec(python_name='diameter', type=<class 'float'>)"
-        },
-        "DATASCHEMA": {},
-        "HEADER_ATTRIBUTE_MAP": {
-          "ReferencePlaneID": [
-            "ref_side_index",
-            "<function BTLxProcessing.<lambda> at 0x22f27c4c0>"
-          ],
-          "Priority": [
-            "priority",
-            "<class 'int'>"
-          ],
-          "ProcessID": [
-            "process_id",
-            "<class 'int'>"
-          ],
-          "ToolID": [
-            "tool_id",
-            "<class 'int'>"
-          ],
-          "CounterSink": [
-            "counter_sink",
-            "<class 'bool'>"
-          ],
-          "ToolPosition": [
-            "tool_position",
-            "<class 'str'>"
-          ],
-          "Name": [
-            "name",
-            "<class 'str'>"
-          ],
-          "Process": [
-            "process",
-            "<class 'bool'>"
-          ]
-        },
-        "PROCESSING_NAME": "Drilling",
-        "angle": 269.9999999996267,
-        "depth": 0.0,
-        "depth_limited": false,
-        "diameter": 0.0064,
-        "inclination": 89.95684867146585,
-        "is_joinery": true,
-        "priority": 0,
-        "process_id": 0,
-        "ref_side_index": 2,
-        "start_x": 0.6190495922011183,
-        "start_y": 0.04249231128784636
+        "type": "Screw",
+        "joint_type": "XLapJoint",
+        "start": [
+          3.8278382871617587,
+          -0.8363026114063342,
+          1.924847034307613
+        ],
+        "end": [
+          3.8678743869711654,
+          -0.8145565530509172,
+          2.00246288100179
+        ],
+        "diameter_m": 0.0064,
+        "length_m": 0.09,
+        "length_mm": 90.0,
+        "assigned_length_mm": 100
       },
+      "start": [
+        3.8278,
+        -0.8363,
+        1.9248
+      ],
+      "end": [
+        3.8679,
+        -0.8146,
+        2.0025
+      ],
+      "line_length_m": 0.09,
       "diameter_m": 0.0064,
-      "length_m": 0.0,
-      "length_mm": 0.0,
-      "has_stl_geometry": false
+      "length_m": 0.09,
+      "length_mm": 90.0,
+      "assigned_length_mm": 100,
+      "joint_type": "XLapJoint",
+      "has_stl_geometry": true
     }
   ],
   "processing": [
     {
-      "id": 2,
-      "type": "Drilling",
+      "id": "web-1",
+      "type": "Screw",
       "data": {
-        "ATTRIBUTE_MAP": {
-          "StartX": "AttributeSpec(python_name='start_x', type=<class 'float'>)",
-          "StartY": "AttributeSpec(python_name='start_y', type=<class 'float'>)",
-          "Angle": "AttributeSpec(python_name='angle', type=<class 'float'>)",
-          "Inclination": "AttributeSpec(python_name='inclination', type=<class 'float'>)",
-          "DepthLimited": "AttributeSpec(python_name='depth_limited', type=<class 'bool'>)",
-          "Depth": "AttributeSpec(python_name='depth', type=<class 'float'>)",
-          "Diameter": "AttributeSpec(python_name='diameter', type=<class 'float'>)"
-        },
-        "DATASCHEMA": {},
-        "HEADER_ATTRIBUTE_MAP": {
-          "ReferencePlaneID": [
-            "ref_side_index",
-            "<function BTLxProcessing.<lambda> at 0x22f27c4c0>"
-          ],
-          "Priority": [
-            "priority",
-            "<class 'int'>"
-          ],
-          "ProcessID": [
-            "process_id",
-            "<class 'int'>"
-          ],
-          "ToolID": [
-            "tool_id",
-            "<class 'int'>"
-          ],
-          "CounterSink": [
-            "counter_sink",
-            "<class 'bool'>"
-          ],
-          "ToolPosition": [
-            "tool_position",
-            "<class 'str'>"
-          ],
-          "Name": [
-            "name",
-            "<class 'str'>"
-          ],
-          "Process": [
-            "process",
-            "<class 'bool'>"
-          ]
-        },
-        "PROCESSING_NAME": "Drilling",
-        "angle": 89.99999999999928,
-        "depth": 0.0,
-        "depth_limited": false,
-        "diameter": 0.0064,
-        "inclination": 84.98036252146302,
-        "is_joinery": true,
-        "priority": 0,
-        "process_id": 0,
-        "ref_side_index": 0,
-        "start_x": 0.2583753728242703,
-        "start_y": 0.013709596891768096
+        "type": "Screw",
+        "joint_type": "XLapJoint",
+        "start": [
+          3.6589788070413944,
+          -0.5217319471377121,
+          2.0293076903117653
+        ],
+        "end": [
+          3.620746310045076,
+          -0.5411833951233563,
+          1.9389754294926742
+        ],
+        "diameter_m": 0.0064,
+        "length_m": 0.1,
+        "length_mm": 100.0,
+        "assigned_length_mm": 100
       },
+      "start": [
+        3.659,
+        -0.5217,
+        2.0293
+      ],
+      "end": [
+        3.6207,
+        -0.5412,
+        1.939
+      ],
+      "line_length_m": 0.1,
       "diameter_m": 0.0064,
-      "length_m": 0.0,
-      "length_mm": 0.0,
-      "has_stl_geometry": false
+      "length_m": 0.1,
+      "length_mm": 100.0,
+      "assigned_length_mm": 100,
+      "joint_type": "XLapJoint",
+      "has_stl_geometry": true
     },
     {
-      "id": 3,
-      "type": "Drilling",
+      "id": "web-2",
+      "type": "Screw",
       "data": {
-        "ATTRIBUTE_MAP": {
-          "StartX": "AttributeSpec(python_name='start_x', type=<class 'float'>)",
-          "StartY": "AttributeSpec(python_name='start_y', type=<class 'float'>)",
-          "Angle": "AttributeSpec(python_name='angle', type=<class 'float'>)",
-          "Inclination": "AttributeSpec(python_name='inclination', type=<class 'float'>)",
-          "DepthLimited": "AttributeSpec(python_name='depth_limited', type=<class 'bool'>)",
-          "Depth": "AttributeSpec(python_name='depth', type=<class 'float'>)",
-          "Diameter": "AttributeSpec(python_name='diameter', type=<class 'float'>)"
-        },
-        "DATASCHEMA": {},
-        "HEADER_ATTRIBUTE_MAP": {
-          "ReferencePlaneID": [
-            "ref_side_index",
-            "<function BTLxProcessing.<lambda> at 0x22f27c4c0>"
-          ],
-          "Priority": [
-            "priority",
-            "<class 'int'>"
-          ],
-          "ProcessID": [
-            "process_id",
-            "<class 'int'>"
-          ],
-          "ToolID": [
-            "tool_id",
-            "<class 'int'>"
-          ],
-          "CounterSink": [
-            "counter_sink",
-            "<class 'bool'>"
-          ],
-          "ToolPosition": [
-            "tool_position",
-            "<class 'str'>"
-          ],
-          "Name": [
-            "name",
-            "<class 'str'>"
-          ],
-          "Process": [
-            "process",
-            "<class 'bool'>"
-          ]
-        },
-        "PROCESSING_NAME": "Drilling",
-        "angle": 89.99999999999936,
-        "depth": 0.0,
-        "depth_limited": false,
-        "diameter": 0.0064,
-        "inclination": 84.98036252146301,
-        "is_joinery": true,
-        "priority": 0,
-        "process_id": 0,
-        "ref_side_index": 0,
-        "start_x": 0.24250123919938046,
-        "start_y": 0.03926368023096034
+        "type": "Screw",
+        "joint_type": "XLapJoint",
+        "start": [
+          3.6683572850883386,
+          -0.49495044789154197,
+          2.0195713949356797
+        ],
+        "end": [
+          3.63012478809202,
+          -0.5144018958771862,
+          1.9292391341165886
+        ],
+        "diameter_m": 0.0064,
+        "length_m": 0.1,
+        "length_mm": 100.0,
+        "assigned_length_mm": 100
       },
+      "start": [
+        3.6684,
+        -0.495,
+        2.0196
+      ],
+      "end": [
+        3.6301,
+        -0.5144,
+        1.9292
+      ],
+      "line_length_m": 0.1,
       "diameter_m": 0.0064,
-      "length_m": 0.0,
-      "length_mm": 0.0,
-      "has_stl_geometry": false
+      "length_m": 0.1,
+      "length_mm": 100.0,
+      "assigned_length_mm": 100,
+      "joint_type": "XLapJoint",
+      "has_stl_geometry": true
     },
     {
-      "id": 4,
-      "type": "Drilling",
+      "id": "web-3",
+      "type": "Screw",
       "data": {
-        "ATTRIBUTE_MAP": {
-          "StartX": "AttributeSpec(python_name='start_x', type=<class 'float'>)",
-          "StartY": "AttributeSpec(python_name='start_y', type=<class 'float'>)",
-          "Angle": "AttributeSpec(python_name='angle', type=<class 'float'>)",
-          "Inclination": "AttributeSpec(python_name='inclination', type=<class 'float'>)",
-          "DepthLimited": "AttributeSpec(python_name='depth_limited', type=<class 'bool'>)",
-          "Depth": "AttributeSpec(python_name='depth', type=<class 'float'>)",
-          "Diameter": "AttributeSpec(python_name='diameter', type=<class 'float'>)"
-        },
-        "DATASCHEMA": {},
-        "HEADER_ATTRIBUTE_MAP": {
-          "ReferencePlaneID": [
-            "ref_side_index",
-            "<function BTLxProcessing.<lambda> at 0x22f27c4c0>"
-          ],
-          "Priority": [
-            "priority",
-            "<class 'int'>"
-          ],
-          "ProcessID": [
-            "process_id",
-            "<class 'int'>"
-          ],
-          "ToolID": [
-            "tool_id",
-            "<class 'int'>"
-          ],
-          "CounterSink": [
-            "counter_sink",
-            "<class 'bool'>"
-          ],
-          "ToolPosition": [
-            "tool_position",
-            "<class 'str'>"
-          ],
-          "Name": [
-            "name",
-            "<class 'str'>"
-          ],
-          "Process": [
-            "process",
-            "<class 'bool'>"
-          ]
-        },
-        "PROCESSING_NAME": "Drilling",
-        "angle": 10.270870749560531,
-        "depth": 0.0,
-        "depth_limited": false,
-        "diameter": 0.0064,
-        "inclination": 65.27325575209935,
-        "is_joinery": true,
-        "priority": 0,
-        "process_id": 0,
-        "ref_side_index": 3,
-        "start_x": 0.5241502823930788,
-        "start_y": 0.022486200657135004
+        "type": "Screw",
+        "joint_type": "TButtJoint - inner",
+        "start": [
+          3.8366906364177362,
+          -0.7199534583498951,
+          1.9635237071697644
+        ],
+        "end": [
+          3.702486776877131,
+          -0.7434958303565297,
+          2.0262539295885214
+        ],
+        "diameter_m": 0.0064,
+        "length_m": 0.15,
+        "length_mm": 150.0,
+        "assigned_length_mm": 150
       },
+      "start": [
+        3.8367,
+        -0.72,
+        1.9635
+      ],
+      "end": [
+        3.7025,
+        -0.7435,
+        2.0263
+      ],
+      "line_length_m": 0.15,
       "diameter_m": 0.0064,
-      "length_m": 0.0,
-      "length_mm": 0.0,
-      "has_stl_geometry": false
+      "length_m": 0.15,
+      "length_mm": 150.0,
+      "assigned_length_mm": 150,
+      "joint_type": "TButtJoint - inner",
+      "has_stl_geometry": true
     },
     {
-      "id": 5,
-      "type": "Drilling",
+      "id": "web-4",
+      "type": "Screw",
       "data": {
-        "ATTRIBUTE_MAP": {
-          "StartX": "AttributeSpec(python_name='start_x', type=<class 'float'>)",
-          "StartY": "AttributeSpec(python_name='start_y', type=<class 'float'>)",
-          "Angle": "AttributeSpec(python_name='angle', type=<class 'float'>)",
-          "Inclination": "AttributeSpec(python_name='inclination', type=<class 'float'>)",
-          "DepthLimited": "AttributeSpec(python_name='depth_limited', type=<class 'bool'>)",
-          "Depth": "AttributeSpec(python_name='depth', type=<class 'float'>)",
-          "Diameter": "AttributeSpec(python_name='diameter', type=<class 'float'>)"
-        },
-        "DATASCHEMA": {},
-        "HEADER_ATTRIBUTE_MAP": {
-          "ReferencePlaneID": [
-            "ref_side_index",
-            "<function BTLxProcessing.<lambda> at 0x22f27c4c0>"
-          ],
-          "Priority": [
-            "priority",
-            "<class 'int'>"
-          ],
-          "ProcessID": [
-            "process_id",
-            "<class 'int'>"
-          ],
-          "ToolID": [
-            "tool_id",
-            "<class 'int'>"
-          ],
-          "CounterSink": [
-            "counter_sink",
-            "<class 'bool'>"
-          ],
-          "ToolPosition": [
-            "tool_position",
-            "<class 'str'>"
-          ],
-          "Name": [
-            "name",
-            "<class 'str'>"
-          ],
-          "Process": [
-            "process",
-            "<class 'bool'>"
-          ]
-        },
-        "PROCESSING_NAME": "Drilling",
-        "angle": 10.270870749560387,
-        "depth": 0.0,
-        "depth_limited": false,
-        "diameter": 0.0064,
-        "inclination": 65.27325575209935,
-        "is_joinery": true,
-        "priority": 0,
-        "process_id": 0,
-        "ref_side_index": 3,
-        "start_x": 0.5230378109223992,
-        "start_y": 0.05258716303905085
+        "type": "Screw",
+        "joint_type": "TButtJoint - inner",
+        "start": [
+          3.8250974178134127,
+          -0.7258812654875458,
+          1.9364967135350448
+        ],
+        "end": [
+          3.6908935582728075,
+          -0.7494236374941804,
+          1.9992269359538017
+        ],
+        "diameter_m": 0.0064,
+        "length_m": 0.15,
+        "length_mm": 150.0,
+        "assigned_length_mm": 150
       },
+      "start": [
+        3.8251,
+        -0.7259,
+        1.9365
+      ],
+      "end": [
+        3.6909,
+        -0.7494,
+        1.9992
+      ],
+      "line_length_m": 0.15,
       "diameter_m": 0.0064,
-      "length_m": 0.0,
-      "length_mm": 0.0,
-      "has_stl_geometry": false
+      "length_m": 0.15,
+      "length_mm": 150.0,
+      "assigned_length_mm": 150,
+      "joint_type": "TButtJoint - inner",
+      "has_stl_geometry": true
     },
     {
-      "id": 6,
-      "type": "Drilling",
+      "id": "web-5",
+      "type": "Screw",
       "data": {
-        "ATTRIBUTE_MAP": {
-          "StartX": "AttributeSpec(python_name='start_x', type=<class 'float'>)",
-          "StartY": "AttributeSpec(python_name='start_y', type=<class 'float'>)",
-          "Angle": "AttributeSpec(python_name='angle', type=<class 'float'>)",
-          "Inclination": "AttributeSpec(python_name='inclination', type=<class 'float'>)",
-          "DepthLimited": "AttributeSpec(python_name='depth_limited', type=<class 'bool'>)",
-          "Depth": "AttributeSpec(python_name='depth', type=<class 'float'>)",
-          "Diameter": "AttributeSpec(python_name='diameter', type=<class 'float'>)"
-        },
-        "DATASCHEMA": {},
-        "HEADER_ATTRIBUTE_MAP": {
-          "ReferencePlaneID": [
-            "ref_side_index",
-            "<function BTLxProcessing.<lambda> at 0x22f27c4c0>"
-          ],
-          "Priority": [
-            "priority",
-            "<class 'int'>"
-          ],
-          "ProcessID": [
-            "process_id",
-            "<class 'int'>"
-          ],
-          "ToolID": [
-            "tool_id",
-            "<class 'int'>"
-          ],
-          "CounterSink": [
-            "counter_sink",
-            "<class 'bool'>"
-          ],
-          "ToolPosition": [
-            "tool_position",
-            "<class 'str'>"
-          ],
-          "Name": [
-            "name",
-            "<class 'str'>"
-          ],
-          "Process": [
-            "process",
-            "<class 'bool'>"
-          ]
-        },
-        "PROCESSING_NAME": "Drilling",
-        "angle": 269.99999999986176,
-        "depth": 0.0,
-        "depth_limited": false,
-        "diameter": 0.0064,
-        "inclination": 89.95684867146586,
-        "is_joinery": true,
-        "priority": 0,
-        "process_id": 0,
-        "ref_side_index": 2,
-        "start_x": 0.6357461797442093,
-        "start_y": 0.017567939344308028
+        "type": "Screw",
+        "joint_type": "XLapJoint",
+        "start": [
+          3.8545636983606273,
+          -0.8369094367733857,
+          1.9112314491484916
+        ],
+        "end": [
+          3.894599798170034,
+          -0.8151633784179687,
+          1.9888472958426688
+        ],
+        "diameter_m": 0.0064,
+        "length_m": 0.09,
+        "length_mm": 90.0,
+        "assigned_length_mm": 100
       },
+      "start": [
+        3.8546,
+        -0.8369,
+        1.9112
+      ],
+      "end": [
+        3.8946,
+        -0.8152,
+        1.9888
+      ],
+      "line_length_m": 0.09,
       "diameter_m": 0.0064,
-      "length_m": 0.0,
-      "length_mm": 0.0,
-      "has_stl_geometry": false
+      "length_m": 0.09,
+      "length_mm": 90.0,
+      "assigned_length_mm": 100,
+      "joint_type": "XLapJoint",
+      "has_stl_geometry": true
     },
     {
-      "id": 7,
-      "type": "Drilling",
+      "id": "web-6",
+      "type": "Screw",
       "data": {
-        "ATTRIBUTE_MAP": {
-          "StartX": "AttributeSpec(python_name='start_x', type=<class 'float'>)",
-          "StartY": "AttributeSpec(python_name='start_y', type=<class 'float'>)",
-          "Angle": "AttributeSpec(python_name='angle', type=<class 'float'>)",
-          "Inclination": "AttributeSpec(python_name='inclination', type=<class 'float'>)",
-          "DepthLimited": "AttributeSpec(python_name='depth_limited', type=<class 'bool'>)",
-          "Depth": "AttributeSpec(python_name='depth', type=<class 'float'>)",
-          "Diameter": "AttributeSpec(python_name='diameter', type=<class 'float'>)"
-        },
-        "DATASCHEMA": {},
-        "HEADER_ATTRIBUTE_MAP": {
-          "ReferencePlaneID": [
-            "ref_side_index",
-            "<function BTLxProcessing.<lambda> at 0x22f27c4c0>"
-          ],
-          "Priority": [
-            "priority",
-            "<class 'int'>"
-          ],
-          "ProcessID": [
-            "process_id",
-            "<class 'int'>"
-          ],
-          "ToolID": [
-            "tool_id",
-            "<class 'int'>"
-          ],
-          "CounterSink": [
-            "counter_sink",
-            "<class 'bool'>"
-          ],
-          "ToolPosition": [
-            "tool_position",
-            "<class 'str'>"
-          ],
-          "Name": [
-            "name",
-            "<class 'str'>"
-          ],
-          "Process": [
-            "process",
-            "<class 'bool'>"
-          ]
-        },
-        "PROCESSING_NAME": "Drilling",
-        "angle": 269.9999999996267,
-        "depth": 0.0,
-        "depth_limited": false,
-        "diameter": 0.0064,
-        "inclination": 89.95684867146585,
-        "is_joinery": true,
-        "priority": 0,
-        "process_id": 0,
-        "ref_side_index": 2,
-        "start_x": 0.6190495922011183,
-        "start_y": 0.04249231128784636
+        "type": "Screw",
+        "joint_type": "XLapJoint",
+        "start": [
+          3.8278382871617587,
+          -0.8363026114063342,
+          1.924847034307613
+        ],
+        "end": [
+          3.8678743869711654,
+          -0.8145565530509172,
+          2.00246288100179
+        ],
+        "diameter_m": 0.0064,
+        "length_m": 0.09,
+        "length_mm": 90.0,
+        "assigned_length_mm": 100
       },
+      "start": [
+        3.8278,
+        -0.8363,
+        1.9248
+      ],
+      "end": [
+        3.8679,
+        -0.8146,
+        2.0025
+      ],
+      "line_length_m": 0.09,
       "diameter_m": 0.0064,
-      "length_m": 0.0,
-      "length_mm": 0.0,
-      "has_stl_geometry": false
+      "length_m": 0.09,
+      "length_mm": 90.0,
+      "assigned_length_mm": 100,
+      "joint_type": "XLapJoint",
+      "has_stl_geometry": true
     }
   ],
   "3d_model": "beams/e30/e30.stl",
   "geometry_model": "beams/e30/e30.stl",
-  "blank_model": "beams/e30/e30_blank.stl"
+  "blank_model": "beams/e30/e30_blank.stl",
+  "features_model": "beams/e30/e30_features.stl"
 }
