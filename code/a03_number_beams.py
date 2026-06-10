@@ -1472,9 +1472,13 @@ def joint_kind(name):
     lower = (name or "").lower()
     if "xlap" in lower:
         return "xlap"
-    if "tbutt" in lower:
+    if "llap" in lower:
+        return "llap"
+    if "lap" in lower:
+        return "xlap"
+    if "tbutt" in lower or "butt" in lower:
         return "tbutt"
-    if "lmiter" in lower:
+    if "lmiter" in lower or "miter" in lower:
         return "lmiter"
     return "other"
 
@@ -1897,14 +1901,17 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
                         clean_joints.append(j_num)
                         seen.add(j_num)
 
-                xlap, tbutt, lmiter = [], [], []
+                xlap, llap, tbutt, lmiter = [], [], [], []
                 for j_num in clean_joints:
                     j_type = joint_type_by_number.get(j_num, "")
-                    if j_type == 'XLapJoint':
+                    kind = joint_kind(j_type)
+                    if kind == 'xlap':
                         xlap.append(j_num)
-                    elif j_type == 'TButtJoint':
+                    elif kind == 'llap':
+                        llap.append(j_num)
+                    elif kind == 'tbutt':
                         tbutt.append(j_num)
-                    elif j_type == 'LMiterJoint':
+                    elif kind == 'lmiter':
                         lmiter.append(j_num)
 
                 beam_id = name.lower()
@@ -1977,6 +1984,7 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
                     "joints": {
                         "all": clean_joints,
                         "xlap": xlap,
+                        "llap": llap,
                         "tbutt": tbutt,
                         "lmiter": lmiter
                     },

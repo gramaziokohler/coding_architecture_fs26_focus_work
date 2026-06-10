@@ -37,6 +37,7 @@ const moduleRows = computed(() => {
         ["module", beam.module],
         ["engraving text", engravingText.value],
         ["xlap", joints.xlap?.length ? joints.xlap.join(", ") : "none"],
+        ["llap", joints.llap?.length ? joints.llap.join(", ") : "none"],
         ["tbutt", joints.tbutt?.length ? joints.tbutt.join(", ") : "none"],
         ["lmiter", joints.lmiter?.length ? joints.lmiter.join(", ") : "none"],
     ].filter(([, value]) => value !== undefined && value !== null && value !== "");

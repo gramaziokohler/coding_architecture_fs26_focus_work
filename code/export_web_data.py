@@ -348,9 +348,13 @@ def joint_kind(name):
     lower = (name or "").lower()
     if "xlap" in lower:
         return "xlap"
-    if "tbutt" in lower:
+    if "llap" in lower:
+        return "llap"
+    if "lap" in lower:
+        return "xlap"
+    if "tbutt" in lower or "butt" in lower:
         return "tbutt"
-    if "lmiter" in lower:
+    if "lmiter" in lower or "miter" in lower:
         return "lmiter"
     return "other"
 
@@ -505,6 +509,7 @@ def export_web_data(model_path, output_dir, base_url, density, module_sizes, cle
         joint_groups = {
             "all": [joint["id"] for joint in joint_details],
             "xlap": [joint["id"] for joint in joint_details if joint["kind"] == "xlap"],
+            "llap": [joint["id"] for joint in joint_details if joint["kind"] == "llap"],
             "tbutt": [joint["id"] for joint in joint_details if joint["kind"] == "tbutt"],
             "lmiter": [joint["id"] for joint in joint_details if joint["kind"] == "lmiter"],
             "details": joint_details,
