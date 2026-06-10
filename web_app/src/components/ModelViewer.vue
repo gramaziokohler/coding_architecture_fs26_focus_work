@@ -658,6 +658,14 @@ const loadBeamData = async (beamId) => {
     return beamData;
 };
 
+const resolveModelUrl = (modelPath) => {
+    if (!modelPath) return "";
+    if (modelPath.startsWith("http://") || modelPath.startsWith("https://")) {
+        return modelPath;
+    }
+    return `${BASE_URL}/${modelPath.replace(/^\/+/, "")}`;
+};
+
 const syncNavigationState = async () => {
     try {
         const structure = await loadStructure();
@@ -686,7 +694,7 @@ const loadCurrentBeamFromUrl = async () => {
 const loadSingleBeam = async ({ preserveCamera = false } = {}) => {
     clearModelObjects();
     shownBeamIds.value = [getBeamId()];
-    const geometry = await loadSTL(currentBeamData["3d_model"]);
+    const geometry = await loadSTL(resolveModelUrl(currentBeamData["3d_model"]));
     geometry.computeBoundingBox();
     const size = new THREE.Vector3();
     geometry.boundingBox.getSize(size);
