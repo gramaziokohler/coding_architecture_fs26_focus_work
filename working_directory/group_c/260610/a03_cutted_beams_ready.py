@@ -1,5 +1,5 @@
 # venv: ca-fs26-focus-work
-# keyword: timber-packing, text-hatch-fill, unit-conversion-cm
+# keyword: timber-packing, 90-deg-beam-rotation, layout-flip
 import Rhino.Geometry as rg
 import math
 from importlib import reload
@@ -17,7 +17,7 @@ class CutItem:
 
 
 def create_geometry_text(text, position, text_height=0.03):
-    """Genera le curve di un testo riempite con un tratteggio (Hatch) solido continuo."""
+    """Genera le curve di un testo perfettamente piatto in Top View (XY) con riempimento Hatch."""
     te = rg.TextEntity()
     te.Text = text
     te.FontIndex = 0
@@ -34,7 +34,6 @@ def create_geometry_text(text, position, text_height=0.03):
     joined = rg.Curve.JoinCurves(curves, 0.001) or curves
     bbox = te.GetBoundingBox(True)
     
-    # Applichiamo il centraggio geometrico
     if bbox.IsValid:
         center_x = (bbox.Max.X + bbox.Min.X) / 2.0
         center_y = (bbox.Max.Y + bbox.Min.Y) / 2.0
@@ -42,25 +41,19 @@ def create_geometry_text(text, position, text_height=0.03):
         for crv in joined:
             crv.Transform(move_to_center)
             
-    # === GENERAZIONE RIEMPIMENTO SOLIDO (HATCH) ===
     output_objects = []
     if joined:
-        # Genera un riempimento solido usando la tolleranza e il pattern standard di Rhino
         hatches = rg.Hatch.Create(joined, 0, 0.0, 1.0, 0.001)
         if hatches:
             output_objects.extend(hatches)
         else:
-            # Se il riempimento fallisce su caratteri particolari, restituisce le curve esterne
             output_objects.extend(joined)
             
     return output_objects
 
 
 def create_3d_text_engraving(text, position, text_height=0.03, engraving_depth=0.005):
-    """
-    Creates 3D solid text geometry centered at the specified position.
-    Uses large-scale generation and scales down to avoid Rhino's precision limits.
-    """
+    """Creates 3D solid text geometry centered at the specified position."""
     scale_factor = 1000.0
 
     work_height = text_height * scale_factor
@@ -169,6 +162,7 @@ def run_packing(timber_model, origin, stock_length_beam_6x8, stock_length_beam_1
     len_12x14 = float(stock_length_beam_12x14) if stock_length_beam_12x14 is not None else (13.0 / 3.0)
 
     def get_assigned_stock_length(w, h):
+        # Manteniamo il controllo coerente controllando le misure nominali reali
         cm_w = round(w * 100.0, 1)
         cm_h = round(h * 100.0, 1)
         if (cm_w == 6.0 and cm_h == 8.0) or (cm_w == 8.0 and cm_h == 6.0): return len_6x8
@@ -221,7 +215,7 @@ def run_packing(timber_model, origin, stock_length_beam_6x8, stock_length_beam_1
                     if nbr in group_set and nbr not in visited:
                         px, py, pz = pts[f]
                         nx_pt, ny_pt, nz_pt = pts[nbr]
-                        d = (px-nx_pt)**2 + (py-ny_pt)**2 + (pz-nz_pt)**2
+                        d = (px-nx_pt)**2 + (ny-ny_pt)**2 + (pz-nz_pt)**2
                         if d < best_dist: best_dist, best_candidate = d, nbr
             if best_candidate is None:
                 for r in list(group_set - visited):
@@ -240,7 +234,7 @@ def run_packing(timber_model, origin, stock_length_beam_6x8, stock_length_beam_1
             beam = timber_model.get_element(node)
             if beam: guid_to_custom_name[str(beam.guid)] = "{}{}".format(k, i + 1)
 
-    # 2. RADDRIZZAMENTO E RAGGRUPPAMENTO DEI BEAM PER SEZIONE
+    # 2. RADDRIZZAMENTO, ROTAZIONE DI 90° E RAGGRUPPAMENTO DEI BEAM PER SEZIONE
     beams_by_section = {}
     for idx, beam in enumerate(timber_model.beams):
         b_guid = str(beam.guid)
@@ -248,14 +242,22 @@ def run_packing(timber_model, origin, stock_length_beam_6x8, stock_length_beam_1
         raw_brep = get_pure_brep(beam.geometry)
         if raw_brep is None: continue
         straight_brep = raw_brep.DuplicateBrep()
+        
         if hasattr(beam, "frame") and beam.frame:
             local_plane = compas_frame_to_rhino_plane(beam.frame)
             flatten_trans = rg.Transform.PlaneToPlane(local_plane, rg.Plane.WorldXY)
             straight_brep.Transform(flatten_trans)
+            
+        # === FILP LONGITUDINALE DI 90 GRADI ALLINEATO ALL'ASSE X ===
+        # Ruotiamo la trave raddrizzata di 90° attorno all'asse X in modo che poggi sulla faccia grande
+        rotate_90_x = rg.Transform.Rotation(math.pi / 2.0, rg.Vector3d.XAxis, rg.Point3d(0, 0, 0))
+        straight_brep.Transform(rotate_90_x)
+        
         local_bbox = straight_brep.GetBoundingBox(True)
         if local_bbox and local_bbox.IsValid:
             size_box = local_bbox.Max - local_bbox.Min
             beam_length = size_box.X
+            # Ora width_box (Y) e height_box (Z) sono scambiati geometricamente: l'appoggio è largo
             width_box, height_box = round(size_box.Y, 4), round(size_box.Z, 4)
         else:
             beam_length, width_box, height_box = beam.centerline.length, 0.12, 0.14
@@ -314,6 +316,8 @@ def run_packing(timber_model, origin, stock_length_beam_6x8, stock_length_beam_1
         this_bar_stock_len = bar["stock_len_assigned"]
         total_material_bought += this_bar_stock_len
 
+        # === CORREZIONE CONTENITORI COMMERCIALI (STOCK BEAMS) ===
+        # Generiamo le barre commerciali grezze orientate sulla nuova larghezza d'appoggio sec_w
         stock_x_interval, stock_y_interval, stock_z_interval = rg.Interval(0, this_bar_stock_len), rg.Interval(0, sec_w), rg.Interval(0, sec_h)
         single_stock_bar = rg.Box(rg.Plane.WorldXY, stock_x_interval, stock_y_interval, stock_z_interval).ToBrep()
         bbox_stock = single_stock_bar.GetBoundingBox(True)
@@ -331,6 +335,7 @@ def run_packing(timber_model, origin, stock_length_beam_6x8, stock_length_beam_1
             pure_beam_geo.Transform(rg.Transform.Translation(target_x - bbox_current_beam.Min.X, y_pos - bbox_current_beam.Min.Y, base_pt.Z - bbox_current_beam.Min.Z))
             arranged_boxes.append(pure_beam_geo)
 
+            # === CORREZIONE SCATOLE DI DIMENSIONE MASSIMA (MAX LEN BOXES) ===
             raw_box_geo = rg.Box(rg.Plane.WorldXY, rg.Interval(0, item["length_x"]), rg.Interval(0, item["width_y"]), rg.Interval(0, item["height_z"])).ToBrep()
             bbox_current_raw = raw_box_geo.GetBoundingBox(True)
             raw_box_geo.Transform(rg.Transform.Translation(target_x - bbox_current_raw.Min.X, y_pos - bbox_current_raw.Min.Y, base_pt.Z - bbox_current_raw.Min.Z))
@@ -344,9 +349,9 @@ def run_packing(timber_model, origin, stock_length_beam_6x8, stock_length_beam_1
 
             lbl_x = (new_bbox.Min.X + new_bbox.Max.X) / 2.0
             lbl_y_center = (new_bbox.Min.Y + new_bbox.Max.Y) / 2.0
+            # L'offset calcola lo spostamento verso il basso usando la nuova semilarghezza del pezzo ruotato
             lbl_y_under = lbl_y_center - (sec_w / 2.0) - l_off
 
-            # === FORMATTAZIONE LUNGHEZZA IN CM (1 DECIMALE) ===
             length_in_cm = item["length_x"] * 100.0
 
             # Nome pezzo con riempimento continuo sotto la trave
@@ -354,7 +359,7 @@ def run_packing(timber_model, origin, stock_length_beam_6x8, stock_length_beam_1
             # Lunghezza convertita in cm sotto al nome con riempimento continuo
             max_len_num_txt.extend(create_geometry_text("{:.1f}cm".format(length_in_cm), rg.Point3d(lbl_x, lbl_y_under - 0.06, exact_top_z), text_height=0.04))
 
-            # === LOGICA DI CONTROLLO MATRICE A 5 PUNTI SUL PIANO Z BLOCATO ===
+            # === LOGICA DI CONTROLLO MATRICE A 5 PUNTI SULLA NUOVA QUOTA ALTEZZA ===
             lbl_y = lbl_y_center
             test_x = lbl_x
             step = 0.02  
@@ -403,7 +408,7 @@ def run_packing(timber_model, origin, stock_length_beam_6x8, stock_length_beam_1
 
             dimensions.append("Stock beam n°: {} | {} | Sezione: {:.1f}x{:.1f}cm | L: {:.3f}m".format(bar["id"], item["name"], sec_w*100.0, sec_h*100.0, item["length_x"]))
 
-    # 5. RENDICONTO STATISTICO
+    # 5. RENDICONTO STATISTICO COERENTE CON IL FLIP SEZIONI
     for sec in sorted(beams_by_section.keys()):
         sec_bars = [b for b in packed_bars if b["section"] == sec]
         sec_num_stocks = len(sec_bars)
