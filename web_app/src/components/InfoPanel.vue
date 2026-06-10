@@ -14,16 +14,11 @@ const error = ref(null);
 
 const HIDDEN_KEYS = [
     "name", "3d_model", "frame", "local_frame", "global_position",
-    "connected_beams", "joints", "processing", "processings", "features", "machining",
-    "is_key_beam", "key_beam" // Aggiunti per nasconderli dalla lista generica
+    "connected_beams", "joints", "processing", "processings", "features", "machining"
 ];
 
 const engravingText = computed(() =>
     beamData.value?.engraving_text || beamData.value?.name || beamData.value?.["beam ID"]
-);
-
-const isKeyBeam = computed(() => 
-    beamData.value?.is_key_beam === true || beamData.value?.key_beam === true
 );
 
 const filteredJoints = computed(() => {
@@ -89,11 +84,6 @@ const formatLabel = (key) => key.replace(/_/g, " ").replace("cm3", "cm³");
                         <li class="spec-item">
                             <span class="label">module</span>
                             <span class="value">{{ beamData.module }}</span>
-                        </li>
-                        <!-- Key Beam - mostra solo se true -->
-                        <li v-if="isKeyBeam" class="spec-item key-beam-item">
-                            <span class="label">Key beam</span>
-                            <span class="value key-beam-badge">✓</span>
                         </li>
                         <template v-for="(value, key) in beamData" :key="key">
                             <li
@@ -268,25 +258,6 @@ h3 {
     word-break: break-word;
 }
 
-.key-beam-item {
-    background: #fffbf0;
-    border-left: 3px solid #ffe066;
-    padding-left: 9px;
-}
-
-.key-beam-badge {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 20px;
-    height: 20px;
-    background: #ffe066;
-    color: #333;
-    border-radius: 50%;
-    font-weight: bold;
-    font-size: 12px;
-}
-
 .joints-section-title {
     color: #666;
     font-size: 12px;
@@ -352,17 +323,6 @@ h3 {
     .spec-item {
         gap: 8px;
         padding: 4px 0;
-        font-size: 10px;
-    }
-
-    .key-beam-item {
-        padding-left: 6px;
-        border-left-width: 2px;
-    }
-
-    .key-beam-badge {
-        width: 18px;
-        height: 18px;
         font-size: 10px;
     }
 }
