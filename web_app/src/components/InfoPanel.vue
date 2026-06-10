@@ -84,8 +84,7 @@ const formatJointValue = (jointData) => {
     }
     
     if (isObject(jointData)) {
-        const values = Object.values(jointData);
-        return values.length === 0 ? "—" : values.join(", ");
+        return JSON.stringify(jointData);
     }
     
     return jointData || "—";
@@ -105,7 +104,7 @@ const formatJointValue = (jointData) => {
             <div class="info-grid">
                 <!-- LEFT COLUMN: BEAM -->
                 <div class="info-column">
-                    <h3>Beam</h3>
+                    <h3>BEAM</h3>
                     <ul class="specs-list">
                         <li class="spec-item">
                             <span class="label">beam ID</span>
@@ -128,8 +127,8 @@ const formatJointValue = (jointData) => {
                             <span class="label">connected beams</span>
                             <span class="value">
                                 {{ isArray(beamData.connected_beams)
-                                    ? beamData.connected_beams.join(", ")
-                                    : beamData.connected_beams }}
+                                    ? beamData.connected_beams.map(b => b.toUpperCase()).join(", ")
+                                    : beamData.connected_beams.toUpperCase() }}
                             </span>
                         </li>
                     </ul>
@@ -137,14 +136,14 @@ const formatJointValue = (jointData) => {
 
                 <!-- RIGHT COLUMN: MODULE -->
                 <div class="info-column">
-                    <h3>Module</h3>
+                    <h3>MODULE</h3>
                     <ul class="specs-list">
                         <li class="spec-item">
                             <span class="label">engraving text</span>
                             <span class="value">{{ engravingText }}</span>
                         </li>
 
-                        <li class="spec-item joints-section-title">
+                        <li v-if="filteredJoints" class="spec-item joints-section-title">
                             <span>joints</span>
                         </li>
 
@@ -158,11 +157,11 @@ const formatJointValue = (jointData) => {
                                 <span class="joint-values">{{ formatJointValue(jointData) }}</span>
                             </li>
                         </template>
-                        <template v-else>
-                            <li class="spec-item">
-                                <span class="value" style="width: 100%; text-align: right;">—</span>
-                            </li>
-                        </template>
+
+                        <li v-if="beamData.is_key_beam === true" class="spec-item">
+                            <span class="label">key beams</span>
+                            <span class="value">Yes</span>
+                        </li>
                     </ul>
                 </div>
             </div>
@@ -172,71 +171,89 @@ const formatJointValue = (jointData) => {
 
 <style scoped>
 .info-panel {
+    display: flex;
+    flex-direction: column;
+    background-color: #f9f9f9;
+    border: 1px solid #d0d0d0;
+    border-radius: 4px;
     padding: 12px 16px;
-    background: #fff;
-    border-bottom: 1px solid #000;
-    max-height: 42vh;
+    max-height: 35vh;
     overflow-y: auto;
+    font-family: "Helvetica Neue", sans-serif;
+}
+
+.status,
+.error {
+    padding: 16px;
+    text-align: center;
+    font-size: 14px;
+    color: #666;
+}
+
+.error {
+    color: #d32f2f;
+}
+
+.beam-info {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
 }
 
 .panel-header {
     display: flex;
     align-items: center;
-    justify-content: space-between;
     gap: 12px;
-    margin-bottom: 10px;
-}
-
-h2,
-h3 {
-    margin: 0;
-    color: #000;
-    line-height: 1.2;
-    font-weight: 600;
+    margin-bottom: 8px;
+    border-bottom: 2px solid #d0d0d0;
+    padding-bottom: 8px;
 }
 
 h2 {
-    font-size: 18px;
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0;
+    color: #000;
+    flex-grow: 1;
 }
 
 h3 {
-    font-size: 12px;
+    font-size: 11px;
+    font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0;
-    color: #555;
-    margin-bottom: 6px;
+    color: #666;
+    margin: 0 0 6px 0;
+    letter-spacing: 0.5px;
 }
 
 .module-tag {
-    border: 1px solid #d0d0d0;
-    padding: 3px 8px;
-    font-size: 12px;
-    color: #111;
-}
-
-.status,
-.error {
-    font-size: 13px;
-    color: #666;
-    padding: 4px 0;
-}
-
-.error {
-    color: #000;
+    background-color: #e8e8e8;
+    padding: 4px 8px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #333;
+    white-space: nowrap;
 }
 
 .info-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 18px;
+    gap: 16px;
+}
+
+.info-column {
+    display: flex;
+    flex-direction: column;
 }
 
 .specs-list {
     list-style: none;
-    margin: 0;
     padding: 0;
+    margin: 0;
     display: flex;
     flex-direction: column;
+    gap: 0;
 }
 
 .spec-item {
@@ -244,7 +261,7 @@ h3 {
     justify-content: space-between;
     align-items: center;
     gap: 12px;
-    padding: 6px 0;
+    padding: 4px 0;
     border-bottom: 1px solid #e0e0e0;
     font-size: 12px;
 }
