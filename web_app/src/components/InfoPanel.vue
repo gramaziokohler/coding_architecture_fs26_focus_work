@@ -30,6 +30,10 @@ const HIDDEN_KEYS = [
     "key_beam"
 ];
 
+const engravingText = computed(() =>
+    beamData.value?.engraving_text || beamData.value?.name || beamData.value?.["beam ID"]
+);
+
 const filteredJoints = computed(() => {
     if (!beamData.value?.joints) return null;
     const skip = ["all", "details"];
@@ -74,12 +78,16 @@ const formatJointValue = (jointData) => {
     if (jointData === null || jointData === undefined) {
         return "—";
     }
+    
     if (isArray(jointData)) {
         return jointData.length === 0 ? "—" : jointData.join(", ");
     }
+    
     if (isObject(jointData)) {
-        return JSON.stringify(jointData);
+        const values = Object.values(jointData);
+        return values.length === 0 ? "—" : values.join(", ");
     }
+    
     return jointData || "—";
 };
 </script>
@@ -89,104 +97,73 @@ const formatJointValue = (jointData) => {
         <div v-if="loading" class="status">Loading...</div>
         <div v-else-if="error" class="error">Error: {{ error }}</div>
         <div v-else-if="beamData" class="beam-info">
-            <!-- HEADER -->
             <div class="panel-header">
                 <h2>{{ beamData.name }}</h2>
+                <span class="module-tag">Module {{ beamData.module }}</span>
             </div>
 
-            <!-- CONTENUTO SCROLLABILE -->
-            <div class="scrollable-content">
-                <div class="info-grid">
-                    <!-- LEFT COLUMN: BEAM -->
-                    <div class="info-column">
-                        <h3>BEAM</h3>
-                        <ul class="specs-list">
-                            <li class="spec-item">
-                                <span class="label">beam ID</span>
-                                <span class="value">{{ beamData["beam ID"]?.toUpperCase() }}</span>
+            <div class="info-grid">
+                <!-- LEFT COLUMN: BEAM -->
+                <div class="info-column">
+                    <h3>Beam</h3>
+                    <ul class="specs-list">
+                        <li class="spec-item">
+                            <span class="label">beam ID</span>
+                            <span class="value">{{ beamData["beam ID"]?.toUpperCase() }}</span>
+                        </li>
+                        <li class="spec-item">
+                            <span class="label">module</span>
+                            <span class="value">{{ beamData.module }}</span>
+                        </li>
+                        <template v-for="(value, key) in beamData" :key="key">
+                            <li
+                                v-if="!HIDDEN_KEYS.includes(key) && key !== 'beam ID' && key !== 'module' && key !== 'engraving_text'"
+                                class="spec-item"
+                            >
+                                <span class="label">{{ formatLabel(key) }}</span>
+                                <span class="value">{{ formatValue(value) }}</span>
                             </li>
-                            <li class="spec-item">
-                                <span class="label">module</span>
-                                <span class="value">{{ beamData.module }}</span>
-                            </li>
-                            <li class="spec-item">
-                                <span class="label">width (m)</span>
-                                <span class="value">{{ formatNumber(beamData.width) }}</span>
-                            </li>
-                            <li class="spec-item">
-                                <span class="label">height (m)</span>
-                                <span class="value">{{ formatNumber(beamData.height) }}</span>
-                            </li>
-                            <li class="spec-item">
-                                <span class="label">length (m)</span>
-                                <span class="value">{{ formatNumber(beamData.length) }}</span>
-                            </li>
-                            <li class="spec-item">
-                                <span class="label">volume (cm³)</span>
-                                <span class="value">{{ formatNumber(beamData.volume) }}</span>
-                            </li>
-                            <li class="spec-item">
-                                <span class="label">weight (kg)</span>
-                                <span class="value">{{ formatNumber(beamData.weight) }}</span>
-                            </li>
-                            <li v-if="beamData.connected_beams" class="spec-item">
-                                <span class="label">connected beams</span>
-                                <span class="value">
-                                    {{ isArray(beamData.connected_beams)
-                                        ? beamData.connected_beams.map(b => b.toUpperCase()).join(", ")
-                                        : beamData.connected_beams.toUpperCase() }}
-                                </span>
-                            </li>
-                            <template v-for="(value, key) in beamData" :key="key">
-                                <li
-                                    v-if="!HIDDEN_KEYS.includes(key) && 
-                                          key !== 'beam ID' && 
-                                          key !== 'module' && 
-                                          key !== 'engraving_text' &&
-                                          key !== 'width' &&
-                                          key !== 'height' &&
-                                          key !== 'length' &&
-                                          key !== 'volume' &&
-                                          key !== 'weight'"
-                                    class="spec-item"
-                                >
-                                    <span class="label">{{ formatLabel(key) }}</span>
-                                    <span class="value">{{ formatValue(value) }}</span>
-                                </li>
-                            </template>
-                        </ul>
-                    </div>
+                        </template>
+                        <li v-if="beamData.connected_beams" class="spec-item">
+                            <span class="label">connected beams</span>
+                            <span class="value">
+                                {{ isArray(beamData.connected_beams)
+                                    ? beamData.connected_beams.join(", ")
+                                    : beamData.connected_beams }}
+                            </span>
+                        </li>
+                    </ul>
+                </div>
 
-                    <!-- RIGHT COLUMN: MODULE -->
-                    <div class="info-column">
-                        <h3>MODULE</h3>
-                        <ul class="specs-list">
+                <!-- RIGHT COLUMN: MODULE -->
+                <div class="info-column">
+                    <h3>Module</h3>
+                    <ul class="specs-list">
+                        <li class="spec-item">
+                            <span class="label">engraving text</span>
+                            <span class="value">{{ engravingText }}</span>
+                        </li>
+
+                        <li class="spec-item joints-section-title">
+                            <span>joints</span>
+                        </li>
+
+                        <template v-if="filteredJoints">
+                            <li
+                                v-for="(jointData, jointType) in filteredJoints"
+                                :key="jointType"
+                                class="spec-item"
+                            >
+                                <span class="joint-tag">{{ jointType }}</span>
+                                <span class="joint-values">{{ formatJointValue(jointData) }}</span>
+                            </li>
+                        </template>
+                        <template v-else>
                             <li class="spec-item">
-                                <span class="label">engraving text</span>
-                                <span class="value">{{ beamData.engraving_text || beamData.name }}</span>
+                                <span class="value" style="width: 100%; text-align: right;">—</span>
                             </li>
-
-                            <li v-if="filteredJoints" class="joints-header">
-                                <span>JOINTS</span>
-                            </li>
-
-                            <template v-if="filteredJoints">
-                                <li
-                                    v-for="(jointData, jointType) in filteredJoints"
-                                    :key="jointType"
-                                    class="spec-item"
-                                >
-                                    <span class="joint-tag">{{ jointType }}</span>
-                                    <span class="joint-values">{{ formatJointValue(jointData) }}</span>
-                                </li>
-                            </template>
-
-                            <li v-if="beamData.is_key_beam === true" class="spec-item">
-                                <span class="label">key beams</span>
-                                <span class="value">Yes</span>
-                            </li>
-                        </ul>
-                    </div>
+                        </template>
+                    </ul>
                 </div>
             </div>
         </div>
@@ -195,89 +172,81 @@ const formatJointValue = (jointData) => {
 
 <style scoped>
 .info-panel {
+    padding: 12px 16px;
+    background: #fff;
+    border-bottom: 1px solid #000;
+    max-height: 42vh;
+    overflow-y: auto;
+}
+
+.panel-header {
     display: flex;
-    flex-direction: column;
-    background-color: #f5f5f5;
-    border: 1px solid #ccc;
-    height: 100%;
-    font-family: "Helvetica Neue", Arial, sans-serif;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+
+h2,
+h3 {
+    margin: 0;
+    color: #000;
+    line-height: 1.2;
+    font-weight: 600;
+}
+
+h2 {
+    font-size: 18px;
+}
+
+h3 {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0;
+    color: #555;
+    margin-bottom: 6px;
+}
+
+.module-tag {
+    border: 1px solid #d0d0d0;
+    padding: 3px 8px;
+    font-size: 12px;
+    color: #111;
 }
 
 .status,
 .error {
-    padding: 16px;
-    text-align: center;
-    font-size: 14px;
+    font-size: 13px;
     color: #666;
+    padding: 4px 0;
 }
 
 .error {
-    color: #d32f2f;
-}
-
-.beam-info {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-}
-
-.panel-header {
-    padding: 12px 16px;
-    background-color: #fff;
-    border-bottom: 1px solid #e0e0e0;
-    flex-shrink: 0;
-}
-
-h2 {
-    font-size: 16px;
-    font-weight: 600;
-    margin: 0;
     color: #000;
-}
-
-h3 {
-    font-size: 11px;
-    font-weight: 600;
-    text-transform: uppercase;
-    color: #999;
-    margin: 0 0 8px 0;
-    letter-spacing: 0.5px;
-}
-
-.scrollable-content {
-    flex: 1;
-    overflow-y: auto;
-    padding: 16px;
 }
 
 .info-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 40px;
-}
-
-.info-column {
-    display: flex;
-    flex-direction: column;
+    gap: 18px;
 }
 
 .specs-list {
     list-style: none;
-    padding: 0;
     margin: 0;
+    padding: 0;
     display: flex;
     flex-direction: column;
-    gap: 0;
 }
 
 .spec-item {
     display: flex;
     justify-content: space-between;
-    align-items: flex-start;
-    gap: 16px;
-    padding: 8px 0;
+    align-items: center;
+    gap: 12px;
+    padding: 6px 0;
     border-bottom: 1px solid #e0e0e0;
-    font-size: 13px;
+    font-size: 12px;
 }
 
 .spec-item:last-child {
@@ -288,34 +257,97 @@ h3 {
     color: #666;
     font-weight: 400;
     flex: 0 0 auto;
+    font-size: 12px;
 }
 
 .joint-tag {
-    border: 1px solid #ccc;
-    padding: 2px 6px;
-    font-size: 11px;
+    border: 1px solid #d0d0d0;
+    padding: 0 4px;
+    font-size: 12px;
     font-weight: 600;
     color: #666;
+    line-height: 18px;
+    height: 18px;
+    display: inline-flex;
+    align-items: center;
     flex: 0 0 auto;
 }
 
 .value,
 .joint-values {
     color: #000;
-    font-family: "Helvetica Neue", Arial, sans-serif;
+    font-family: "Helvetica Neue", sans-serif;
     font-weight: 500;
     text-align: right;
+    word-break: break-word;
 }
 
-.joints-header {
-    font-size: 11px;
-    font-weight: 600;
-    text-transform: uppercase;
-    color: #999;
-    padding: 12px 0 8px 0;
-    margin-top: 8px;
-    border-top: 1px solid #e0e0e0;
+.joints-section-title {
+    color: #666;
+    font-size: 12px;
+    font-weight: 400;
+    text-transform: none;
+    padding: 6px 0;
     border-bottom: 1px solid #e0e0e0;
-    letter-spacing: 0.5px;
+    justify-content: center;
+}
+
+@media (max-width: 900px) {
+    .info-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+}
+
+@media (max-width: 760px) {
+    .info-panel {
+        max-height: 29vh;
+        padding: 8px 11px;
+    }
+
+    .panel-header {
+        gap: 8px;
+        margin-bottom: 6px;
+    }
+
+    h2 {
+        font-size: 14px;
+    }
+
+    h3 {
+        font-size: 10px;
+        margin-bottom: 3px;
+    }
+
+    .label {
+        font-size: 10px;
+    }
+
+    .joint-tag {
+        font-size: 9px;
+        font-weight: 600;
+        padding: 0 3px;
+        line-height: 16px;
+        height: 16px;
+    }
+
+    .joints-section-title {
+        font-size: 10px;
+    }
+
+    .module-tag {
+        padding: 2px 6px;
+        font-size: 10px;
+    }
+
+    .info-grid {
+        gap: 7px;
+    }
+
+    .spec-item {
+        gap: 8px;
+        padding: 4px 0;
+        font-size: 10px;
+    }
 }
 </style>
