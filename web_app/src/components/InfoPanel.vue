@@ -13,17 +13,25 @@ const loading = ref(true);
 const error = ref(null);
 
 const HIDDEN_KEYS = [
-    "name", "3d_model", "frame", "local_frame", "global_position",
-    "connected_beams", "joints", "processing", "processings", "features", "machining",
-    "is_key_beam", "key_beam" // Aggiunti per nasconderli dalla lista generica
+    "name",
+    "3d_model",
+    "geometry_model",
+    "blank_model",
+    "frame",
+    "local_frame",
+    "global_position",
+    "connected_beams",
+    "joints",
+    "processing",
+    "processings",
+    "features",
+    "machining",
+    "key_beam",
+    "is_key_beam"
 ];
 
 const engravingText = computed(() =>
     beamData.value?.engraving_text || beamData.value?.name || beamData.value?.["beam ID"]
-);
-
-const isKeyBeam = computed(() => 
-    beamData.value?.is_key_beam === true || beamData.value?.key_beam === true
 );
 
 const filteredJoints = computed(() => {
@@ -44,6 +52,7 @@ const loadBeamInfo = async () => {
         const response = await fetch(jsonUrl);
         if (!response.ok) throw new Error(`Failed to fetch beam data: ${response.status} ${response.statusText}`);
         beamData.value = await response.json();
+        console.log("is_key_beam value:", beamData.value?.is_key_beam);
     } catch (e) {
         error.value = e.message;
         console.error("InfoPanel error:", e);
@@ -65,6 +74,23 @@ const formatValue = (value) => {
     return value;
 };
 const formatLabel = (key) => key.replace(/_/g, " ").replace("cm3", "cm³");
+
+const formatJointValue = (jointData) => {
+    if (jointData === null || jointData === undefined) {
+        return "—";
+    }
+
+    if (isArray(jointData)) {
+        return jointData.length === 0 ? "—" : jointData.join(", ");
+    }
+
+    if (isObject(jointData)) {
+        const values = Object.values(jointData);
+        return values.length === 0 ? "—" : values.join(", ");
+    }
+
+    return jointData || "—";
+};
 </script>
 
 <template>
@@ -84,16 +110,11 @@ const formatLabel = (key) => key.replace(/_/g, " ").replace("cm3", "cm³");
                     <ul class="specs-list">
                         <li class="spec-item">
                             <span class="label">beam ID</span>
-                            <span class="value">{{ beamData["beam ID"] }}</span>
+                            <span class="value">{{ beamData["beam ID"]?.toUpperCase() }}</span>
                         </li>
                         <li class="spec-item">
                             <span class="label">module</span>
                             <span class="value">{{ beamData.module }}</span>
-                        </li>
-                        <!-- Key Beam - mostra solo se true -->
-                        <li v-if="isKeyBeam" class="spec-item key-beam-item">
-                            <span class="label">Key beam</span>
-                            <span class="value key-beam-badge">✓</span>
                         </li>
                         <template v-for="(value, key) in beamData" :key="key">
                             <li
@@ -108,9 +129,13 @@ const formatLabel = (key) => key.replace(/_/g, " ").replace("cm3", "cm³");
                             <span class="label">connected beams</span>
                             <span class="value">
                                 {{ isArray(beamData.connected_beams)
-                                    ? beamData.connected_beams.join(", ")
-                                    : beamData.connected_beams }}
+                                    ? beamData.connected_beams.map(b => b.toUpperCase()).join(", ")
+                                    : beamData.connected_beams.toUpperCase() }}
                             </span>
+                        </li>
+                        <li v-if="beamData.is_key_beam === true || beamData.is_key_beam === 'true'" class="spec-item">
+                            <span class="label">key beams</span>
+                            <span class="value">Yes</span>
                         </li>
                     </ul>
                 </div>
@@ -135,13 +160,7 @@ const formatLabel = (key) => key.replace(/_/g, " ").replace("cm3", "cm³");
                                 class="spec-item"
                             >
                                 <span class="joint-tag">{{ jointType }}</span>
-                                <span class="joint-values">
-                                    {{ isArray(jointData)
-                                        ? jointData.join(", ")
-                                        : isObject(jointData)
-                                            ? Object.values(jointData).join(", ")
-                                            : jointData ?? "—" }}
-                                </span>
+                                <span class="joint-values">{{ formatJointValue(jointData) }}</span>
                             </li>
                         </template>
                         <template v-else>
@@ -268,25 +287,6 @@ h3 {
     word-break: break-word;
 }
 
-.key-beam-item {
-    background: #fffbf0;
-    border-left: 3px solid #ffe066;
-    padding-left: 9px;
-}
-
-.key-beam-badge {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 20px;
-    height: 20px;
-    background: #ffe066;
-    color: #333;
-    border-radius: 50%;
-    font-weight: bold;
-    font-size: 12px;
-}
-
 .joints-section-title {
     color: #666;
     font-size: 12px;
@@ -352,17 +352,6 @@ h3 {
     .spec-item {
         gap: 8px;
         padding: 4px 0;
-        font-size: 10px;
-    }
-
-    .key-beam-item {
-        padding-left: 6px;
-        border-left-width: 2px;
-    }
-
-    .key-beam-badge {
-        width: 18px;
-        height: 18px;
         font-size: 10px;
     }
 }
