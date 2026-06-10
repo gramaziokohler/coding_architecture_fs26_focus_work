@@ -6,7 +6,6 @@ from compas_timber.connections import (
     TButtJoint,
     TLapJoint,
     XLapJoint,
-    TStepJoint
 )
 
 # ---------------------------------------------------------------------------
@@ -90,18 +89,18 @@ def _ray_obb_exit(origin, direction, beam):
     return tmax 
 
 class DrillingProcessor:
-    def __init__(self, timber_model, screw_diameter=0.006, screw_length=0.150, screw_spacing=0.030, max_drilling_depth=None, run_joinery=True, max_arch_penetration=None):
+    def __init__(self, timber_model, screw_diameter=0.006, screw_length=0.150, screw_spacing=0.030, max_drilling_depth=None, max_arch_penetration=None,drill_type="both"):
         self.timber_model = timber_model
         self.screw_diameter = screw_diameter
         self.screw_length = screw_length
         self.screw_spacing = screw_spacing 
         self.max_drilling_depth = max_drilling_depth
-        self.run_joinery = run_joinery 
         self.max_arch_penetration = max_arch_penetration 
+        self.drill_type = drill_type
         
         self.drilling_count = 0
         self.screw_lines = []
-        self.screw_assigned_lengths = [] # NEW: Tracks standard length bin per screw
+        self.screw_assigned_lengths = []
         self.failed_screw_info = []
         self.summary_text = ""
         self.joinery_errors = [] 
@@ -137,14 +136,6 @@ class DrillingProcessor:
         self.miter_counts = {}
         self.inventory_counts = {100: 0, 130: 0, 150: 0, "Oversized": 0}
 
-        if self.run_joinery:
-            try:
-                errors = self.timber_model.process_joinery(stop_on_first_error=False)
-                self.joinery_errors = errors or []
-                print(f"Joinery processed. {len(self.joinery_errors)} joining error(s).")
-            except Exception as e:
-                print(f"process_joinery() failed: {e}")
-                self.joinery_errors = [str(e)]
         
         for beam in self.timber_model.beams:
             if hasattr(beam, 'features'):
@@ -442,8 +433,99 @@ class DrillingProcessor:
             final_tail = head + screw_dir * final_screw_length
             hw_lines.append(Line(head, final_tail))
 
-        return self._generate_features(hw_lines, abut_beam, cont_beam, joint_label, final_screw_length)
+        return self._generate_features(hw_lines, [abut_beam], joint_label, final_screw_length)
     
+
+    def _resolve_shallow_drilling(self, abut_beam, cont_beam, intersection_pt):
+        # 1. Establish coordinate vectors
+        dir_into_abut = abut_beam.centerline.direction.copy()
+        vec_to_mid = Vector.from_start_end(intersection_pt, abut_beam.centerline.midpoint)
+        if dir_into_abut.dot(vec_to_mid) < 0: 
+            dir_into_abut.scale(-1)
+        dir_into_abut.unitize()
+        
+        dir_cont = cont_beam.centerline.direction.copy()
+        dir_cont.unitize()
+        if dir_cont.dot(dir_into_abut) < 0:
+            dir_cont.scale(-1)
+            
+        # Define the local plane of the joint
+        plane_normal = dir_cont.cross(dir_into_abut)
+        if plane_normal.length < 1e-5: 
+            plane_normal = Vector(0, 0, 1)
+        plane_normal.unitize()
+        
+        # Vector perpendicular to dir_cont, pointing "down" into the continuous beam
+        v_perp = plane_normal.cross(dir_cont)
+        v_perp.unitize()
+        if v_perp.dot(dir_into_abut) > 0: 
+            v_perp.scale(-1)
+            
+        # 2. Construct the primary 40-degree target vector (Pitch)
+        target_angle_rad = math.radians(40.0)
+        base_screw_dir = dir_cont * math.cos(target_angle_rad) + v_perp * math.sin(target_angle_rad)
+        base_screw_dir.unitize()
+        
+        # Ensure it points generally towards the continuous beam
+        if base_screw_dir.dot(dir_into_abut * -1) < 0:
+             base_screw_dir = (dir_cont * -1) * math.cos(target_angle_rad) + v_perp * math.sin(target_angle_rad)
+             base_screw_dir.unitize()
+
+        # 3. Iteration Setup (Higher Resolution)
+        thickness_c = max(cont_beam.width, cont_beam.height)
+        anchor_depth = 0.060
+        required_penetration = thickness_c + anchor_depth
+        
+        walk_step = 0.005  # Finer 5mm increments
+        max_steps = 60     # Still walks back up to 300mm total
+        
+        # Sweep from center outward in 5-degree increments to find the absolute edge of the timber
+        yaws = [0, 5, -5, 10, -10, 15, -15, 20, -20, 25, -25] 
+        
+        cat_a = abut_beam.attributes.get("category", "inner")
+        cat_c = cont_beam.attributes.get("category", "inner")
+        joint_label = "TButtJoint - arch (40° Corrected)" if cat_a == "arch" or cat_c == "arch" else "TButtJoint - inner (40° Corrected)"
+        
+        # 4. The "Walk Back" Loop
+        for step in range(max_steps):
+            offset_dist = step * walk_step
+            # Move the starting point of the ray further up the abutting beam
+            entry_pt = intersection_pt + (dir_into_abut * offset_dist)
+            
+            for yaw in yaws:
+                yaw_rad = math.radians(yaw)
+                # Apply lateral skew (yaw) by rotating the vector around the perpendicular axis
+                current_screw_dir = base_screw_dir * math.cos(yaw_rad) + plane_normal * math.sin(yaw_rad)
+                current_screw_dir.unitize()
+                
+                # Check volumetric boundaries: Does it exit the abutting beam prematurely?
+                exit_dist = _ray_obb_exit(entry_pt, current_screw_dir, abut_beam)
+                
+                if exit_dist is not None:
+                    # Calculate total screw length needed from this new, higher origin point
+                    req_screw_length = math.ceil((offset_dist + required_penetration) / 0.010) * 0.010
+                    
+                    # If the distance the screw travels INSIDE the abutting beam is greater 
+                    # than the required length minus the anchor, it means it doesn't poke out the sides.
+                    if exit_dist >= (req_screw_length - anchor_depth):
+                        
+                        # Generate the corrected trajectories
+                        offset_vec = plane_normal * (self.screw_spacing / 2.0)
+                        end_pt = entry_pt + (current_screw_dir * req_screw_length)
+                        
+                        hw_line_1 = Line(entry_pt + offset_vec, end_pt + offset_vec)
+                        hw_line_2 = Line(entry_pt - offset_vec, end_pt - offset_vec)
+                        
+                        self._generate_features(
+                            [hw_line_1, hw_line_2],
+                            [cont_beam],
+                            joint_label,
+                            req_screw_length
+                        )
+                        return True
+                        
+        return False
+
     def _apply_standard_butt_drilling(self, joint):
         elements = [joint.main_beam, joint.cross_beam]
         line1, line2 = elements[0].centerline, elements[1].centerline
@@ -464,6 +546,27 @@ class DrillingProcessor:
             abut_beam, cont_beam = elements[1], elements[0]
             intersection_pt = pt_b
 
+        dir_abut = abut_beam.centerline.direction.copy()
+        dir_cont = cont_beam.centerline.direction.copy()
+        
+        angle_rad = dir_abut.angle(dir_cont)
+        angle_deg = math.degrees(angle_rad)
+        acute_angle_deg = min(angle_deg, 180.0 - angle_deg)
+
+        # --- THE 40-DEGREE REROUTE ---
+        if acute_angle_deg < 40.0:
+            success = self._resolve_shallow_drilling(abut_beam, cont_beam, intersection_pt)
+            
+            # If the solver couldn't find a valid geometry without breaching, throw the visual flag
+            if not success:
+                flag_line = Line(intersection_pt, intersection_pt + Vector(0, 0, 0.2))
+                self.failed_screw_info.append({
+                    "line": flag_line,
+                    "type": f"FAILED 40° SOLVE: {acute_angle_deg:.1f}°"
+                })
+            return
+        # -----------------------------
+
         centerline = abut_beam.centerline
         dir_into_abut = centerline.direction.copy()
         vec_to_mid = Vector.from_start_end(intersection_pt, centerline.midpoint)
@@ -478,7 +581,6 @@ class DrillingProcessor:
         req_screw_length = math.ceil(raw_screw_length / 0.010) * 0.010
         end_pt = start_pt + (dir_into_abut * req_screw_length)
 
-        dir_cont = cont_beam.centerline.direction.copy()
         dir_cont.unitize()
         offset_dir = dir_into_abut.cross(dir_cont)
         if offset_dir.length < 1e-5: offset_dir = Vector(0, 0, 1) 
@@ -494,8 +596,7 @@ class DrillingProcessor:
         
         self._generate_features(
             [hw_line_1, hw_line_2],
-            abut_beam,
-            cont_beam,
+            [cont_beam],
             joint_label,
             req_screw_length
         )
@@ -542,9 +643,58 @@ class DrillingProcessor:
         hw_line_1 = Line(hw_start_1, hw_end_1)
         hw_line_2 = Line(hw_start_2, hw_end_2)
         
-        return self._generate_features([hw_line_1, hw_line_2], beam_a, beam_b, joint_label, req_screw_length)
+        # 1. Determine spatial relationship (Top vs Bottom)
+        if pt_a.z > pt_b.z:
+            beam_top, beam_bottom = beam_a, beam_b
+        else:
+            beam_top, beam_bottom = beam_b, beam_a
 
-    def _generate_features(self, hw_lines, beam_1, beam_2, joint_label, req_screw_length):
+        # 2. Select targets strictly based on the GH Value List
+        if self.drill_type == "both":
+            target_beams = [beam_a, beam_b]
+        elif self.drill_type == "upper":
+            target_beams = [beam_top]
+        elif self.drill_type == "lower":
+            target_beams = [beam_bottom]
+        else:
+            # Fallback to your automatic majority face logic
+            target_beams = [self._evaluate_majority_faces(beam_top, beam_bottom, screw_dir)]
+
+        # 3. Pass ONLY the selected beam(s) to the generator
+        return self._generate_features([hw_line_1, hw_line_2], target_beams, joint_label, req_screw_length)
+    
+    def _evaluate_majority_faces(self, beam_top, beam_bottom, screw_dir):
+        """
+        Evaluates which beam should be drilled based on face hits.
+        Returns the selected beam.
+        """
+        def get_pierced_face_normal(beam):
+            # Calculate the dot product of the screw direction against the beam's local axes
+            if not hasattr(beam, 'frame'): 
+                return Vector(0,0,1)
+            
+            dots = {
+                "xaxis": abs(screw_dir.dot(beam.frame.xaxis)),
+                "yaxis": abs(screw_dir.dot(beam.frame.yaxis)),
+                "zaxis": abs(screw_dir.dot(beam.frame.zaxis))
+            }
+            # The face with the highest dot product is the one most perpendicular to the screw
+            max_axis = max(dots, key=dots.get)
+            return max_axis
+
+        top_hit = get_pierced_face_normal(beam_top)
+        bottom_hit = get_pierced_face_normal(beam_bottom)
+
+        # Priority: drill through the wider face (Z-axis in typical timber framing)
+        if top_hit == "zaxis":
+            return beam_top
+        elif bottom_hit == "zaxis":
+            return beam_bottom
+        
+        # Fallback to the top beam if equal
+        return beam_top
+
+    def _generate_features(self, hw_lines, target_beams, joint_label, req_screw_length):
         success = False
         
         if joint_label not in self.hardware_screws_by_type:
@@ -566,19 +716,10 @@ class DrillingProcessor:
             hw_line = hw_lines[i]
             line_added_to_any = False
             
-            for beam in [beam_1, beam_2]:
+            for beam in target_beams:
                 try:
                     drill = Drilling.from_line_and_element(hw_line, beam, diameter=self.screw_diameter)
-                    if self.max_drilling_depth is not None:
-                        try:
-                            ref_side = beam.side_as_surface(drill.ref_side_index)
-                            drill.depth = drill._calculate_depth(hw_line, ref_side)
-                        except Exception:
-                            drill.depth = hw_line.length
-                        drill.depth_limited = True
-                        if drill.depth > self.max_drilling_depth:
-                            drill.depth = self.max_drilling_depth
-                            
+                    
                     if hasattr(beam, 'add_feature'): beam.add_feature(drill)
                     else: beam.features.append(drill)
                     line_added_to_any = True

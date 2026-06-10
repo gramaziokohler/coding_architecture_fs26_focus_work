@@ -78,9 +78,6 @@ const beamWeightKg = (beamData) => {
     if (Number.isFinite(beamData["volume (cm³)"])) {
         return beamData["volume (cm³)"] / 1000000 * FALLBACK_DENSITY_KG_M3;
     }
-    if (Number.isFinite(beamData["volume (cm³)"])) {
-        return beamData["volume (cm³)"] / 1000000 * FALLBACK_DENSITY_KG_M3;
-    }
     return 0;
 };
 
@@ -367,6 +364,7 @@ const getEngravingPlacement = () => {
     const frame = getDisplayFrame();
     if (!frame) return null;
 
+    // Se ci sono dati engraving espliciti nel JSON, usali
     const engraving = currentBeamData?.engraving || currentBeamData?.label || currentBeamData?.beam_label || {};
     if (engraving.position || engraving.location || engraving.origin) {
         const origin = vectorFromArray(engraving.position || engraving.location || engraving.origin);
@@ -377,19 +375,42 @@ const getEngravingPlacement = () => {
         return { origin: origin.add(normal.multiplyScalar(offset)), xAxis, yAxis, normal };
     }
 
-    const midpoint = vectorFromArray(position?.midpoint || getBeamFrame()?.origin || [0, 0, 0]);
-    const width = numericBeamValue(currentBeamData, "width (m)", 0.06);
+    // Usa centerline_start e centerline_end per trovare il centro reale
+    if (!position?.centerline_start || !position?.centerline_end) return null;
+    const start = vectorFromArray(position.centerline_start);
+    const end = vectorFromArray(position.centerline_end);
+    const beamLength = start.distanceTo(end);
+
+    // Posizione default al centro (t=0.5), sposta se c'è un joint vicino
+    let centerT = 0.5;
+    const records = buildJointRecords();
+    if (records.length) {
+        const midpoint = start.clone().lerp(end, 0.5);
+        const hasJointNearCenter = records.some((joint, index) => {
+            const loc = joint.location
+                ? vectorFromArray(joint.location)
+                : fallbackJointLocation(joint.connectedBeamId, index, records.length);
+            if (!loc) return false;
+            return loc.distanceTo(midpoint) < beamLength * 0.25;
+        });
+        if (hasJointNearCenter) {
+            centerT = 0.72;
+        }
+    }
+
+    const textCenter = start.clone().lerp(end, centerT);
+
+    // Posiziona sulla faccia superiore (z_axis = up del beam)
     const height = numericBeamValue(currentBeamData, "height (m)", 0.08);
-    const normal = frame.y_axis.clone().normalize();
-    const origin = midpoint
+    const normal = frame.z_axis.clone().normalize();
+    const origin = textCenter
         .clone()
-        .add(normal.clone().multiplyScalar(width * 0.5 + 0.003))
-        .add(frame.z_axis.clone().multiplyScalar(height * 0.18));
+        .add(normal.clone().multiplyScalar(height * 0.5 + 0.003));
 
     return {
         origin,
-        xAxis: frame.x_axis,
-        yAxis: frame.z_axis,
+        xAxis: frame.x_axis,  // testo orientato lungo il beam
+        yAxis: frame.y_axis,  // normale al piano del testo
         normal,
     };
 };
@@ -658,6 +679,14 @@ const loadBeamData = async (beamId) => {
     return beamData;
 };
 
+const resolveModelUrl = (modelPath) => {
+    if (!modelPath) return "";
+    if (modelPath.startsWith("http://") || modelPath.startsWith("https://")) {
+        return modelPath;
+    }
+    return `${BASE_URL}/${modelPath.replace(/^\/+/, "")}`;
+};
+
 const syncNavigationState = async () => {
     try {
         const structure = await loadStructure();
@@ -686,7 +715,7 @@ const loadCurrentBeamFromUrl = async () => {
 const loadSingleBeam = async ({ preserveCamera = false } = {}) => {
     clearModelObjects();
     shownBeamIds.value = [getBeamId()];
-    const geometry = await loadSTL(currentBeamData["3d_model"]);
+    const geometry = await loadSTL(resolveModelUrl(currentBeamData["3d_model"]));
     geometry.computeBoundingBox();
     const size = new THREE.Vector3();
     geometry.boundingBox.getSize(size);
