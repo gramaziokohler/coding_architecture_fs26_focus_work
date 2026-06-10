@@ -14,569 +14,250 @@ const emit = defineEmits(["beam-selected"]);
 
 const containerRef = ref(null);
 const gizmoRef = ref(null);
-const hoverInfo = ref(null);
-const hoverStyle = ref({});
-let scene, camera, renderer, controls;
-let animationId;
-let currentBeamData = null;
-let structureData = null;
-let gizmoRenderer, gizmoScene, gizmoCamera;
-let pointerDown = null;
-const raycaster = new THREE.Raycaster();
-const pointer = new THREE.Vector2();
 
-const BASE_URL = "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data";
+let scene, camera, renderer, controls;
+let gizmoScene, gizmoCamera, gizmoRenderer;
+let animationId;
+let structureData = null;
+let currentBeamData = null;
+let pointerDown = null;
+
+const beamDataCache = new Map();
+const beamDataCacheVersion = ref(0);
+
+const BASE_URL = "https://example.com/data";
+const WOOD_COLOR = 0x8b7355;
+const HIGHLIGHT_COLOR = 0xff6b6b;
+const MODULE_COLOR = 0x4ecdc4;
+const KEY_BEAM_COLOR = 0xffe066;
+
+const MODULE_PALETTE = [
+    0xff6b6b, 0x4ecdc4, 0x45b7d1, 0xf9ca24, 0x6c5ce7,
+    0xa29bfe, 0xfd79a8, 0xfdcb6e, 0x6c7a89, 0x00b894,
+];
 
 const viewMode = ref("single");
 const isLoading = ref(false);
-const isAutoRotating = ref(false);
-const autoOrientBeamFrame = ref(false);
-const preserveCameraOnViewChange = ref(true);
-const colorCurrentModule = ref(true);
-const colorAllModules = ref(false);
 const currentBeamId = ref("");
 const currentModule = ref("");
-const beamIndex = ref(-1);
-const moduleIndex = ref(-1);
 const moduleList = ref([]);
 const currentModuleBeams = ref([]);
+const moduleIndex = ref(-1);
+const beamIndex = ref(-1);
 const shownBeamIds = ref([]);
-const beamDataCacheVersion = ref(0);
-const beamDataCache = new Map();
+const isAutoRotating = ref(false);
+const preserveCameraOnViewChange = ref(false);
+const autoOrientBeamFrame = ref(false);
+const colorCurrentModule = ref(false);
+const colorAllModules = ref(false);
+const showKeyBeams = ref(false);
+const hoverInfo = ref(null);
+const hoverStyle = ref({});
 
-const WOOD_COLOR = 0xd4b896;
-const HIGHLIGHT_COLOR = 0xff8fa3;
-const OUTLINE_COLOR = 0x171717;
-const CENTERLINE_COLOR = 0x111111;
-const MODULE_COLOR = 0x8fcf9c;
-const MODULE_PALETTE = [
-    0x9ec5ff,
-    0xd6a4e8,
-    0x88d8d0,
-    0xf19a8e,
-    0xc3a57d,
-    0xff9fc7,
-    0xaeb7ff,
-    0xd0a1c9,
-    0x9fc9d8,
-];
-const FALLBACK_DENSITY_KG_M3 = 500;
+const pointer = new THREE.Vector2();
+const raycaster = new THREE.Raycaster();
+
+const getBeamId = (beam = currentBeamData) => {
+    return beam?.beam_id || beam?.id || "";
+};
+
+const getDisplayFrame = (beam = currentBeamData) => {
+    return beam?.beam_frame || beam?.frame;
+};
+
+const mobileOverlayScale = () => {
+    return window.innerWidth < 800 ? 0.55 : 1;
+};
 
 const beamCounter = computed(() => {
-    if (!currentModuleBeams.value.length || beamIndex.value < 0) return "";
-    return `${beamIndex.value + 1} / ${currentModuleBeams.value.length}`;
+    if (viewMode.value === "single") return null;
+    const total = shownBeamIds.value.length;
+    const index = shownBeamIds.value.indexOf(getBeamId()) + 1;
+    return total > 0 ? `${index}/${total}` : null;
 });
 
 const moduleCounter = computed(() => {
-    if (!moduleList.value.length || moduleIndex.value < 0) return "";
-    return `${moduleIndex.value + 1} / ${moduleList.value.length}`;
+    return moduleList.value.length > 0 ? `${moduleIndex.value + 1}/${moduleList.value.length}` : null;
 });
-
-const beamWeightKg = (beamData) => {
-    if (!beamData) return 0;
-    if (Number.isFinite(beamData["weight (kg)"])) return beamData["weight (kg)"];
-    if (Number.isFinite(beamData["volume (cm³)"])) {
-        return beamData["volume (cm³)"] / 1000000 * FALLBACK_DENSITY_KG_M3;
-    }
-    return 0;
-};
 
 const totalShownWeight = computed(() => {
-    beamDataCacheVersion.value;
-    const total = shownBeamIds.value.reduce((sum, beamId) => {
-        return sum + beamWeightKg(beamDataCache.get(beamId));
-    }, 0);
-    return total.toFixed(2);
+    return shownBeamIds.value.reduce((sum, id) => {
+        const cached = beamDataCache.get(id);
+        return sum + (cached?.weight || 0);
+    }, 0).toFixed(2);
 });
-
-const loadSTL = (url) =>
-    fetch(url, { mode: "cors" })
-        .then((r) => {
-            if (!r.ok) throw new Error(`HTTP ${r.status}`);
-            return r.arrayBuffer();
-        })
-        .then((buf) => STLLoader.prototype.parse(buf));
 
 const loadJson = async (url) => {
     const response = await fetch(url);
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    if (!response.ok) throw new Error(`Failed to load ${url}`);
     return response.json();
 };
 
-const getBeamId = (beamData = currentBeamData) => beamData?.["beam ID"] || beamData?.beam_id || "";
-
-const getBeamFrame = (beamData = currentBeamData) => beamData?.frame || beamData?.local_frame || null;
-
-const getGlobalPosition = (beamData = currentBeamData) => {
-    if (beamData?.global_position) return beamData.global_position;
-    const frame = getBeamFrame(beamData);
-    return {
-        centerline_start: beamData?.centerline_start,
-        centerline_end: beamData?.centerline_end,
-        midpoint: beamData?.midpoint || frame?.origin,
-    };
+const loadSTL = async (url) => {
+    return new Promise((resolve, reject) => {
+        const loader = new STLLoader();
+        loader.load(
+            url,
+            (geometry) => resolve(geometry),
+            undefined,
+            (error) => reject(error)
+        );
+    });
 };
 
-const vectorFromArray = (value) => new THREE.Vector3(value[0], value[1], value[2]);
-
-const getCenterlineStart = (beamData = currentBeamData) => {
-    const position = getGlobalPosition(beamData);
-    return position?.centerline_start || getBeamFrame(beamData)?.origin || null;
-};
-
-const getBeamDisplayName = (beamId) => {
-    if (!beamId) return "";
-    const cached = beamDataCache.get(beamId);
-    if (cached?.name) return cached.name;
-    return beamId.toUpperCase();
-};
-
-const mobileOverlayScale = () => (containerRef.value?.clientWidth <= 760 ? 0.59 : 1);
-
-const makeModelObject = (object) => {
-    object.userData.isModelObject = true;
-    return object;
-};
-
-const makeMesh = (geometry, color, opacity = 0.45, beamId = "") => {
-    geometry.computeBoundingBox();
-    const material = new THREE.MeshBasicMaterial({
+const makeMesh = (geometry, color, opacity, beamId) => {
+    const material = new THREE.MeshPhongMaterial({
         color,
         side: THREE.DoubleSide,
         transparent: opacity < 1,
         opacity,
-        depthWrite: opacity >= 1,
     });
     const mesh = new THREE.Mesh(geometry, material);
     mesh.userData.isBeam = true;
     mesh.userData.beamId = beamId;
-    mesh.userData.hoverInfo = {
-        title: getBeamDisplayName(beamId),
-        lines: ["Beam", beamId ? `ID ${beamId}` : ""].filter(Boolean),
-    };
-    makeModelObject(mesh);
     return mesh;
 };
 
 const addOutline = (geometry) => {
-    const edges = new THREE.EdgesGeometry(geometry, 18);
+    const edges = new THREE.EdgesGeometry(geometry);
     const line = new THREE.LineSegments(
         edges,
-        new THREE.LineBasicMaterial({
-            color: OUTLINE_COLOR,
-            transparent: true,
-            opacity: 0.9,
-        })
+        new THREE.LineBasicMaterial({ color: 0x999999, linewidth: 1 })
     );
-    line.userData.isOverlay = true;
-    makeModelObject(line);
     scene.add(line);
 };
 
-const clearModelObjects = () => {
-    hoverInfo.value = null;
-    const toRemove = scene.children.filter((child) => child.userData.isModelObject);
-    toRemove.forEach((child) => {
-        scene.remove(child);
-        if (child.geometry) child.geometry.dispose();
-        if (child.material) child.material.dispose();
+const drawCenterline = (beamData, isSelected = false) => {
+    if (!beamData || !getDisplayFrame(beamData)) return;
+    const frame = getDisplayFrame(beamData);
+    const start = new THREE.Vector3(...(frame.origin || [0, 0, 0]));
+    const direction = new THREE.Vector3(...(frame.y_axis || [0, 1, 0])).normalize();
+    const length = beamData.length || 1;
+    const end = start.clone().add(direction.clone().multiplyScalar(length));
+
+    const points = [start, end];
+    const geometry = new THREE.BufferGeometry().setFromPoints(points);
+    const color = isSelected ? 0xff0000 : 0x999999;
+    const material = new THREE.LineBasicMaterial({ color, linewidth: 2 });
+    const line = new THREE.Line(geometry, material);
+    line.userData.isModelObject = true;
+    scene.add(line);
+};
+
+const drawBeamFrame = (beamData, scale = 0.1, isSelected = false) => {
+    if (!beamData || !getDisplayFrame(beamData)) return;
+    const frame = getDisplayFrame(beamData);
+    const origin = new THREE.Vector3(...(frame.origin || [0, 0, 0]));
+
+    const axes = [
+        { axis: frame.x_axis, color: 0xff3030 },
+        { axis: frame.y_axis, color: 0x2aa84a },
+        { axis: frame.z_axis, color: 0x2f6fff },
+    ];
+
+    axes.forEach(({ axis, color }) => {
+        const direction = new THREE.Vector3(...axis).normalize().multiplyScalar(scale);
+        const end = origin.clone().add(direction);
+        const points = [origin, end];
+        const geometry = new THREE.BufferGeometry().setFromPoints(points);
+        const material = new THREE.LineBasicMaterial({ color, linewidth: 2 });
+        const line = new THREE.Line(geometry, material);
+        line.userData.isModelObject = true;
+        scene.add(line);
     });
 };
 
-const makeLine = (start, end, color, linewidth = 1) => {
-    const geometry = new THREE.BufferGeometry().setFromPoints([start, end]);
-    const line = new THREE.Line(
-        geometry,
-        new THREE.LineBasicMaterial({
-            color,
-            linewidth,
-            transparent: true,
-            opacity: 0.95,
-        })
-    );
-    line.userData.isOverlay = true;
-    makeModelObject(line);
-    scene.add(line);
-    return line;
+const drawEngraving = (scale = 0.05) => {
+    if (!currentBeamData?.engraving_position) return;
+    const pos = currentBeamData.engraving_position;
+    const point = new THREE.Vector3(...pos);
+    const geometry = new THREE.SphereGeometry(scale, 8, 8);
+    const material = new THREE.MeshBasicMaterial({ color: 0xff00ff });
+    const sphere = new THREE.Mesh(geometry, material);
+    sphere.position.copy(point);
+    sphere.userData.isModelObject = true;
+    sphere.userData.hoverInfo = {
+        title: "Engraving",
+        lines: [`Position: ${pos.map((v) => v.toFixed(2)).join(", ")}`],
+    };
+    scene.add(sphere);
 };
 
-const makeTextCanvas = (text, fontSize = 42, color = "#111111", fontWeight = 700, lineHeight = 1.25) => {
+const drawCameraBeamLabel = (beamData, scale = 0.07) => {
+    if (!beamData) return;
+    const frame = getDisplayFrame(beamData);
+    if (!frame) return;
+    const pos = new THREE.Vector3(...(frame.origin || [0, 0, 0]));
     const canvas = document.createElement("canvas");
+    canvas.width = 256;
+    canvas.height = 128;
     const ctx = canvas.getContext("2d");
-    const lines = String(text).split("\n");
-    const font = `${fontWeight} ${fontSize}px Helvetica Neue, Arial, sans-serif`;
-    ctx.font = font;
-    const maxWidth = Math.max(...lines.map((line) => ctx.measureText(line).width));
-    const padding = 2;
-    const width = Math.ceil(maxWidth + padding * 2);
-    const height = Math.ceil(fontSize * lineHeight * lines.length + padding * 2);
-    canvas.width = Math.max(2, width);
-    canvas.height = Math.max(2, height);
-
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.font = font;
+    ctx.fillStyle = "white";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "black";
+    ctx.font = "bold 32px Arial";
     ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillStyle = color;
-    lines.forEach((line, index) => {
-        const y = padding + fontSize * lineHeight * (index + 0.5);
-        ctx.fillText(line, canvas.width / 2, y);
-    });
-
-    return canvas;
-};
-
-const makeTextSprite = (text, position, color = "#111111", scale = 0.08, hoverInfoData = null, options = {}) => {
-    const canvas = makeTextCanvas(text, options.fontSize || 42, color, options.fontWeight ?? 700, options.lineHeight || 1.25);
+    ctx.fillText(getBeamId(beamData), canvas.width / 2, canvas.height / 2);
 
     const texture = new THREE.CanvasTexture(canvas);
-    texture.needsUpdate = true;
-    const material = new THREE.SpriteMaterial({
-        map: texture,
-        transparent: true,
-        alphaTest: 0.05,
-        depthWrite: false,
+    const geometry = new THREE.PlaneGeometry(1, 0.5);
+    const material = new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide });
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.position.copy(pos);
+    mesh.scale.multiplyScalar(scale);
+    mesh.userData.isModelObject = true;
+    scene.add(mesh);
+};
+
+const drawJointLabels = (scale = 0.038) => {
+    if (!currentBeamData?.joints) return;
+    currentBeamData.joints.forEach((joint, index) => {
+        const pos = new THREE.Vector3(...(joint.position || [0, 0, 0]));
+        const canvas = document.createElement("canvas");
+        canvas.width = 128;
+        canvas.height = 64;
+        const ctx = canvas.getContext("2d");
+        ctx.fillStyle = "white";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = "black";
+        ctx.font = "bold 16px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText(`J${index}`, canvas.width / 2, canvas.height / 2);
+
+        const texture = new THREE.CanvasTexture(canvas);
+        const geometry = new THREE.PlaneGeometry(1, 0.5);
+        const material = new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide });
+        const mesh = new THREE.Mesh(geometry, material);
+        mesh.position.copy(pos);
+        mesh.scale.multiplyScalar(scale);
+        mesh.userData.isModelObject = true;
+        scene.add(mesh);
     });
-    const sprite = new THREE.Sprite(material);
-    const aspect = canvas.width / canvas.height;
-    sprite.position.copy(position);
-    sprite.scale.set(scale * aspect, scale, 1);
-    sprite.userData.isOverlay = true;
-    if (hoverInfoData) sprite.userData.hoverInfo = hoverInfoData;
-    makeModelObject(sprite);
-    scene.add(sprite);
-    return sprite;
-};
-
-const makeTextPlane = (text, position, xAxis, yAxis, color = "#111111", scale = 0.16, options = {}) => {
-    const canvas = makeTextCanvas(text, options.fontSize || 64, color, options.fontWeight ?? 700, options.lineHeight || 1.25);
-
-    const texture = new THREE.CanvasTexture(canvas);
-    texture.needsUpdate = true;
-    const material = new THREE.MeshBasicMaterial({
-        map: texture,
-        transparent: true,
-        alphaTest: 0.05,
-        side: THREE.DoubleSide,
-        depthWrite: false,
-    });
-    const geometry = new THREE.PlaneGeometry(scale * (canvas.width / canvas.height), scale);
-    const plane = new THREE.Mesh(geometry, material);
-
-    const x = xAxis.clone().normalize();
-    const y = yAxis.clone().normalize();
-    const z = new THREE.Vector3().crossVectors(x, y).normalize();
-    const matrix = new THREE.Matrix4().makeBasis(x, y, z);
-    plane.quaternion.setFromRotationMatrix(matrix);
-    plane.position.copy(position);
-    plane.userData.isOverlay = true;
-    plane.userData.hoverInfo = {
-        title: text,
-        lines: ["Beam label"],
-    };
-    makeModelObject(plane);
-    scene.add(plane);
-    return plane;
-};
-
-const makeProcessingMarker = (record) => {
-    const location = record.location || record.position || record.point || record.origin;
-    if (!location) return;
-
-    const geometry = new THREE.SphereGeometry(0.025, 12, 8);
-    const material = new THREE.MeshBasicMaterial({ color: 0x111111 });
-    const marker = new THREE.Mesh(geometry, material);
-    marker.position.copy(vectorFromArray(location));
-    marker.userData.isOverlay = true;
-    marker.userData.hoverInfo = {
-        title: record.label || record.name || record.type || "Processing",
-        lines: [record.type || "Processing", record.id ? `ID ${record.id}` : ""].filter(Boolean),
-    };
-    makeModelObject(marker);
-    scene.add(marker);
-};
-
-const getDisplayFrame = (beamData = currentBeamData) => {
-    const frame = getBeamFrame(beamData);
-    if (!frame?.x_axis || !frame?.y_axis || !frame?.z_axis) return null;
-
-    const origin = vectorFromArray(getCenterlineStart(beamData) || frame.origin);
-    const xAxis = vectorFromArray(frame.x_axis).normalize();
-    const yAxis = vectorFromArray(frame.y_axis).normalize();
-    const zAxis = vectorFromArray(frame.z_axis).normalize();
-
-    return { origin, x_axis: xAxis, y_axis: yAxis, z_axis: zAxis };
 };
 
 const drawProcessing = () => {
-    const records =
-        currentBeamData?.processing ||
-        currentBeamData?.processings ||
-        currentBeamData?.features ||
-        currentBeamData?.machining ||
-        [];
-
-    if (!Array.isArray(records)) return;
-    records.forEach(makeProcessingMarker);
-};
-
-const drawBeamFrame = (beamData = currentBeamData, scale = 0.25, showAxisLabels = true) => {
-    const frame = getDisplayFrame(beamData);
-    if (!frame) return;
-
-    const origin = frame.origin;
-    const headLength = scale * 0.18;
-    const headWidth = scale * 0.08;
-    const axes = [
-        { dir: frame.x_axis, color: 0xff3030, lengthMult: 1.8, label: "X" },
-        { dir: frame.y_axis, color: 0x2aa84a, lengthMult: 1.1, label: "Y" },
-        { dir: frame.z_axis, color: 0x2f6fff, lengthMult: 1.1, label: "Z" },
-    ];
-
-    axes.forEach(({ dir, color, lengthMult, label }) => {
-        const direction = dir.clone().normalize();
-        const length = scale * lengthMult;
-        const arrow = new THREE.ArrowHelper(direction, origin, length, color, headLength, headWidth);
-        arrow.userData.isOverlay = true;
-        makeModelObject(arrow);
-        scene.add(arrow);
-        if (showAxisLabels) {
-            makeTextSprite(label, origin.clone().add(direction.multiplyScalar(length * 1.15)), `#${color.toString(16).padStart(6, "0")}`, scale * 0.16);
-        }
-    });
-};
-
-const drawCenterline = (beamData = currentBeamData, isCurrent = true) => {
-    const position = getGlobalPosition(beamData);
-    if (!position?.centerline_start || !position?.centerline_end) return;
-    const start = vectorFromArray(position.centerline_start);
-    const end = vectorFromArray(position.centerline_end);
-    makeLine(start, end, isCurrent ? CENTERLINE_COLOR : 0x777777);
-};
-
-const numericBeamValue = (beamData, key, fallback = 0) => {
-    const value = beamData?.[key];
-    return Number.isFinite(value) ? value : fallback;
-};
-
-const getEngravingPlacement = () => {
-    const position = getGlobalPosition();
-    const frame = getDisplayFrame();
-    if (!frame) return null;
-
-    // Se ci sono dati engraving espliciti nel JSON, usali
-    const engraving = currentBeamData?.engraving || currentBeamData?.label || currentBeamData?.beam_label || {};
-    if (engraving.position || engraving.location || engraving.origin) {
-        const origin = vectorFromArray(engraving.position || engraving.location || engraving.origin);
-        const xAxis = engraving.x_axis ? vectorFromArray(engraving.x_axis) : frame.x_axis;
-        const yAxis = engraving.y_axis ? vectorFromArray(engraving.y_axis) : frame.y_axis;
-        const normal = engraving.normal ? vectorFromArray(engraving.normal).normalize() : frame.z_axis;
-        const offset = Number.isFinite(engraving.offset) ? engraving.offset : 0.003;
-        return { origin: origin.add(normal.multiplyScalar(offset)), xAxis, yAxis, normal };
-    }
-
-    // Usa centerline_start e centerline_end per trovare il centro reale
-    if (!position?.centerline_start || !position?.centerline_end) return null;
-    const start = vectorFromArray(position.centerline_start);
-    const end = vectorFromArray(position.centerline_end);
-    const beamLength = start.distanceTo(end);
-
-    // Posizione default al centro (t=0.5), sposta se c'è un joint vicino
-    let centerT = 0.5;
-    const records = buildJointRecords();
-    if (records.length) {
-        const midpoint = start.clone().lerp(end, 0.5);
-        const hasJointNearCenter = records.some((joint, index) => {
-            const loc = joint.location
-                ? vectorFromArray(joint.location)
-                : fallbackJointLocation(joint.connectedBeamId, index, records.length);
-            if (!loc) return false;
-            return loc.distanceTo(midpoint) < beamLength * 0.25;
-        });
-        if (hasJointNearCenter) {
-            centerT = 0.72;
-        }
-    }
-
-    const textCenter = start.clone().lerp(end, centerT);
-
-    // Posiziona sulla faccia superiore (z_axis = up del beam)
-    const height = numericBeamValue(currentBeamData, "height (m)", 0.08);
-    const normal = frame.z_axis.clone().normalize();
-    const origin = textCenter
-        .clone()
-        .add(normal.clone().multiplyScalar(height * 0.5 + 0.003));
-
-    return {
-        origin,
-        xAxis: frame.x_axis,  // testo orientato lungo il beam
-        yAxis: frame.y_axis,  // normale al piano del testo
-        normal,
-    };
-};
-
-const drawEngraving = (scale = 0.045) => {
-    const text = currentBeamData?.engraving_text || currentBeamData?.label_text || currentBeamData?.name || getBeamId();
-    const placement = getEngravingPlacement();
-    if (!text || !placement) return;
-
-    makeTextPlane(text, placement.origin, placement.xAxis, placement.yAxis, "#111111", scale, {
-        fontSize: 42,
-        fontWeight: 300,
-    });
-};
-
-const drawCameraBeamLabel = (beamData = currentBeamData, scale = 0.08) => {
-    const position = getGlobalPosition(beamData);
-    const frame = getDisplayFrame(beamData);
-    const text = beamData?.name || getBeamId(beamData);
-    if (!text || !frame) return;
-
-    const labelPosition = vectorFromArray(position?.midpoint || getBeamFrame(beamData)?.origin || [0, 0, 0]);
-
-    makeTextSprite(text, labelPosition, "#111111", scale, {
-        title: text,
-        lines: ["Beam label"],
-    }, {
-        fontSize: 42,
-        fontWeight: 500,
-    });
-};
-
-const closestPointsOnSegments = (p1, q1, p2, q2) => {
-    const d1 = q1.clone().sub(p1);
-    const d2 = q2.clone().sub(p2);
-    const r = p1.clone().sub(p2);
-    const a = d1.dot(d1);
-    const e = d2.dot(d2);
-    const f = d2.dot(r);
-    const epsilon = 1e-9;
-    let s = 0;
-    let t = 0;
-
-    if (a <= epsilon && e <= epsilon) {
-        return [p1.clone(), p2.clone()];
-    }
-    if (a <= epsilon) {
-        t = THREE.MathUtils.clamp(f / e, 0, 1);
-    } else {
-        const c = d1.dot(r);
-        if (e <= epsilon) {
-            s = THREE.MathUtils.clamp(-c / a, 0, 1);
-        } else {
-            const b = d1.dot(d2);
-            const denom = a * e - b * b;
-            if (denom !== 0) {
-                s = THREE.MathUtils.clamp((b * f - c * e) / denom, 0, 1);
-            }
-            t = (b * s + f) / e;
-            if (t < 0) {
-                t = 0;
-                s = THREE.MathUtils.clamp(-c / a, 0, 1);
-            } else if (t > 1) {
-                t = 1;
-                s = THREE.MathUtils.clamp((b - c) / a, 0, 1);
-            }
-        }
-    }
-
-    return [
-        p1.clone().add(d1.multiplyScalar(s)),
-        p2.clone().add(d2.multiplyScalar(t)),
-    ];
-};
-
-const jointTypeById = (jointId) => {
-    const groups = currentBeamData?.joints || {};
-    return Object.entries(groups).find(([key, ids]) => key !== "all" && Array.isArray(ids) && ids.includes(jointId))?.[0] || "";
-};
-
-const formatJointType = (type) => {
-    const normalized = (type || "joint").toLowerCase();
-    const names = {
-        tbutt: "TButtJoint",
-        xlap: "XLapJoint",
-        lmiter: "LMiterJoint",
-    };
-    return names[normalized] || type || "Joint";
-};
-
-const exportedJointRecords = () => {
-    const records =
-        currentBeamData?.joint_details ||
-        currentBeamData?.joint_info ||
-        currentBeamData?.joint_locations ||
-        currentBeamData?.joints?.details ||
-        [];
-    return Array.isArray(records) ? records : [];
-};
-
-const buildJointRecords = () => {
-    const exported = exportedJointRecords().map((joint) => {
-        const connectedBeamId = joint.connected_beam || joint.connected_beam_id || joint.other_beam || joint.other_beam_id || joint.beam_b;
-        return {
-            id: String(joint.id || joint.joint_id || joint.name || ""),
-            connectedBeamId,
-            label: joint.label || `${getBeamDisplayName(getBeamId())} - ${getBeamDisplayName(connectedBeamId)}`,
-            location: joint.location || joint.position || joint.point,
-            type: joint.type || joint.joint_type,
+    if (!currentBeamData?.processing) return;
+    currentBeamData.processing.forEach((proc) => {
+        if (!proc.position) return;
+        const pos = new THREE.Vector3(...proc.position);
+        const geometry = new THREE.BoxGeometry(0.02, 0.02, 0.02);
+        const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+        const mesh = new THREE.Mesh(geometry, material);
+        mesh.position.copy(pos);
+        mesh.userData.isModelObject = true;
+        mesh.userData.hoverInfo = {
+            title: proc.type || "Processing",
+            lines: [`Position: ${proc.position.map((v) => v.toFixed(2)).join(", ")}`],
         };
-    });
-    if (exported.length) return exported;
-
-    const joints = currentBeamData?.joints?.all || [];
-    const connectedIds = currentBeamData?.connected_beams || [];
-    return joints.map((jointId, index) => ({
-        id: String(jointId),
-        connectedBeamId: connectedIds[index],
-        label: `${getBeamDisplayName(getBeamId())} - ${getBeamDisplayName(connectedIds[index])}`,
-        type: jointTypeById(jointId),
-    }));
-};
-
-const fallbackJointLocation = (connectedBeamId, index, count) => {
-    const position = getGlobalPosition();
-    if (!position?.centerline_start || !position?.centerline_end) return null;
-
-    const start = vectorFromArray(position.centerline_start);
-    const end = vectorFromArray(position.centerline_end);
-    const connectedBeam = beamDataCache.get(connectedBeamId) || structureData?.beams?.find((beam) => beam.beam_id === connectedBeamId);
-    const connectedPosition = connectedBeam ? getGlobalPosition(connectedBeam) : null;
-
-    if (connectedPosition?.centerline_start && connectedPosition?.centerline_end) {
-        const connectedStart = vectorFromArray(connectedPosition.centerline_start);
-        const connectedEnd = vectorFromArray(connectedPosition.centerline_end);
-        const [pointA, pointB] = closestPointsOnSegments(start, end, connectedStart, connectedEnd);
-        return pointA.add(pointB).multiplyScalar(0.5);
-    }
-
-    const t = (index + 1) / (count + 1);
-    return start.clone().lerp(end, t);
-};
-
-const drawJointLabels = (scale = 0.13) => {
-    const records = buildJointRecords();
-    if (!records.length) return;
-
-    const normal = getBeamFrame()?.z_axis ? vectorFromArray(getBeamFrame().z_axis).normalize() : new THREE.Vector3(0, 0, 1);
-
-    records.forEach((joint, index) => {
-        const location = joint.location ? vectorFromArray(joint.location) : fallbackJointLocation(joint.connectedBeamId, index, records.length);
-        if (!location) return;
-        const label = joint.label || `${getBeamDisplayName(getBeamId())} - ${getBeamDisplayName(joint.connectedBeamId)}`;
-        const type = formatJointType(joint.type);
-        const displayLabel = `${label}\n${type}`;
-        const point = location.add(normal.clone().multiplyScalar(scale * 0.9));
-        makeTextSprite(displayLabel, point, "#111111", scale, {
-            title: label,
-            lines: [type, joint.id ? `Joint ${joint.id}` : ""].filter(Boolean),
-        }, {
-            fontSize: 34,
-            fontWeight: 400,
-            lineHeight: 1.05,
-        });
+        scene.add(mesh);
     });
 };
+
+const clearModelObjects = () => {
+    const toRemove = scene.children.filter((child) => child.userData.isModelObject);
+    toRemove.forEach((child) => scene.remove(child));
+};
+
 const addSelectedBeamOverlays = (sizeScale = 1) => {
     const responsiveScale = sizeScale * mobileOverlayScale();
     drawCenterline(currentBeamData, true);
@@ -819,13 +500,19 @@ const loadPavilion = async ({ preserveCamera = false } = {}) => {
                 const id = beam.beam_id;
                 const isCurrentBeam = id === currentId;
                 const isCurrentModule = colorCurrentModule.value && beam.module === currentModule.value;
-                const color = isCurrentBeam ? HIGHLIGHT_COLOR : (isCurrentModule ? MODULE_COLOR : (colorAllModules.value ? moduleColor(beam.module) : WOOD_COLOR));
-                const opacity = isCurrentBeam ? 0.62 : ((isCurrentModule || colorAllModules.value) ? 0.36 : 0.18);
                 try {
                     const [geometry, beamData] = await Promise.all([
                         loadSTL(`${BASE_URL}/beams/${id}/${id}.stl`),
                         loadBeamData(id),
                     ]);
+                    const isKeyBeam = beamData?.is_key_beam === true || beamData?.key_beam === true;
+                    const color = isCurrentBeam ? HIGHLIGHT_COLOR 
+                        : (showKeyBeams.value && isKeyBeam ? KEY_BEAM_COLOR 
+                        : (isCurrentModule ? MODULE_COLOR 
+                        : (colorAllModules.value ? moduleColor(beam.module) : WOOD_COLOR)));
+                    const opacity = isCurrentBeam ? 0.62 
+                        : (showKeyBeams.value && isKeyBeam ? 0.72 
+                        : ((isCurrentModule || colorAllModules.value) ? 0.36 : 0.18));
                     scene.add(makeMesh(geometry, color, opacity, id));
                     addOutline(geometry);
                     if (isCurrentBeam) drawCenterline(currentBeamData, true);
@@ -1077,8 +764,13 @@ onMounted(async () => {
                     <input v-model="colorAllModules" type="checkbox" @change="setMode('pavilion')" />
                     Color all
                 </label>
+                <label v-if="viewMode === 'pavilion'" class="rotate-toggle">
+                    <input v-model="showKeyBeams" type="checkbox" @change="setMode('pavilion')" />
+                    Key beams
+                </label>
             </div>
         </div>
+
         <div class="navigation-buttons">
             <div class="nav-group">
                 <button class="nav-arrow nav-arrow-prev" title="Prev module" aria-label="Prev module" @click="navigateModule(-1)">
