@@ -14,11 +14,16 @@ const error = ref(null);
 
 const HIDDEN_KEYS = [
     "name", "3d_model", "frame", "local_frame", "global_position",
-    "connected_beams", "joints", "processing", "processings", "features", "machining"
+    "connected_beams", "joints", "processing", "processings", "features", "machining",
+    "is_key_beam", "key_beam" // Nascosti dalla lista generica
 ];
 
 const engravingText = computed(() =>
     beamData.value?.engraving_text || beamData.value?.name || beamData.value?.["beam ID"]
+);
+
+const isKeyBeam = computed(() => 
+    beamData.value?.is_key_beam === true || beamData.value?.key_beam === true
 );
 
 const filteredJoints = computed(() => {
@@ -84,6 +89,11 @@ const formatLabel = (key) => key.replace(/_/g, " ").replace("cm3", "cm³");
                         <li class="spec-item">
                             <span class="label">module</span>
                             <span class="value">{{ beamData.module }}</span>
+                        </li>
+                        <!-- Key Beam - mostra SOLO se true, senza evidenziazione -->
+                        <li v-if="isKeyBeam" class="spec-item">
+                            <span class="label">Key beam</span>
+                            <span class="value">true</span>
                         </li>
                         <template v-for="(value, key) in beamData" :key="key">
                             <li

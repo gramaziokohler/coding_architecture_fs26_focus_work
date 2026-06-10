@@ -764,6 +764,28 @@ def vector_normalize(v):
         return [0.0, 0.0, 0.0]
     return [c / length for c in v]
 
+def xyz_to_list(value):
+    if all(hasattr(value, attr) for attr in ("x", "y", "z")):
+        return [float(value.x), float(value.y), float(value.z)]
+    if all(hasattr(value, attr) for attr in ("X", "Y", "Z")):
+        return [float(value.X), float(value.Y), float(value.Z)]
+    return [float(value[0]), float(value[1]), float(value[2])]
+
+def beam_frame_data(beam):
+    frame = beam.frame
+    blank = getattr(beam, "blank", None)
+    blank_frame = getattr(blank, "frame", None) if blank is not None else None
+    origin = getattr(blank_frame, "point", None) or frame.point
+    x_axis = xyz_to_list(frame.xaxis)
+    y_axis = xyz_to_list(frame.yaxis)
+    z_axis = xyz_to_list(getattr(frame, "zaxis", None) or vector_cross(x_axis, y_axis))
+    return {
+        "origin": xyz_to_list(origin),
+        "x_axis": vector_normalize(x_axis),
+        "y_axis": vector_normalize(y_axis),
+        "z_axis": vector_normalize(z_axis),
+    }
+
 def frame_from_data(frame_data):
     data = frame_data.get("data", frame_data)
     origin = data.get("point") or data.get("origin")
@@ -779,6 +801,15 @@ def frame_from_data(frame_data):
         "y_axis": vector_normalize([float(v) for v in y_axis]),
         "z_axis": vector_normalize([float(v) for v in z_axis]),
     }
+
+def blank_frame_from_beam_data(beam_data):
+    blank = beam_data.get("blank") or {}
+    if isinstance(blank, dict):
+        blank_data = blank.get("data", blank)
+        frame = blank_data.get("frame")
+        if frame:
+            return frame_from_data(frame)
+    return None
 
 # =========================
 # BEAM GEOMETRY OPERATIONS
@@ -853,34 +884,12 @@ def get_beam_weight(beam, length, density=500):
 
 def get_beam_local_frame(beam):
     try:
-        line = beam.centerline
-        start = line.start if hasattr(line, "start") else get_line_start(line)
-        end = line.end if hasattr(line, "end") else get_line_end(line)
-        dx = end.x - start.x
-        dy = end.y - start.y
-        dz = end.z - start.z
-        length = (dx**2 + dy**2 + dz**2) ** 0.5
-        if length < 1e-10:
-            return None
-        x_axis = [dx/length, dy/length, dz/length]
-        ref = [1.0, 0.0, 0.0] if abs(x_axis[2]) > 0.9 else [0.0, 0.0, 1.0]
-        cx = x_axis[1]*ref[2] - x_axis[2]*ref[1]
-        cy = x_axis[2]*ref[0] - x_axis[0]*ref[2]
-        cz = x_axis[0]*ref[1] - x_axis[1]*ref[0]
-        c_len = (cx**2 + cy**2 + cz**2) ** 0.5
-        if c_len < 1e-10:
-            return None
-        z_axis = [cx/c_len, cy/c_len, cz/c_len]
-        y_axis = [
-            z_axis[1]*x_axis[2] - z_axis[2]*x_axis[1],
-            z_axis[2]*x_axis[0] - z_axis[0]*x_axis[2],
-            z_axis[0]*x_axis[1] - z_axis[1]*x_axis[0]
-        ]
+        frame = beam_frame_data(beam)
         return {
-            "origin": [round((start.x+end.x)/2.0, 4), round((start.y+end.y)/2.0, 4), round((start.z+end.z)/2.0, 4)],
-            "x_axis": [round(v, 4) for v in x_axis],
-            "y_axis": [round(v, 4) for v in y_axis],
-            "z_axis": [round(v, 4) for v in z_axis]
+            "origin": [round(v, 4) for v in frame["origin"]],
+            "x_axis": [round(v, 4) for v in frame["x_axis"]],
+            "y_axis": [round(v, 4) for v in frame["y_axis"]],
+            "z_axis": [round(v, 4) for v in frame["z_axis"]]
         }
     except:
         return None
@@ -983,6 +992,46 @@ def geometry_to_vertices_and_faces(geometry):
     if not combined_vertices or not combined_faces:
         return None
     return combined_vertices, combined_faces
+
+def write_rhino_geometry_ascii_stl(path, name, geometry):
+    native = (
+        getattr(geometry, "native_brep", None)
+        or getattr(geometry, "native_mesh", None)
+        or getattr(geometry, "native", None)
+        or geometry
+    )
+    meshes = []
+    if isinstance(native, rg.Mesh):
+        meshes = [native]
+    elif isinstance(native, rg.Brep):
+        meshes = list(rg.Mesh.CreateFromBrep(native, rg.MeshingParameters.Default) or [])
+    else:
+        return False
+
+    joined = rg.Mesh()
+    for mesh in meshes:
+        joined.Append(mesh)
+
+    vertices = [[float(v.X), float(v.Y), float(v.Z)] for v in joined.Vertices]
+    faces = []
+    for face in joined.Faces:
+        faces.append([int(face.A), int(face.B), int(face.C)])
+        if not face.IsTriangle:
+            faces.append([int(face.A), int(face.C), int(face.D)])
+    write_mesh_ascii_stl(path, name, vertices, faces)
+    return True
+
+def write_geometry_ascii_stl(path, name, geometry):
+    if geometry is None:
+        return False
+    if write_rhino_geometry_ascii_stl(path, name, geometry):
+        return True
+    mesh_data = geometry_to_vertices_and_faces(geometry)
+    if not mesh_data:
+        return False
+    vertices, faces = mesh_data
+    write_mesh_ascii_stl(path, name, vertices, faces)
+    return True
 
 # =========================
 # JOINT FUNCTIONS
@@ -1446,7 +1495,7 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
             os.makedirs(output_folder)
 
         global_structure_path = os.path.join(output_folder, "structure.json")
-        json_files_created, stl_files_created, stl_errors = [], [], []
+        json_files_created, stl_files_created, blank_files_created, stl_errors = [], [], [], []
 
         for k in labels_keys:
             for node in ordered_by_module.get(k, []):
@@ -1488,51 +1537,28 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
                 if not os.path.exists(beam_folder):
                     os.makedirs(beam_folder)
 
+                local_frame = get_beam_local_frame(beam)
+
                 # STL Export
                 stl_path = os.path.join(beam_folder, "{}.stl".format(beam_id))
+                blank_stl_path = os.path.join(beam_folder, "{}_blank.stl".format(beam_id))
                 try:
-                    if hasattr(beam.geometry, 'native_brep') or isinstance(beam.geometry, rg.Brep):
-                        native = getattr(beam.geometry, 'native_brep', beam.geometry)
-                        meshp = rg.MeshingParameters.Default
-                        meshes = rg.Mesh.CreateFromBrep(native, meshp)
-                        if meshes:
-                            joined = rg.Mesh()
-                            for m in meshes:
-                                joined.Append(m)
-                            stl_lines = ["solid {}".format(beam_id)]
-                            for i in range(joined.Faces.Count):
-                                face = joined.Faces[i]
-                                verts = joined.Vertices
-                                def add_tri(p0, p1, p2):
-                                    ux = p1.X - p0.X; uy = p1.Y - p0.Y; uz = p1.Z - p0.Z
-                                    vx = p2.X - p0.X; vy = p2.Y - p0.Y; vz = p2.Z - p0.Z
-                                    nx = uy*vz - uz*vy
-                                    ny = uz*vx - ux*vz
-                                    nz = ux*vy - uy*vx
-                                    ln = (nx**2 + ny**2 + nz**2) ** 0.5
-                                    if ln > 0:
-                                        nx /= ln; ny /= ln; nz /= ln
-                                    stl_lines.append("  facet normal {} {} {}".format(nx, ny, nz))
-                                    stl_lines.append("    outer loop")
-                                    stl_lines.append("      vertex {} {} {}".format(p0.X, p0.Y, p0.Z))
-                                    stl_lines.append("      vertex {} {} {}".format(p1.X, p1.Y, p1.Z))
-                                    stl_lines.append("      vertex {} {} {}".format(p2.X, p2.Y, p2.Z))
-                                    stl_lines.append("    endloop")
-                                    stl_lines.append("  endfacet")
-                                if face.IsTriangle:
-                                    add_tri(verts[face.A], verts[face.B], verts[face.C])
-                                else:
-                                    add_tri(verts[face.A], verts[face.B], verts[face.C])
-                                    add_tri(verts[face.A], verts[face.C], verts[face.D])
-                            stl_lines.append("endsolid {}".format(beam_id))
-                            with open(stl_path, 'w') as f:
-                                f.write("\n".join(stl_lines))
-                            stl_files_created.append(stl_path)
-                except:
-                    pass
+                    if write_geometry_ascii_stl(stl_path, beam_id, beam.geometry):
+                        stl_files_created.append(stl_path)
+                except Exception as error:
+                    stl_errors.append("Errore STL geometry per {}: {}".format(beam_id, error))
+
+                try:
+                    blank = getattr(beam, "blank", None)
+                    if write_geometry_ascii_stl(blank_stl_path, "{}_blank".format(beam_id), blank):
+                        blank_files_created.append(blank_stl_path)
+                except Exception as error:
+                    stl_errors.append("Errore STL blank per {}: {}".format(beam_id, error))
 
                 if not os.path.exists(stl_path):
-                    stl_errors.append("Errore STL per {}".format(beam_id))
+                    stl_errors.append("Errore STL geometry per {}".format(beam_id))
+                if not os.path.exists(blank_stl_path):
+                    stl_errors.append("Errore STL blank per {}".format(beam_id))
 
                 global_pos = all_beams_positions.get(name, {})
 
@@ -1547,7 +1573,7 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
                     "length (m)": round(length, 2),
                     "volume (cm³)": round(volume_m3 * 1_000_000, 2),
                     "weight (kg)": round(weight, 2),
-                    "local_frame": get_beam_local_frame(beam),
+                    "local_frame": local_frame,
                     "connected_beams": sorted([
                         beam_label_by_guid[nbr].lower()
                         for nbr in g.neighbors(node)
@@ -1565,7 +1591,9 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
                         "tbutt": tbutt,
                         "lmiter": lmiter
                     },
-                    "3d_model": "beams/{}/{}.stl".format(beam_id, beam_id)
+                    "3d_model": "beams/{}/{}.stl".format(beam_id, beam_id),
+                    "geometry_model": "beams/{}/{}.stl".format(beam_id, beam_id),
+                    "blank_model": "beams/{}/{}_blank.stl".format(beam_id, beam_id)
                 }
 
                 json_path = os.path.join(beam_folder, "{}.json".format(beam_id))
@@ -1607,8 +1635,8 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
             json.dump(structure_data, f, indent=2)
         json_files_created.append(global_structure_path)
 
-        json_export_out = "JSON: {} | STL: {} | Errori STL: {}".format(
-            len(json_files_created), len(stl_files_created), len(stl_errors)
+        json_export_out = "JSON: {} | STL geometry: {} | STL blank: {} | Errori STL: {}".format(
+            len(json_files_created), len(stl_files_created), len(blank_files_created), len(stl_errors)
         )
         if stl_errors:
             json_export_out += "\n" + "\n".join(stl_errors[:5])
@@ -1676,6 +1704,9 @@ def export_web_data(model_path, output_dir, base_url, density, module_sizes, cle
         beam_id, module, display_name = get_beam_identity(index, guid, data, module_sizes)
         guid_to_beam_id[guid] = beam_id
         frame = frame_from_data(data["frame"])
+        blank_frame = blank_frame_from_beam_data(data)
+        if blank_frame:
+            frame["origin"] = blank_frame["origin"]
         length = float(data["length"])
         width = float(data["width"])
         height = float(data["height"])
@@ -1728,10 +1759,12 @@ def export_web_data(model_path, output_dir, base_url, density, module_sizes, cle
         beam_dir = beams_dir / beam_id
         beam_dir.mkdir(parents=True, exist_ok=True)
         stl_path = beam_dir / "{}.stl".format(beam_id)
+        blank_stl_path = beam_dir / "{}_blank.stl".format(beam_id)
         json_path = beam_dir / "{}.json".format(beam_id)
 
         vertices = beam_box_vertices(beam["frame"], beam["length"], beam["width"], beam["height"])
         write_ascii_stl(stl_path, beam_id, vertices)
+        write_ascii_stl(blank_stl_path, "{}_blank".format(beam_id), vertices)
 
         joint_details = joints_by_beam.get(beam_id, [])
         joint_groups = {
@@ -1767,6 +1800,8 @@ def export_web_data(model_path, output_dir, base_url, density, module_sizes, cle
             "joints": joint_groups,
             "processing": beam["features"] + beam["extra_processings"],
             "3d_model": "{}/beams/{}/{}.stl".format(base_url.rstrip("/"), beam_id, beam_id),
+            "geometry_model": "{}/beams/{}/{}.stl".format(base_url.rstrip("/"), beam_id, beam_id),
+            "blank_model": "{}/beams/{}/{}_blank.stl".format(base_url.rstrip("/"), beam_id, beam_id),
         }
 
         with open(json_path, "w") as fp:
