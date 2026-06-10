@@ -116,6 +116,10 @@ const formatJointValue = (jointData) => {
                             <span class="label">module</span>
                             <span class="value">{{ beamData.module }}</span>
                         </li>
+                        <li v-if="beamData.is_key_beam === true || beamData.is_key_beam === 'true'" class="spec-item">
+                            <span class="label">key beam</span>
+                            <span class="value">Yes</span>
+                        </li>
                         <template v-for="(value, key) in beamData" :key="key">
                             <li
                                 v-if="!HIDDEN_KEYS.includes(key) && key !== 'beam ID' && key !== 'module' && key !== 'engraving_text'"
@@ -132,10 +136,6 @@ const formatJointValue = (jointData) => {
                                     ? beamData.connected_beams.map(b => b.toUpperCase()).join(", ")
                                     : beamData.connected_beams.toUpperCase() }}
                             </span>
-                        </li>
-                        <li v-if="beamData.is_key_beam === true || beamData.is_key_beam === 'true'" class="spec-item">
-                            <span class="label">key beam</span>
-                            <span class="value">Yes</span>
                         </li>
                     </ul>
                 </div>
