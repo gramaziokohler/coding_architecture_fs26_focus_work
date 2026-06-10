@@ -837,7 +837,7 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
                         lmiter.append(j_num)
 
                 beam_id = name.lower()
-                beam_folder = os.path.join(output_folder, beam_id)
+                beam_folder = os.path.join(output_folder, "beams", beam_id)
                 if not os.path.exists(beam_folder):
                     os.makedirs(beam_folder)
 
