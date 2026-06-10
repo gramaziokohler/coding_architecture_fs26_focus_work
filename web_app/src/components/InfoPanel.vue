@@ -26,7 +26,6 @@ const HIDDEN_KEYS = [
     "processings",
     "features",
     "machining",
-    "is_key_beam",
     "key_beam"
 ];
 
@@ -78,16 +77,16 @@ const formatJointValue = (jointData) => {
     if (jointData === null || jointData === undefined) {
         return "—";
     }
-    
+
     if (isArray(jointData)) {
         return jointData.length === 0 ? "—" : jointData.join(", ");
     }
-    
+
     if (isObject(jointData)) {
         const values = Object.values(jointData);
         return values.length === 0 ? "—" : values.join(", ");
     }
-    
+
     return jointData || "—";
 };
 </script>
@@ -131,6 +130,10 @@ const formatJointValue = (jointData) => {
                                     ? beamData.connected_beams.map(b => b.toUpperCase()).join(", ")
                                     : beamData.connected_beams.toUpperCase() }}
                             </span>
+                        </li>
+                        <li v-if="beamData.is_key_beam" class="spec-item">
+                            <span class="label">key beams</span>
+                            <span class="value">Yes</span>
                         </li>
                     </ul>
                 </div>
