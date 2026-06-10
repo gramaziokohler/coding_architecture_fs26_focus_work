@@ -1,5 +1,5 @@
 # venv: ca-fs26-focus-work
-# keyword: timber-packing, 90-deg-beam-rotation, vacuum-placement, adaptive-shifting, exact-return-order
+# keyword: timber-packing, 90-deg-beam-rotation, vacuum-area-boolean, blank-length-diagnostic
 import Rhino.Geometry as rg
 import math
 from importlib import reload
@@ -259,12 +259,36 @@ def run_packing(timber_model, origin, stock_length_beam_6x8, stock_length_beam_1
         else:
             beam_length, width_box, height_box = beam.centerline.length, 0.12, 0.14
 
-        needed_len = beam_length + total_target_gap
+        # === DIAGNOSTICA DI TRACCIAMENTO SORGENTE BLANK_LENGTH ===
+        compas_blank_len = None
+        blank_source = "FALLBACK (Misura Taglio)"
+        
+        if hasattr(beam, "blank_length") and getattr(beam, "blank_length") is not None:
+            compas_blank_len = getattr(beam, "blank_length")
+            blank_source = "PROPRIETÀ_NATIVA (.blank_length)"
+        elif hasattr(beam, "attributes") and isinstance(beam.attributes, dict) and "blank_length" in beam.attributes:
+            compas_blank_len = beam.attributes["blank_length"]
+            blank_source = "DIZIONARIO_ATTRIBUTI (['blank_length'])"
+        elif hasattr(beam, "blank_len") and getattr(beam, "blank_len") is not None:
+            compas_blank_len = getattr(beam, "blank_len")
+            blank_source = "PROPRIETÀ_NATIVA_CORTA (.blank_len)"
+        elif hasattr(beam, "attributes") and isinstance(beam.attributes, dict) and "blank_len" in beam.attributes:
+            compas_blank_len = beam.attributes["blank_len"]
+            blank_source = "DIZIONARIO_ATTRIBUTI_CORTO (['blank_len'])"
+            
+        if compas_blank_len is None:
+            compas_blank_len = beam_length
+        else:
+            compas_blank_len = float(compas_blank_len)
+
+        needed_len = compas_blank_len + total_target_gap
+        
         section_key = (width_box, height_box)
         if section_key not in beams_by_section: beams_by_section[section_key] = []
         beams_by_section[section_key].append({
             "beam_obj": beam, "geo_brep": straight_brep, "name": correct_name,
-            "length_x": beam_length, "width_y": width_box, "height_z": height_box, "needed_len": needed_len
+            "length_x": beam_length, "blank_length": compas_blank_len, "blank_source": blank_source,
+            "width_y": width_box, "height_z": height_box, "needed_len": needed_len
         })
 
     # 3. ESECUZIONE ALGORITMO BIN PACKING
@@ -274,7 +298,10 @@ def run_packing(timber_model, origin, stock_length_beam_6x8, stock_length_beam_1
         sec_w, sec_h = section_key
         current_allowed_s_len = get_assigned_stock_length(sec_w, sec_h)
         usable_cutting_length = current_allowed_s_len - (2.0 * stock_edge_gap)
-        section_beams = sorted(beams_by_section[section_key], key=lambda x: x["length_x"], reverse=True)
+        
+        # Packing calibrato sulle lunghezze grezze totali
+        section_beams = sorted(beams_by_section[section_key], key=lambda x: x["blank_length"], reverse=True)
+        
         section_bars = []
         for item in section_beams:
             needed = item["needed_len"]
@@ -297,7 +324,7 @@ def run_packing(timber_model, origin, stock_length_beam_6x8, stock_length_beam_1
                 packed_bars.append(new_bar)
                 bar_global_counter += 1
 
-    # 4. GENERAZIONE DEL LAYOUT SPAZIALE COERENTE + SPOSTAMENTO VELOCE ENGRAVING + ADATTAMENTO VACUUM
+    # 4. GENERAZIONE DEL LAYOUT SPAZIALE COERENTE + SPOSTAMENTO VELOCE ENGRAVING + ADATTAMENTO CONTINUO VACUUM
     arranged_boxes, max_len_boxes, stock_beams, max_len_lines, arranged_names, label_curves, max_len_num_txt, engraving, dimensions, report_sections = [], [], [], [], [], [], [], [], [], []
     vacuum_surfaces_out = [] 
     failed_vacuums = [] 
@@ -335,7 +362,7 @@ def run_packing(timber_model, origin, stock_length_beam_6x8, stock_length_beam_1
             arranged_boxes.append(pure_beam_geo)
 
             # === SCATOLE DI DIMENSIONE MASSIMA (MAX LEN BOXES) ===
-            raw_box_geo = rg.Box(rg.Plane.WorldXY, rg.Interval(0, item["length_x"]), rg.Interval(0, item["width_y"]), rg.Interval(0, item["height_z"])).ToBrep()
+            raw_box_geo = rg.Box(rg.Plane.WorldXY, rg.Interval(0, item["blank_length"]), rg.Interval(0, item["width_y"]), rg.Interval(0, item["height_z"])).ToBrep()
             bbox_current_raw = raw_box_geo.GetBoundingBox(True)
             raw_box_geo.Transform(rg.Transform.Translation(target_x - bbox_current_raw.Min.X, y_pos - bbox_current_raw.Min.Y, base_pt.Z - bbox_current_raw.Min.Z))
             max_len_boxes.append(raw_box_geo)
@@ -343,7 +370,7 @@ def run_packing(timber_model, origin, stock_length_beam_6x8, stock_length_beam_1
             new_bbox = pure_beam_geo.GetBoundingBox(True)
             exact_top_z = base_pt.Z + item["height_z"]
             
-            max_len_lines.append(rg.Line(rg.Point3d(new_bbox.Min.X, new_bbox.Min.Y, exact_top_z + 0.01), rg.Point3d(new_bbox.Min.X + item["length_x"], new_bbox.Min.Y, exact_top_z + 0.01)))
+            max_len_lines.append(rg.Line(rg.Point3d(new_bbox.Min.X, new_bbox.Min.Y, exact_top_z + 0.01), rg.Point3d(new_bbox.Min.X + item["blank_length"], new_bbox.Min.Y, exact_top_z + 0.01)))
             arranged_names.append(item["name"])
 
             lbl_x = (new_bbox.Min.X + new_bbox.Max.X) / 2.0
@@ -401,10 +428,9 @@ def run_packing(timber_model, origin, stock_length_beam_6x8, stock_length_beam_1
             if solid_text:
                 engraving.append(solid_text)
 
-            # === LOGICA ADATTIVA INTEGRALE AREA VACUUM + DISTANZA MINIMA 1CM ===
+            # === LOGICA ADATTIVA CONFRONTO DI AREA ESATTA VACUUM ===
             v_width = 0.075
             v_length = 0.14
-            margin_x = 0.01  # Tolleranza minima extra lungo X per il joint
             
             half_l = v_length / 2.0
             half_w = v_width / 2.0
@@ -412,44 +438,48 @@ def run_packing(timber_model, origin, stock_length_beam_6x8, stock_length_beam_1
             vacuums_placed_count = 0
             first_vacuum_x = None  
             
+            min_v_x = new_bbox.Min.X + half_l
+            max_v_x = new_bbox.Max.X - half_l
+            target_area = v_length * v_width
+            
             for v_ratio in [0.33, 0.66]:
                 x_offset_from_center = (item["length_x"] * v_ratio) - (item["length_x"] / 2.0)
                 current_v_x = test_x + x_offset_from_center
                 
-                # === CONTROLLO DI INTERASSE E GAP LIBERO (Almeno 1cm di legno pulito tra i corpi) ===
+                if current_v_x < min_v_x:
+                    current_v_x = min_v_x
+                
                 if first_vacuum_x is not None:
                     if current_v_x < first_vacuum_x + v_length + 0.01:
                         current_v_x = first_vacuum_x + v_length + 0.01
                 
                 step_v = 0.01
-                max_v_x = new_bbox.Max.X - half_l
-                
                 vacuum_success = False
+                
                 while current_v_x <= max_v_x:
-                    # === CONTROLLO DI TUTTA L'AREA (5 Punti: Centro + 4 Angoli del perimetro reale) ===
-                    vacuum_test_points = [
-                        rg.Point3d(current_v_x, lbl_y_center, exact_top_z + 0.01),
-                        rg.Point3d(current_v_x - half_l - margin_x, lbl_y_center - half_w, exact_top_z + 0.01),
-                        rg.Point3d(current_v_x + half_l + margin_x, lbl_y_center - half_w, exact_top_z + 0.01),
-                        rg.Point3d(current_v_x - half_l - margin_x, lbl_y_center + half_w, exact_top_z + 0.01),
-                        rg.Point3d(current_v_x + half_l + margin_x, lbl_y_center + half_w, exact_top_z + 0.01)
-                    ]
+                    v_box_x = rg.Interval(current_v_x - half_l, current_v_x + half_l)
+                    v_box_y = rg.Interval(lbl_y_center - half_w, lbl_y_center + half_w)
+                    v_box_z = rg.Interval(base_pt.Z - 0.01, base_pt.Z + 0.02)
                     
-                    single_vacuum_safe = True
-                    for pt in vacuum_test_points:
-                        ray = rg.Line(pt, rg.Point3d(pt.X, pt.Y, base_pt.Z - 0.01)).ToNurbsCurve()
-                        intersections = rg.Intersect.Intersection.CurveBrep(ray, pure_beam_geo, 0.001)
+                    test_box_brep = rg.Box(rg.Plane.WorldXY, v_box_x, v_box_y, v_box_z).ToBrep()
+                    res_intersections = rg.Brep.CreateBooleanIntersection(pure_beam_geo, test_box_brep, 0.001)
+                    
+                    single_vacuum_safe = False
+                    if res_intersections:
+                        total_contact_area = 0.0
+                        slice_plane = rg.Plane(rg.Point3d(0, 0, base_pt.Z + 0.001), rg.Vector3d.ZAxis)
                         
-                        point_hits_bottom_wood = False
-                        if intersections and len(intersections[2]) > 0:
-                            lowest_z = min(p.Z for p in intersections[2])
-                            if abs(lowest_z - base_pt.Z) < 0.002:
-                                point_hits_bottom_wood = True
-                                
-                        if not point_hits_bottom_wood:
-                            single_vacuum_safe = False
-                            break
-                            
+                        for piece in res_intersections:
+                            contour_curves = rg.Brep.CreateContourCurves(piece, slice_plane)
+                            if contour_curves:
+                                for crv in contour_curves:
+                                    if crv.IsClosed:
+                                        amp = rg.AreaMassProperties.Compute(crv)
+                                        if amp: total_contact_area += amp.Area
+                                            
+                        if abs(total_contact_area - target_area) < 1e-5:
+                            single_vacuum_safe = True
+                    
                     if single_vacuum_safe:
                         vacuum_success = True
                         break 
@@ -460,7 +490,7 @@ def run_packing(timber_model, origin, stock_length_beam_6x8, stock_length_beam_1
                     if first_vacuum_x is None:
                         first_vacuum_x = current_v_x
                         
-                    vacuum_plane = rg.Plane(rg.Point3d(current_v_x, lbl_y_center, base_pt.Z), rg.Vector3d.XAxis, rg.Vector3d.YAxis)
+                    vacuum_plane = rg.Plane(rg.Point3d(current_v_x, lbl_y_center, 0.0), rg.Vector3d.XAxis, rg.Vector3d.YAxis)
                     vacuum_surf = rg.PlaneSurface(
                         vacuum_plane, 
                         rg.Interval(-half_l, half_l), 
@@ -472,7 +502,10 @@ def run_packing(timber_model, origin, stock_length_beam_6x8, stock_length_beam_1
             if vacuums_placed_count < 2:
                 failed_vacuums.append(item["name"])
 
-            dimensions.append("Stock beam n°: {} | {} | Sezione: {:.1f}x{:.1f}cm | L: {:.3f}m".format(bar["id"], item["name"], sec_w*100.0, sec_h*100.0, item["length_x"]))
+            # === AGGIUNTA LOG DI TRACCIAMENTO SUL PIN DIMENSIONS ===
+            dimensions.append("Stock bar n°: {} | {} | Sezione: {:.1f}x{:.1f}cm | L_taglio: {:.3f}m | L_grezzo: {:.3f}m -> [SORGENTE DATI: {}]".format(
+                bar["id"], item["name"], sec_w*100.0, sec_h*100.0, item["length_x"], item["blank_length"], item["blank_source"]
+            ))
 
     # 5. RENDICONTO STATISTICO
     for sec in sorted(beams_by_section.keys()):
@@ -487,5 +520,6 @@ def run_packing(timber_model, origin, stock_length_beam_6x8, stock_length_beam_1
     total_efficiency = ((total_material_bought - total_waste_material) / total_material_bought) * 100.0 if total_material_bought > 0 else 0.0
     report = "==================================================\n        REPORT DETTAGLIATO DI SECOLO DI TAGLIO    \n==================================================\n" + "\n\n".join(report_sections) + "\n\n--- TOTAL PACKING SUMMARY ---\nTotal Stocks needed: {} pcs\nTotal Material:      {:.2f} m\nTotal Waste:         {:.2f} m\nTotal Efficiency:    {:.1f}%\nTotal Cost:          {:.2f} EUR\n-----------------------------\n==================================================".format(len(packed_bars), total_material_bought, total_waste_material, total_efficiency, total_material_bought * p_lm)
 
-    # === ESATTO ORDINE DI RETURN RICHIESTO CON LE DUE NUOVE VARIABILI IN CODA ===
+    # === ESATTO ORDINE DI RETURN CONSERVATO INVARIATO ===
+
     return arranged_boxes, arranged_names, max_len_boxes, stock_beams, max_len_lines, label_curves, max_len_num_txt, engraving, dimensions, report, vacuum_surfaces_out, failed_vacuums
