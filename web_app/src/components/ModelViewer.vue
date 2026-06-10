@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted, ref, watch, nextTick, onBeforeUnmount } from "vue";
 import * as THREE from "three";
 import { STLLoader } from "three/examples/jsm/loaders/STLLoader.js";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
@@ -896,6 +896,8 @@ const setMode = async (
                 preserveCamera,
             });
         }
+    } catch (e) {
+        console.error(`Could not set mode ${mode}:`, e);
     } finally {
         isLoading.value = false;
     }
@@ -957,7 +959,7 @@ const navigateBeam = (step) => {
 const navigateModule = (step) => {
     const modules = moduleList.value;
 
-    if (!modules.length || moduleIndex.value < 0) return;
+    if (!modules.length || moduleIndex.value < 0 || !structureData?.beams) return;
 
     const nextModule = modules[(moduleIndex.value + step + modules.length) % modules.length];
     const beam = structureData.beams.find((entry) => entry.module === nextModule);
@@ -967,6 +969,8 @@ const navigateModule = (step) => {
 
 const initGizmo = () => {
     const canvas = gizmoRef.value;
+
+    if (!canvas) return;
 
     gizmoRenderer = new THREE.WebGLRenderer({
         canvas,
@@ -987,7 +991,7 @@ const initGizmo = () => {
 };
 
 const updateGizmo = () => {
-    if (!gizmoRenderer) return;
+    if (!gizmoRenderer || !gizmoCamera || !camera) return;
 
     gizmoCamera.position.copy(camera.position).normalize().multiplyScalar(3);
     gizmoCamera.up.copy(camera.up);
@@ -997,6 +1001,8 @@ const updateGizmo = () => {
 };
 
 const beamFromPointerEvent = (event) => {
+    if (!renderer || !camera || !scene) return "";
+
     const rect = renderer.domElement.getBoundingClientRect();
 
     pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
@@ -1011,6 +1017,8 @@ const beamFromPointerEvent = (event) => {
 };
 
 const hoverFromPointerEvent = (event) => {
+    if (!renderer || !camera || !scene) return;
+
     const rect = renderer.domElement.getBoundingClientRect();
 
     pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
@@ -1069,12 +1077,34 @@ const handlePointerLeave = () => {
     hoverInfo.value = null;
 };
 
+const loadInitialBeam = async () => {
+    if (!props.beamUrl) {
+        console.warn("No beamUrl yet. Waiting for prop update.");
+        return;
+    }
+
+    isLoading.value = true;
+
+    try {
+        await loadCurrentBeamFromUrl();
+        await loadSingleBeam();
+    } catch (e) {
+        console.error("Error loading beam:", e);
+    } finally {
+        isLoading.value = false;
+    }
+};
+
+let resizeHandler = null;
+
 onMounted(async () => {
+    await nextTick();
+
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0xffffff);
 
-    const width = containerRef.value.clientWidth;
-    const height = containerRef.value.clientHeight;
+    const width = containerRef.value?.clientWidth || 800;
+    const height = containerRef.value?.clientHeight || 600;
 
     camera = new THREE.PerspectiveCamera(75, width / height, 0.01, 100000);
     camera.position.set(0, -5, 3);
@@ -1109,33 +1139,31 @@ onMounted(async () => {
     dirLight.position.set(5, 8, 5);
     scene.add(dirLight);
 
-    try {
-        isLoading.value = true;
-
-        await loadCurrentBeamFromUrl();
-        await loadSingleBeam();
-    } catch (e) {
-        console.error("Error loading beam:", e);
-    } finally {
-        isLoading.value = false;
-    }
+    await loadInitialBeam();
 
     initGizmo();
 
     const animate = () => {
         animationId = requestAnimationFrame(animate);
 
-        controls.update();
+        if (controls) {
+            controls.update();
+        }
 
-        renderer.render(scene, camera);
+        if (renderer && scene && camera) {
+            renderer.render(scene, camera);
+        }
+
         updateGizmo();
     };
 
     animate();
 
-    const handleResize = () => {
-        const w = containerRef.value.clientWidth;
-        const h = containerRef.value.clientHeight;
+    resizeHandler = () => {
+        if (!containerRef.value || !camera || !renderer) return;
+
+        const w = containerRef.value.clientWidth || 800;
+        const h = containerRef.value.clientHeight || 600;
 
         camera.aspect = w / h;
         camera.updateProjectionMatrix();
@@ -1143,7 +1171,49 @@ onMounted(async () => {
         renderer.setSize(w, h);
     };
 
-    window.addEventListener("resize", handleResize);
+    window.addEventListener("resize", resizeHandler);
+});
+
+watch(
+    () => props.beamUrl,
+    async (newUrl, oldUrl) => {
+        if (!newUrl || newUrl === oldUrl) return;
+
+        await nextTick();
+
+        if (!scene || !renderer || !camera) return;
+
+        await loadInitialBeam();
+    }
+);
+
+onBeforeUnmount(() => {
+    if (animationId) {
+        cancelAnimationFrame(animationId);
+    }
+
+    if (resizeHandler) {
+        window.removeEventListener("resize", resizeHandler);
+    }
+
+    if (renderer?.domElement) {
+        renderer.domElement.removeEventListener("pointerdown", handlePointerDown);
+        renderer.domElement.removeEventListener("pointerup", handlePointerUp);
+        renderer.domElement.removeEventListener("pointermove", handlePointerMove);
+        renderer.domElement.removeEventListener("pointerleave", handlePointerLeave);
+    }
+
+    if (controls) {
+        controls.dispose();
+    }
+
+    if (renderer) {
+        renderer.dispose();
+    }
+
+    if (gizmoRenderer) {
+        gizmoRenderer.dispose();
+    }
 });
 </script>
 
@@ -1373,6 +1443,7 @@ onMounted(async () => {
 .model-viewer {
     width: 100%;
     height: 100%;
+    min-height: 600px;
     position: relative;
 }
 
@@ -1614,6 +1685,10 @@ onMounted(async () => {
 }
 
 @media (max-width: 760px) {
+    .model-viewer {
+        min-height: 420px;
+    }
+
     .view-buttons {
         top: 8px;
         left: 8px;
