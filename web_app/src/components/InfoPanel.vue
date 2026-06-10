@@ -128,8 +128,8 @@ const formatJointValue = (jointData) => {
                             <span class="label">connected beams</span>
                             <span class="value">
                                 {{ isArray(beamData.connected_beams)
-                                    ? beamData.connected_beams.join(", ")
-                                    : beamData.connected_beams }}
+                                    ? beamData.connected_beams.map(b => b.toUpperCase()).join(", ")
+                                    : beamData.connected_beams.toUpperCase() }}
                             </span>
                         </li>
                     </ul>
