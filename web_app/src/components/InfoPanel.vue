@@ -12,52 +12,47 @@ const beamData = ref(null);
 const loading = ref(true);
 const error = ref(null);
 
-const HIDDEN_KEYS = ["name", "3d_model", "geometry_model", "blank_model", "frame", "local_frame", "global_position", "connected_beams", "joints"];
+const HIDDEN_KEYS = [
+    "name",
+    "3d_model",
+    "geometry_model",
+    "blank_model",
+    "frame",
+    "local_frame",
+    "global_position",
+    "connected_beams",
+    "joints",
+    "processing",
+    "processings",
+    "features",
+    "machining",
+    "key_beam",
+    "is_key_beam",
+];
 
-const engravingText = computed(() => beamData.value?.engraving_text || beamData.value?.name || beamData.value?.["beam ID"]);
+const engravingText = computed(() =>
+    beamData.value?.engraving_text || beamData.value?.name || beamData.value?.["beam ID"]
+);
 
-const beamRows = computed(() => {
-    const beam = beamData.value || {};
-    return [
-        ["beam ID", (beam["beam ID"] || beam.beam_id)?.toString().toUpperCase()],
-        ["key beam", beam.is_key_beam ? "yes" : "no"],
-        ["width (m)", beam["width (m)"]],
-        ["height (m)", beam["height (m)"]],
-        ["length (m)", beam["length (m)"]],
-        ["volume (cm³)", beam["volume (cm³)"] ?? beam["volume (cm3)"]],
-        ["weight (kg)", beam["weight (kg)"]],
-        ["connected beams", beam.connected_beams?.map(b => b.toString().toUpperCase()).join(", ")],
-    ].filter(([, value]) => value !== undefined && value !== null && value !== "");
+const filteredJoints = computed(() => {
+    if (!beamData.value?.joints) return null;
+    const skip = ["all", "details"];
+    const entries = Object.entries(beamData.value.joints).filter(([key]) => !skip.includes(key));
+    if (entries.length === 0) return null;
+    return Object.fromEntries(entries);
 });
-
-const moduleRows = computed(() => {
-    const beam = beamData.value || {};
-    const joints = beam.joints || {};
-    return [
-        ["module", beam.module],
-        ["engraving text", engravingText.value],
-        ["xlap", joints.xlap?.length ? joints.xlap.join(", ") : "none"],
-        ["llap", joints.llap?.length ? joints.llap.join(", ") : "none"],
-        ["tbutt", joints.tbutt?.length ? joints.tbutt.join(", ") : "none"],
-        ["lmiter", joints.lmiter?.length ? joints.lmiter.join(", ") : "none"],
-    ].filter(([, value]) => value !== undefined && value !== null && value !== "");
-});
-
 
 const loadBeamInfo = async () => {
     loading.value = true;
     error.value = null;
     try {
-        if (!props.beamUrl) {
-            throw new Error("No beam URL provided");
-        }
+        if (!props.beamUrl) throw new Error("No beam URL provided");
         const beamName = props.beamUrl.split("/").pop();
         const jsonUrl = props.beamUrl + "/" + beamName + ".json";
         const response = await fetch(jsonUrl);
-        if (!response.ok) {
-            throw new Error(`Failed to fetch beam data: ${response.status} ${response.statusText}`);
-        }
+        if (!response.ok) throw new Error(`Failed to fetch beam data: ${response.status} ${response.statusText}`);
         beamData.value = await response.json();
+        console.log("is_key_beam value:", beamData.value?.is_key_beam);
     } catch (e) {
         error.value = e.message;
         console.error("InfoPanel error:", e);
@@ -71,16 +66,31 @@ watch(() => props.beamUrl, loadBeamInfo);
 
 const isObject = (value) => typeof value === "object" && value !== null;
 const isArray = (value) => Array.isArray(value);
-
-const formatNumber = (value) => (Number.isFinite(value) ? Number(value).toFixed(4) : value);
-
+const formatNumber = (value) => (Number.isFinite(value) ? Number(value).toFixed(2) : value);
 const formatValue = (value) => {
     if (isArray(value)) return value.map(formatNumber).join(", ");
     if (isObject(value)) return JSON.stringify(value);
+    if (Number.isFinite(value)) return Number(value).toFixed(2);
     return value;
 };
+const formatLabel = (key) => key.replace(/_/g, " ").replace("cm3", "cm³");
 
-const formatLabel = (key) => key.replace(/_/g, " ");
+const formatJointValue = (jointData) => {
+    if (jointData === null || jointData === undefined) {
+        return "—";
+    }
+
+    if (isArray(jointData)) {
+        return jointData.length === 0 ? "—" : jointData.join(", ");
+    }
+
+    if (isObject(jointData)) {
+        const values = Object.values(jointData);
+        return values.length === 0 ? "—" : values.join(", ");
+    }
+
+    return jointData || "—";
+};
 </script>
 
 <template>
@@ -94,27 +104,72 @@ const formatLabel = (key) => key.replace(/_/g, " ");
             </div>
 
             <div class="info-grid">
-                <section class="info-section">
+                <!-- LEFT COLUMN: BEAM -->
+                <div class="info-column">
                     <h3>Beam</h3>
                     <ul class="specs-list">
-                        <li v-for="[label, value] in beamRows" :key="label" class="spec-item">
-                            <span class="label">{{ label }}</span>
-                            <span class="value">{{ formatValue(value) }}</span>
+                        <li class="spec-item">
+                            <span class="label">beam ID</span>
+                            <span class="value">{{ beamData["beam ID"]?.toUpperCase() }}</span>
+                        </li>
+                        <li class="spec-item">
+                            <span class="label">module</span>
+                            <span class="value">{{ beamData.module }}</span>
+                        </li>
+                        <template v-for="(value, key) in beamData" :key="key">
+                            <li
+                                v-if="!HIDDEN_KEYS.includes(key) && key !== 'beam ID' && key !== 'module' && key !== 'engraving_text'"
+                                class="spec-item"
+                            >
+                                <span class="label">{{ formatLabel(key) }}</span>
+                                <span class="value">{{ formatValue(value) }}</span>
+                            </li>
+                        </template>
+                        <li v-if="beamData.connected_beams" class="spec-item">
+                            <span class="label">connected beams</span>
+                            <span class="value">
+                                {{ isArray(beamData.connected_beams)
+                                    ? beamData.connected_beams.map(b => b.toUpperCase()).join(", ")
+                                    : beamData.connected_beams.toUpperCase() }}
+                            </span>
+                        </li>
+                        <li v-if="beamData.is_key_beam === true || beamData.is_key_beam === 'true'" class="spec-item">
+                            <span class="label">key beam</span>
+                            <span class="value">Yes</span>
                         </li>
                     </ul>
-                </section>
+                </div>
 
-                <section class="info-section">
+                <!-- RIGHT COLUMN: MODULE -->
+                <div class="info-column">
                     <h3>Module</h3>
                     <ul class="specs-list">
-                        <li v-for="[label, value] in moduleRows" :key="label" class="spec-item">
-                            <span class="label">{{ label }}</span>
-                            <span class="value">{{ formatValue(value) }}</span>
+                        <li class="spec-item">
+                            <span class="label">engraving text</span>
+                            <span class="value">{{ engravingText }}</span>
                         </li>
+
+                        <li class="spec-item joints-section-title">
+                            <span>joints</span>
+                        </li>
+
+                        <template v-if="filteredJoints">
+                            <li
+                                v-for="(jointData, jointType) in filteredJoints"
+                                :key="jointType"
+                                class="spec-item"
+                            >
+                                <span class="joint-tag">{{ jointType }}</span>
+                                <span class="joint-values">{{ formatJointValue(jointData) }}</span>
+                            </li>
+                        </template>
+                        <template v-else>
+                            <li class="spec-item">
+                                <span class="value" style="width: 100%; text-align: right;">—</span>
+                            </li>
+                        </template>
                     </ul>
-                </section>
-
-
+                </div>
             </div>
         </div>
     </div>
@@ -177,7 +232,7 @@ h3 {
 
 .info-grid {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: 1fr 1fr;
     gap: 18px;
 }
 
@@ -192,6 +247,7 @@ h3 {
 .spec-item {
     display: flex;
     justify-content: space-between;
+    align-items: center;
     gap: 12px;
     padding: 6px 0;
     border-bottom: 1px solid #e0e0e0;
@@ -206,6 +262,20 @@ h3 {
     color: #666;
     font-weight: 400;
     flex: 0 0 auto;
+    font-size: 12px;
+}
+
+.joint-tag {
+    border: 1px solid #d0d0d0;
+    padding: 0 4px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #666;
+    line-height: 18px;
+    height: 18px;
+    display: inline-flex;
+    align-items: center;
+    flex: 0 0 auto;
 }
 
 .value,
@@ -217,29 +287,14 @@ h3 {
     word-break: break-word;
 }
 
-.joints-container {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-    margin-top: 8px;
-}
-
-.joint-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 12px;
+.joints-section-title {
+    color: #666;
     font-size: 12px;
+    font-weight: 400;
+    text-transform: none;
+    padding: 6px 0;
     border-bottom: 1px solid #e0e0e0;
-    padding-bottom: 5px;
-}
-
-.joint-type {
-    color: #111;
-    font-weight: 600;
-    border: 1px solid #d8d8d8;
-    padding: 2px 6px;
-    flex: 0 0 auto;
+    justify-content: center;
 }
 
 @media (max-width: 900px) {
@@ -269,6 +324,22 @@ h3 {
         margin-bottom: 3px;
     }
 
+    .label {
+        font-size: 10px;
+    }
+
+    .joint-tag {
+        font-size: 9px;
+        font-weight: 600;
+        padding: 0 3px;
+        line-height: 16px;
+        height: 16px;
+    }
+
+    .joints-section-title {
+        font-size: 10px;
+    }
+
     .module-tag {
         padding: 2px 6px;
         font-size: 10px;
@@ -278,20 +349,10 @@ h3 {
         gap: 7px;
     }
 
-    .spec-item,
-    .joint-row {
+    .spec-item {
         gap: 8px;
         padding: 4px 0;
         font-size: 10px;
-    }
-
-    .joint-type {
-        padding: 1px 4px;
-    }
-
-    .joints-container {
-        gap: 3px;
-        margin-top: 4px;
     }
 }
 </style>
