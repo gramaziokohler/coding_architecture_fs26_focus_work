@@ -305,7 +305,7 @@ def create_stencil(
             ref_pt = opening.points[0]  # Erster Punkt der Kurve als Positionscheck
             
             # Nur hinzufügen, wenn an dieser Stelle noch keine Kurve liegt
-            if not any(ref_pt.distance_to(seen) < 0.005 for seen in seen_centers):
+            if not any(ref_pt.distance(seen) < 0.005 for seen in seen_centers): # <-- distance statt distance_to
                 plate_holes_out.append(opening.transformed(plate.modeltransformation))
                 seen_centers.append(ref_pt)
 
