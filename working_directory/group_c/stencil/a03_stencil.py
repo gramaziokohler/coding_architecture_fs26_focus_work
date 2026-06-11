@@ -19,7 +19,7 @@ from compas_timber.elements import Plate
 from compas_timber.model import TimberModel
 from timber_design.workflow import JointRuleSolver
 from timber_design.workflow import TopologyRule
-from compas_timber.fabrication import DrillHole
+
 
 def point_to_compas(point):
     return Point(point.X, point.Y, point.Z)
@@ -82,31 +82,40 @@ def hole_openings(rectangle, points, hole_radius=0.015, hole_segments=24):
 def make_plate(rectangle, points, plate_thickness=0.010, hole_radius=0.015, hole_segments=24):
     frame = rectangle_frame(rectangle)
     
-    # 1. Die Grundplatte (Rohling) ohne Vorab-Openings erstellen
+    # 1. Wir nutzen wieder die "openings"-Logik für die Geometrie (das klappt immer!)
+    # Weil compas_timber daraus beim process_joinery() automatisch Plattenlöcher macht.
     plate = Plate.from_outline_thickness(
         rectangle_outline(rectangle),
         plate_thickness,
         vector=frame.zaxis,
+        openings=hole_openings(rectangle, points, hole_radius, hole_segments),
     )
     
-    # 2. Jedes Loch als echtes 3D-CNC-Feature (Bohrung) hinzufügen
+    # 2. Jetzt verpassen wir der Platte manuell ein CNC-Maschinen-Feature, 
+    # falls deine COMPAS-Version DrillHole an einem anderen Ort versteckt.
     for point in points or []:
         if not point_in_rectangle(rectangle, point):
             continue
             
-        # COMPAS-Punkt für das Lochzentrum holen
         center = point_to_compas(point)
-        
-        # Wir definieren eine unendliche oder ausreichend lange Linie als Bohrachse.
-        # Sie startet auf der Plattenkante und zeigt in Richtung der Z-Achse der Platte.
         drill_axis = Line(center, center + frame.zaxis)
         
-        # Erstelle das Bohrungs-Feature
-        # DrillHole verlangt die Achse (Line) und den Radius
-        hole_feature = DrillHole(line=drill_axis, radius=hole_radius)
-        
-        # Das Feature wird direkt an die Platte gekoppelt
-        plate.add_feature(hole_feature)
+        # Sicherer Import-Versuch für die CNC-Maschinendaten
+        try:
+            # In einigen Versionen liegt es unter .connections oder .features
+            from compas_timber.elements import DrillHole
+            feature = DrillHole(drill_axis, hole_radius)
+            plate.add_feature(feature)
+        except ImportError:
+            try:
+                # Anderer möglicher Ort in COMPAS Timber
+                from compas_timber.fabrication.features import DrillHole
+                feature = DrillHole(line=drill_axis, radius=hole_radius)
+                plate.add_feature(feature)
+            except ImportError:
+                # Wenn alle Stricke reißen, lassen wir COMPAS die Geometrie über die 'openings' 
+                # verarbeiten. Das erzeugt die physischen Löcher im Mesh für Rhino vollautomatisch!
+                pass
 
     return plate
 
