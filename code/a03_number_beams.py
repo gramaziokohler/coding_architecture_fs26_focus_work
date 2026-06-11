@@ -140,6 +140,9 @@ def vector_cross(a, b):
         a[0] * b[1] - a[1] * b[0],
     ]
 
+def vector_dot(a, b):
+    return sum(a[i] * b[i] for i in range(3))
+
 def vector_length(v):
     return math.sqrt(sum(c * c for c in v))
 
@@ -266,6 +269,57 @@ def get_beam_weight(beam, length, density=500):
     w_m = w if w < 1 else w / 100.0
     h_m = h if h < 1 else h / 100.0
     return w_m * h_m * length * density
+
+def get_blank_length(beam, fallback=None):
+    def positive_number(value):
+        try:
+            number = float(value)
+            return number if number > 0 else None
+        except:
+            return None
+
+    for attr in ("blank_length", "blank_len"):
+        number = positive_number(getattr(beam, attr, None))
+        if number:
+            return number
+
+    attributes = getattr(beam, "attributes", None)
+    if isinstance(attributes, dict):
+        for key in ("blank_length", "blank_len"):
+            number = positive_number(attributes.get(key))
+            if number:
+                return number
+
+    blank = getattr(beam, "blank", None)
+    for attr in ("length", "xsize", "x_size", "size_x"):
+        number = positive_number(getattr(blank, attr, None))
+        if number:
+            return number
+
+    blank_attributes = getattr(blank, "attributes", None)
+    if isinstance(blank_attributes, dict):
+        for key in ("length", "blank_length", "xsize", "x_size", "size_x"):
+            number = positive_number(blank_attributes.get(key))
+            if number:
+                return number
+
+    try:
+        mesh_data = geometry_to_vertices_and_faces_any(blank)
+        if mesh_data:
+            vertices, _ = mesh_data
+            blank_frame = getattr(blank, "frame", None)
+            frame = blank_frame or getattr(beam, "frame", None)
+            axis = xyz_to_list(getattr(frame, "xaxis", None)) if frame else None
+            if axis:
+                axis = vector_normalize(axis)
+                projections = [vector_dot(vertex, axis) for vertex in vertices]
+                number = positive_number(max(projections) - min(projections))
+                if number:
+                    return number
+    except:
+        pass
+
+    return fallback
 
 def get_beam_local_frame(beam):
     try:
@@ -999,50 +1053,7 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
     for k in base_labels:
         ordered_by_module[k] = connected_growth(seeds[k], groups[k])
 
-    # =========================================================================
-    # POST-PROCESSING: MAPPATURA NOMI INIZIALI
-    # =========================================================================
-    guid_by_initial_name = {}
-    node_initial_name = {}
-
-    for k in base_labels:
-        for i, node in enumerate(ordered_by_module[k]):
-            initial_name = "{}{}".format(k, i + 1)
-            guid_by_initial_name[initial_name] = node
-            node_initial_name[node] = initial_name
-
-    # =========================================================================
-    # SPOSTAMENTI MANUALI
-    # Ordine di applicazione:
-    #   1. G e H prima (estrazione da moduli base)
-    #   2. poi D19/D20/D21 -> B e F23 -> E
-    # =========================================================================
-
-    # --- Tutti gli spostamenti definiti ---
-    # Nota: D19/D20/D21 e F23 vengono calcolati DOPO le rinumerazioni G/H,
-    # quindi usiamo i nomi iniziali pre-qualsiasi spostamento.
-
-    manual_moves_ordered = [
-        # (nome_iniziale, modulo_target)
-        # Prima: estrazione moduli G e H
-        ("A10",  "G"),
-        ("C27",  "G"),
-        ("C28",  "G"),
-        ("C29",  "G"),
-        ("D17",  "G"),
-        ("D18",  "G"),
-        ("C25",  "H"),
-        ("C26",  "H"),
-        ("D22",  "H"),
-        # Poi: spostamenti intra-modulo
-        ("D19",  "B"),
-        ("D20",  "B"),
-        ("D21",  "B"),
-        ("F23",  "E"),
-    ]
-
     def _insert_by_proximity(target_list, node_to_move):
-        """Inserisce node_to_move nella posizione più sensata per prossimità."""
         if not target_list:
             target_list.append(node_to_move)
             return
@@ -1057,21 +1068,107 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
                 best_idx = idx_n
         target_list.insert(best_idx + 1, node_to_move)
 
-    # Prima passata: rimozione dai moduli originali
-    for initial_name, target_mod in manual_moves_ordered:
-        if initial_name in guid_by_initial_name:
-            node_to_move = guid_by_initial_name[initial_name]
+    # =========================================================================
+    # POST-PROCESSING FASE 1: APPLICAZIONE SPOSTAMENTI STORICI (Nomenclatura Corrente)
+    # =========================================================================
+    guid_by_pure_grid_name = {}
+    for k in base_labels:
+        for i, node in enumerate(ordered_by_module[k]):
+            pure_name = "{}{}".format(k, i + 1)
+            guid_by_pure_grid_name[pure_name] = node
+
+    historical_moves = {
+        "B19": "D", "B22": "D", "B23": "D", "B24": "D",
+        "A28": "C", "A29": "C", "E36": "C"
+    }
+
+    for pure_name, target_mod in historical_moves.items():
+        if pure_name in guid_by_pure_grid_name:
+            node_to_move = guid_by_pure_grid_name[pure_name]
+            for mod_k in base_labels:
+                if node_to_move in ordered_by_module[mod_k]:
+                    ordered_by_module[mod_k].remove(node_to_move)
+                    break
+
+    for pure_name, target_mod in historical_moves.items():
+        if pure_name in guid_by_pure_grid_name:
+            node_to_move = guid_by_pure_grid_name[pure_name]
+            _insert_by_proximity(ordered_by_module[target_mod], node_to_move)
+            assignment[node_to_move] = target_mod
+
+    # =========================================================================
+    # POST-PROCESSING FASE 2: MAPPATURA DALLA NOMENCLATURA MODIFICATA CORRENTE
+    # =========================================================================
+    guid_by_modified_name = {}
+    node_initial_name = {}
+
+    for k in base_labels:
+        for i, node in enumerate(ordered_by_module[k]):
+            current_modified_name = "{}{}".format(k, i + 1)
+            guid_by_modified_name[current_modified_name] = node
+            node_initial_name[node] = current_modified_name
+
+    # =========================================================================
+    # POST-PROCESSING FASE 3: NUOVI MODULI G, H E SPOSTAMENTI FINALI RICHIESTI
+    # =========================================================================
+    new_manual_moves_ordered = [
+        ("A10",  "G"),
+        ("C27",  "G"),
+        ("C28",  "G"),
+        ("C29",  "G"),
+        ("D17",  "G"),
+        ("D18",  "G"),
+        ("C25",  "H"),
+        ("C26",  "H"),
+        ("D22",  "H"),
+        ("D19",  "B"),
+        ("D20",  "B"),
+        ("D21",  "B"),
+        ("F23",  "E"),
+    ]
+
+    for interim_name, target_mod in new_manual_moves_ordered:
+        if interim_name in guid_by_modified_name:
+            node_to_move = guid_by_modified_name[interim_name]
             for mod_k in all_labels:
                 if node_to_move in ordered_by_module[mod_k]:
                     ordered_by_module[mod_k].remove(node_to_move)
                     break
 
-    # Seconda passata: inserimento nei moduli target con ordine sensato
-    for initial_name, target_mod in manual_moves_ordered:
-        if initial_name in guid_by_initial_name:
-            node_to_move = guid_by_initial_name[initial_name]
+    for interim_name, target_mod in new_manual_moves_ordered:
+        if interim_name in guid_by_modified_name:
+            node_to_move = guid_by_modified_name[interim_name]
             _insert_by_proximity(ordered_by_module[target_mod], node_to_move)
             assignment[node_to_move] = target_mod
+
+    # =========================================================================
+    # POST-PROCESSING FASE 4: NUOVA NOMENCLATURA DEI MODULI RICHIESTA
+    # E -> A, F -> B, A -> C, B -> D, C -> E, G -> F, H -> G, D -> H
+    # =========================================================================
+    module_renaming_map = {
+        "E": "A",
+        "F": "B",
+        "A": "C",
+        "B": "D",
+        "C": "E",
+        "G": "F",
+        "H": "G",
+        "D": "H"
+    }
+
+    # Creiamo una copia temporanea del dizionario per applicare la ridenominazione in blocco senza sovrascritture distruttive
+    renamed_ordered_by_module = {k: [] for k in all_labels}
+    for old_mod, new_mod in module_renaming_map.items():
+        renamed_ordered_by_module[new_mod] = ordered_by_module[old_mod]
+    
+    # Aggiorniamo la lista di riferimento principale
+    ordered_by_module = renamed_ordered_by_module
+
+    # Aggiorniamo i metadati dei nodi dentro la mappa globale d'assegnazione
+    for node in assignment:
+        old_assignment = assignment[node]
+        if old_assignment in module_renaming_map:
+            assignment[node] = module_renaming_map[old_assignment]
 
     # =========================
     # 7. GENERAZIONE BEAM OUTPUT
@@ -1086,7 +1183,6 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
             beam = timber_model.get_element(node)
             set_beam_partitioning_attributes(beam, k, i + 1, beam_id=name.lower(), display_name=name)
 
-            # Key beam: confronto col nome INIZIALE (pre-spostamento)
             orig_name = node_initial_name.get(node, "")
             is_key_beam_by_guid[node] = (orig_name in KEY_BEAMS_LIST)
 
@@ -1233,6 +1329,7 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
                 except:
                     length = 0.0
 
+                blank_length = get_blank_length(beam, length)
                 w, h = get_beam_section(beam)
                 w_m = w if (w is not None and w < 1) else (w / 100.0 if w is not None else None)
                 h_m = h if (h is not None and h < 1) else (h / 100.0 if h is not None else None)
@@ -1304,6 +1401,7 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
                     "width (m)": round(w_m, 4) if w_m else None,
                     "height (m)": round(h_m, 4) if h_m else None,
                     "length (m)": round(length, 2),
+                    "blank_length (m)": round(blank_length, 2) if blank_length else None,
                     "volume (cm³)": round(volume_m3 * 1_000_000, 2),
                     "weight (kg)": round(weight, 2),
                     "local_frame": local_frame,
@@ -1573,4 +1671,3 @@ def export_web_data(model_path, output_dir, base_url, density, module_sizes, cle
         "beam_count": len(beam_records),
         "joint_ref_count": sum(len(joints) for joints in joints_by_beam.values()),
     }
-

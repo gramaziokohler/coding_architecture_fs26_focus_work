@@ -6,6 +6,7 @@ Copy this file into a project folder that is on the Python path and import
 """
 
 from compas.geometry import Brep
+from compas.geometry import Line
 from compas.geometry import Plane
 from compas.geometry import Point
 from compas.geometry import Polyhedron
@@ -126,42 +127,13 @@ class CutoffLLapJoint(LLapJoint):
             self.beam_a.remove_features(self.features)
             self.beam_b.remove_features(self.features)
 
-        negative_volume_a, negative_volume_b = self._create_negative_volumes(self.cut_plane_bias)
-
-        if self.limit_lap_removal:
-            clipping_plane_a = self.extension_plane_b
-            clipping_plane_b = self.extension_plane_a
-            if self.invert_lap_removal_plane:
-                clipping_plane_a = self._inverted_plane(clipping_plane_a)
-                clipping_plane_b = self._inverted_plane(clipping_plane_b)
-            negative_volume_a = self._clip_polyhedron_to_plane(negative_volume_a, clipping_plane_a, self.debug_clip_status)
-            negative_volume_b = self._clip_polyhedron_to_plane(negative_volume_b, clipping_plane_b, self.debug_clip_status)
-
-        if self.extend_lap_removal_to_inner_edge:
-            negative_volume_a = self._extend_polyhedron_to_beam_edge(
-                negative_volume_a,
-                self.beam_a,
-                self.beam_b,
-                self.ref_side_index_a,
-                self.centerline_intersection,
-                clipping_plane_a if self.limit_lap_removal else self.extension_plane_b,
-                self.debug_clip_status,
-            )
-            negative_volume_b = self._extend_polyhedron_to_beam_edge(
-                negative_volume_b,
-                self.beam_b,
-                self.beam_a,
-                self.ref_side_index_b,
-                self.centerline_intersection,
-                clipping_plane_b if self.limit_lap_removal else self.extension_plane_a,
-                self.debug_clip_status,
-            )
+        negative_volume_a, negative_volume_b = self._create_cutoff_negative_volumes()
 
         self.debug_negative_volume_a = negative_volume_a
         self.debug_negative_volume_b = negative_volume_b
 
-        lap_feature_a = LapProxy(negative_volume_a, self.beam_a, ref_side_index=self.ref_side_index_a)
-        lap_feature_b = LapProxy(negative_volume_b, self.beam_b, ref_side_index=self.ref_side_index_b)
+        lap_feature_a = LapProxy.from_volume_and_beam(negative_volume_a, self.beam_a, ref_side_index=self.ref_side_index_a)
+        lap_feature_b = LapProxy.from_volume_and_beam(negative_volume_b, self.beam_b, ref_side_index=self.ref_side_index_b)
         self._mark_feature_as_joinery(lap_feature_a)
         self._mark_feature_as_joinery(lap_feature_b)
 
@@ -174,6 +146,103 @@ class CutoffLLapJoint(LLapJoint):
         self.beam_a.add_features(features_a)
         self.beam_b.add_features(features_b)
         self.features.extend(features_a + features_b)
+
+    def _create_cutoff_negative_volumes(self):
+        """Build lap negative volumes directly from beam edge intersections.
+
+        Instead of clipping a rectangular volume after the fact, we construct
+        each hexahedron from 6 planes derived from actual beam geometry:
+        - top/bottom: the ref-side plane of each beam + the midplane (bias)
+        - two lateral sides: beam B's side planes (same as LapJoint)
+        - cutoff end: beam A's cutoff plane (extension_plane_a/b)
+        - far end: derived from the bias split (same as LapJoint)
+
+        This gives a clean 6-face axis-derived polyhedron with the cutoff
+        baked in — no post-clipping needed, BTLx-compatible.
+        """
+        from compas_timber.connections import LLapJoint as _LLapJoint
+
+        beam_a, beam_b = self.beam_a, self.beam_b
+
+        plane_cut_vector = beam_a.centerline.vector.cross(beam_b.centerline.vector)
+        offset_vector = Vector.from_start_end(*intersection_line_line(beam_a.centerline, beam_b.centerline))
+        if plane_cut_vector.dot(offset_vector) >= 0:
+            plane_cut_vector = -plane_cut_vector
+
+        planes_a = _LLapJoint._sort_beam_planes(beam_a, plane_cut_vector)
+        plane_a0, plane_a1, plane_a2, plane_a3 = planes_a
+
+        planes_b = _LLapJoint._sort_beam_planes(beam_b, -plane_cut_vector)
+        plane_b0, plane_b1, plane_b2, plane_b3 = planes_b
+
+        cutoff_a = self.extension_plane_a
+        cutoff_b = self.extension_plane_b
+
+        def make_hexahedron(top_plane, bottom_plane, start_plane, end_plane,
+                            side_plane_near, side_plane_far):
+            v = []
+            for end_pl in (start_plane, end_plane):
+                for side_pl in (side_plane_near, side_plane_far):
+                    for tb_pl in (top_plane, bottom_plane):
+                        pt = intersection_plane_plane_plane(end_pl, side_pl, tb_pl)
+                        if pt is None:
+                            return None
+                        v.append(Point(*pt))
+            faces = [
+                [0, 2, 6, 4],  # top
+                [1, 5, 7, 3],  # bottom
+                [0, 1, 3, 2],  # start
+                [4, 6, 7, 5],  # end
+                [0, 4, 5, 1],  # near side
+                [2, 3, 7, 6],  # far side
+            ]
+            poly = Polyhedron(v, faces)
+            try:
+                brep = Brep.from_mesh(poly.to_mesh())
+                if brep.volume is not None and brep.volume < 0:
+                    faces = [face[::-1] for face in faces]
+                    poly = Polyhedron(v, faces)
+            except Exception:
+                pass
+            return poly
+
+        # Find bias split plane from corner lines (same logic as LapJoint._create_polyhedron)
+        corner_pairs = [(plane_a1, plane_b1), (plane_a1, plane_b2), (plane_a2, plane_b2), (plane_a2, plane_b1)]
+        lines = []
+        for sp1, sp2 in corner_pairs:
+            pt_top = intersection_plane_plane_plane(sp1, sp2, plane_a0)
+            pt_bot = intersection_plane_plane_plane(sp1, sp2, plane_b0)
+            if pt_top is None or pt_bot is None:
+                return self._create_negative_volumes(self.cut_plane_bias)
+            lines.append(Line(Point(*pt_top), Point(*pt_bot)))
+        longest = max(lines, key=lambda l: l.length)
+        bias_plane = Plane(longest.point_at(self.cut_plane_bias), longest.direction)
+
+        vol_a = make_hexahedron(
+            top_plane=plane_b0,
+            bottom_plane=bias_plane,
+            start_plane=cutoff_a,
+            end_plane=plane_a3,
+            side_plane_near=plane_a1,
+            side_plane_far=plane_a2,
+        )
+
+        vol_b = make_hexahedron(
+            top_plane=plane_a0,
+            bottom_plane=bias_plane,
+            start_plane=cutoff_b,
+            end_plane=plane_b3,
+            side_plane_near=plane_b1,
+            side_plane_far=plane_b2,
+        )
+
+        if vol_a is None or vol_b is None:
+            self.debug_clip_status.append("cutoff volume construction failed; falling back")
+            return self._create_negative_volumes(self.cut_plane_bias)
+
+        if self.flip_lap_side:
+            return vol_b, vol_a
+        return vol_a, vol_b
 
     @staticmethod
     def _mark_feature_as_joinery(feature):
