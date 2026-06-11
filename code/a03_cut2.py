@@ -2,9 +2,9 @@
 # keyword: timber-packing, production-layout, attribute-driven
 import Rhino.Geometry as rg
 
-def get_flatten_xform(beam):
-    """Convert beam 3D frame to 2D layout (flatten to WorldXY plane)."""
-    f = beam.frame
+def get_flatten_xform(beam, geom_obj=None):
+    """Convert beam or blank 3D frame to 2D layout (flatten to WorldXY plane)."""
+    f = getattr(geom_obj, "frame", None) or beam.frame
     plane = rg.Plane(rg.Point3d(f.point.x, f.point.y, f.point.z), 
                      rg.Vector3d(f.xaxis.x, f.xaxis.y, f.xaxis.z), 
                      rg.Vector3d(f.yaxis.x, f.yaxis.y, f.yaxis.z))
@@ -27,6 +27,30 @@ def get_rhino_geometry(geom_obj):
     if hasattr(geom_obj, 'Geometry'):
         return geom_obj.Geometry
     return geom_obj
+
+def duplicate_geometry(geo):
+    if hasattr(geo, 'DuplicateBrep'):
+        return geo.DuplicateBrep()
+    if hasattr(geo, 'Duplicate'):
+        return geo.Duplicate()
+    return None
+
+def get_positive_number(value):
+    try:
+        number = float(value)
+        return number if number > 0 else None
+    except:
+        return None
+
+def get_blank_length(beam, fallback=None):
+    """Read the packing length from beam.blank geometry, not custom beam attributes."""
+    blank = getattr(beam, "blank", None)
+    for attr in ("length", "lenght", "xsize", "x_size", "size_x"):
+        number = get_positive_number(getattr(blank, attr, None))
+        if number:
+            return number, "beam.blank.{}".format(attr)
+
+    return fallback, "measured beam.blank bounding length fallback"
 
 def create_geometry_text(text, position, text_height=0.03):
     """Create 2D text geometry centered at position."""
@@ -75,16 +99,19 @@ def run_packing(timber_model, origin, saw_gap, label_offset, price_lm):
     if not timber_model or not timber_model.beams:
         return [], [], [], 0, [], [], [], "Error: No beams in timber_model"
     
-    # Extract beams with their attributes
+    # Extract beam blanks with their attributes. Packing must be based on
+    # beam.blank, not on the cut beam geometry.
     processed = []
     for beam in timber_model.beams:
-        # Get native Rhino geometry from COMPAS wrapper
-        native_geo = get_rhino_geometry(beam.geometry)
+        blank_obj = getattr(beam, "blank", None)
+        native_geo = get_rhino_geometry(blank_obj)
         if native_geo is None:
-            continue
+            raise ValueError("Beam {} has no usable beam.blank for packing".format(getattr(beam, "key", "?")))
         
-        xform = get_flatten_xform(beam)
-        geo = native_geo.Duplicate()
+        xform = get_flatten_xform(beam, blank_obj)
+        geo = duplicate_geometry(native_geo)
+        if geo is None:
+            raise ValueError("Beam {} beam.blank could not be duplicated for packing".format(getattr(beam, "key", "?")))
         geo.Transform(xform)
         
         # Read display name from attributes (set by run_module_naming)
@@ -94,7 +121,10 @@ def run_packing(timber_model, origin, saw_gap, label_offset, price_lm):
         beam_id = beam.attributes.get("beam_id", "")
         
         bbox = geo.GetBoundingBox(True)
-        length = bbox.Max.X - bbox.Min.X
+        measured_blank_length = bbox.Max.X - bbox.Min.X
+        length, length_source = get_blank_length(beam, measured_blank_length)
+        if length is None:
+            raise ValueError("Beam {} beam.blank has no measurable packing length".format(getattr(beam, "key", "?")))
         
         processed.append({
             "beam": beam,
@@ -103,7 +133,9 @@ def run_packing(timber_model, origin, saw_gap, label_offset, price_lm):
             "module": module,
             "number": number,
             "beam_id": beam_id,
-            "length": length
+            "length": length,
+            "measured_blank_length": measured_blank_length,
+            "length_source": length_source
         })
     
     # Sort by length (descending) for optimal packing
@@ -124,8 +156,13 @@ def run_packing(timber_model, origin, saw_gap, label_offset, price_lm):
     for item in processed:
         xform_nest = rg.Transform.Translation(current_x, origin.Y, origin.Z)
         
-        # Position beam geometry
-        g = item["geo"].Duplicate()
+        # Position blank geometry on the packing line.
+        g = duplicate_geometry(item["geo"])
+        if g is None:
+            continue
+        bbox_before = g.GetBoundingBox(True)
+        if bbox_before and bbox_before.IsValid:
+            g.Transform(rg.Transform.Translation(-bbox_before.Min.X, -bbox_before.Min.Y, -bbox_before.Min.Z))
         g.Transform(xform_nest)
         arr_boxes.append(g)
         
@@ -158,6 +195,9 @@ def run_packing(timber_model, origin, saw_gap, label_offset, price_lm):
             "number": item["number"],
             "nested_position_x": current_x,
             "nested_length": length,
+            "measured_blank_length": item["measured_blank_length"],
+            "length_source": item["length_source"],
+            "uses_beam_blank": True,
             "has_text_feature": True
         })
         
@@ -179,7 +219,7 @@ def run_packing(timber_model, origin, saw_gap, label_offset, price_lm):
         if beams_in_module:
             report_lines.append(f"\n{module_letter}: {len(beams_in_module)} beams")
             for b in beams_in_module:
-                report_lines.append(f"  └─ {b['display_name']} @ x={b['nested_position_x']:.2f}m")
+                report_lines.append(f"  └─ {b['display_name']} @ x={b['nested_position_x']:.2f}m | blank L={b['nested_length']:.2f}m")
     
     report = "\n".join(report_lines)
     

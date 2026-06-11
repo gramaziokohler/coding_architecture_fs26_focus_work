@@ -16,7 +16,7 @@ class CutItem:
 
 
 def create_geometry_text(text, position, text_height=0.03):
-    """Genera le curve di un testo perfettamente piatto in Top View (XY) con riempimento Hatch."""
+    """Create editable 2D Rhino text, not exploded curves or hatches."""
     te = rg.TextEntity()
     te.Text = text
     te.FontIndex = 0
@@ -25,30 +25,15 @@ def create_geometry_text(text, position, text_height=0.03):
     plane = rg.Plane.WorldXY
     plane.Origin = position
     te.Plane = plane
-    
-    curves = te.Explode()
-    if not curves:
-        return []
-        
-    joined = rg.Curve.JoinCurves(curves, 0.001) or curves
+
     bbox = te.GetBoundingBox(True)
-    
     if bbox.IsValid:
         center_x = (bbox.Max.X + bbox.Min.X) / 2.0
         center_y = (bbox.Max.Y + bbox.Min.Y) / 2.0
         move_to_center = rg.Transform.Translation(position.X - center_x, position.Y - center_y, 0)
-        for crv in joined:
-            crv.Transform(move_to_center)
-            
-    output_objects = []
-    if joined:
-        hatches = rg.Hatch.Create(joined, 0, 0.0, 1.0, 0.001)
-        if hatches:
-            output_objects.extend(hatches)
-        else:
-            output_objects.extend(joined)
-            
-    return output_objects
+        te.Transform(move_to_center)
+
+    return [te]
 
 
 def create_3d_text_engraving(text, position, text_height=0.03, engraving_depth=0.005):
@@ -170,16 +155,16 @@ def get_longest_brep_edge_length(brep):
     return max(edge_lengths) if edge_lengths else None
 
 
-def get_native_blank_length(beam):
-    if hasattr(beam, "blank_length") and getattr(beam, "blank_length") is not None:
-        return float(getattr(beam, "blank_length")), "PROPRIETÀ_NATIVA (.blank_length)"
-    if hasattr(beam, "attributes") and isinstance(beam.attributes, dict) and "blank_length" in beam.attributes:
-        return float(beam.attributes["blank_length"]), "DIZIONARIO_ATTRIBUTI (['blank_length'])"
-    if hasattr(beam, "blank_len") and getattr(beam, "blank_len") is not None:
-        return float(getattr(beam, "blank_len")), "PROPRIETÀ_NATIVA_CORTA (.blank_len)"
-    if hasattr(beam, "attributes") and isinstance(beam.attributes, dict) and "blank_len" in beam.attributes:
-        return float(beam.attributes["blank_len"]), "DIZIONARIO_ATTRIBUTI_CORTO (['blank_len'])"
-    return None, "MISSING"
+def get_blank_geometry_length(beam):
+    blank = getattr(beam, "blank", None)
+    for attr in ("length", "lenght", "xsize", "x_size", "size_x"):
+        try:
+            value = float(getattr(blank, attr))
+            if value > 0:
+                return value, "beam.blank.{}".format(attr)
+        except:
+            pass
+    return None, "beam.blank measured geometry fallback"
 
 
 def compas_frame_to_rhino_plane(compas_frame):
@@ -234,9 +219,6 @@ def run_packing(timber_model, origin, stock_length_beam_6x8, stock_length_beam_1
         if not correct_name:
             correct_name = "B{:02d}".format(idx + 1)
 
-        # Accordo sulla sorgente blank length
-        native_blank_len, blank_source = get_native_blank_length(beam)
-        
         blank_geo = getattr(beam, "blank", None)
         raw_blank_brep = get_rhino_brep_from_compas_geometry(blank_geo)
         if raw_blank_brep is None:
@@ -247,6 +229,7 @@ def run_packing(timber_model, origin, stock_length_beam_6x8, stock_length_beam_1
             raise ValueError("Beam {} beam.blank could not be duplicated as Rhino geometry.".format(correct_name))
         
         blank_frame = getattr(blank_geo, "frame", None) or getattr(beam, "frame", None)
+        flatten_trans = None
         if blank_frame:
             local_plane = compas_frame_to_rhino_plane(blank_frame)
             flatten_trans = rg.Transform.PlaneToPlane(local_plane, rg.Plane.WorldXY)
@@ -260,25 +243,29 @@ def run_packing(timber_model, origin, stock_length_beam_6x8, stock_length_beam_1
         if blank_edge_len is None:
             raise ValueError("Beam {} beam.blank has no measurable Brep edges.".format(correct_name))
 
-        # Uso della blank_length sincronizzata come valore sovrano
+        native_blank_len, blank_source = get_blank_geometry_length(beam)
         chosen_packing_length = native_blank_len if native_blank_len is not None else blank_edge_len
 
         local_bbox = straight_blank_brep.GetBoundingBox(True)
         if local_bbox and local_bbox.IsValid:
             size_box = local_bbox.Max - local_bbox.Min
             width_box, height_box = round(size_box.Y, 4), round(size_box.Z, 4)
+            blank_min_x, blank_min_y, blank_min_z = local_bbox.Min.X, local_bbox.Min.Y, local_bbox.Min.Z
         else:
             width_box, height_box = 0.12, 0.14
+            blank_min_x, blank_min_y, blank_min_z = 0.0, 0.0, 0.0
 
-        # Recupero della vera geometria finale tagliata e sagomata (beam geometry)
+        # Recupero della vera geometria finale tagliata e sagomata.
+        # It must receive the exact same flatten/rotation as beam.blank so its
+        # offset inside the blank is preserved in the packing layout.
         straight_cut_brep = None
         cut_length = None
         raw_cut_brep = get_pure_brep(beam.geometry)
         if raw_cut_brep is not None:
             straight_cut_brep = duplicate_rhino_geometry(raw_cut_brep)
             if straight_cut_brep is not None:
-                if hasattr(beam, "frame") and beam.frame:
-                    straight_cut_brep.Transform(rg.Transform.PlaneToPlane(compas_frame_to_rhino_plane(beam.frame), rg.Plane.WorldXY))
+                if flatten_trans:
+                    straight_cut_brep.Transform(flatten_trans)
                 straight_cut_brep.Transform(rotate_90_x)
                 cut_bbox = straight_cut_brep.GetBoundingBox(True)
                 if cut_bbox and cut_bbox.IsValid:
@@ -295,11 +282,12 @@ def run_packing(timber_model, origin, stock_length_beam_6x8, stock_length_beam_1
             "name": correct_name,
             "length_x": chosen_packing_length, 
             "blank_length": chosen_packing_length, 
-            "blank_length_attr": native_blank_len,
+            "blank_length_native": native_blank_len,
             "cut_length": cut_length, 
-            "blank_source": "Check source: {}".format(blank_source),
+            "blank_source": blank_source,
             "width_y": width_box, 
             "height_z": height_box, 
+            "blank_min": (blank_min_x, blank_min_y, blank_min_z),
             "needed_len": needed_len
         })
 
@@ -369,11 +357,13 @@ def run_packing(timber_model, origin, stock_length_beam_6x8, stock_length_beam_1
                 real_beam_geo = item["cut_brep"].DuplicateBrep()
             else:
                 real_beam_geo = item["blank_brep"].DuplicateBrep()
-                
-            bbox_init = real_beam_geo.GetBoundingBox(True)
-            real_beam_geo.Transform(rg.Transform.Translation(0.0 - bbox_init.Min.X, 0.0 - bbox_init.Min.Y, 0.0 - bbox_init.Min.Z))
-            bbox_current_beam = real_beam_geo.GetBoundingBox(True)
-            real_beam_geo.Transform(rg.Transform.Translation(target_x - bbox_current_beam.Min.X, y_pos - bbox_current_beam.Min.Y, base_pt.Z - bbox_current_beam.Min.Z))
+
+            blank_min_x, blank_min_y, blank_min_z = item["blank_min"]
+            real_beam_geo.Transform(rg.Transform.Translation(
+                target_x - blank_min_x,
+                y_pos - blank_min_y,
+                base_pt.Z - blank_min_z
+            ))
             arranged_boxes.append(real_beam_geo)
 
             # SCATOLE DI DIMENSIONE MASSIMA (MAX LEN BOXES CON BLANK_LENGTH)
@@ -385,7 +375,7 @@ def run_packing(timber_model, origin, stock_length_beam_6x8, stock_length_beam_1
             new_bbox = real_beam_geo.GetBoundingBox(True)
             exact_top_z = base_pt.Z + item["height_z"]
             
-            max_len_lines.append(rg.Line(rg.Point3d(new_bbox.Min.X, new_bbox.Min.Y, exact_top_z + 0.01), rg.Point3d(new_bbox.Min.X + item["blank_length"], new_bbox.Min.Y, exact_top_z + 0.01)))
+            max_len_lines.append(rg.Line(rg.Point3d(target_x, y_pos, exact_top_z + 0.01), rg.Point3d(target_x + item["blank_length"], y_pos, exact_top_z + 0.01)))
             arranged_names.append(item["name"])
 
             lbl_x = (new_bbox.Min.X + new_bbox.Max.X) / 2.0
@@ -503,9 +493,9 @@ def run_packing(timber_model, origin, stock_length_beam_6x8, stock_length_beam_1
                 failed_vacuums.append(item["name"])
 
             cut_length_txt = "{:.3f}m".format(item["cut_length"]) if item["cut_length"] is not None else "n/a"
-            attr_blank_txt = "{:.3f}m".format(item["blank_length_attr"]) if item["blank_length_attr"] is not None else "n/a"
-            dimensions.append("Stock bar n°: {} | {} | Sezione: {:.1f}x{:.1f}cm | L_cut_geom: {} | L_blank_edge: {:.3f}m | L_blank_attr: {} -> [SORGENTE DATI: {}]".format(
-                bar["id"], item["name"], sec_w*100.0, sec_h*100.0, cut_length_txt, item["blank_length"], attr_blank_txt, item["blank_source"]
+            native_blank_txt = "{:.3f}m".format(item["blank_length_native"]) if item["blank_length_native"] is not None else "n/a"
+            dimensions.append("Stock bar n°: {} | {} | Sezione: {:.1f}x{:.1f}cm | L_cut_geom: {} | L_blank_pack: {:.3f}m | L_blank_native: {} -> [SORGENTE DATI: {}]".format(
+                bar["id"], item["name"], sec_w*100.0, sec_h*100.0, cut_length_txt, item["blank_length"], native_blank_txt, item["blank_source"]
             ))
 
     # 4. RENDICONTO STATISTICO
