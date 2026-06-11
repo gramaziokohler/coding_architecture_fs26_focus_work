@@ -3,70 +3,77 @@
   "name": "A15",
   "module": "A",
   "is_key_beam": false,
-  "width (m)": 0.06,
-  "height (m)": 0.08,
-  "length (m)": 0.68,
-  "volume (cm\u00b3)": 3266.53,
-  "weight (kg)": 1.63,
+  "width (m)": 0.12,
+  "height (m)": 0.14,
+  "length (m)": 0.88,
+  "blank_length (m)": 0.89,
+  "volume (cm\u00b3)": 14831.19,
+  "weight (kg)": 7.42,
   "local_frame": {
     "origin": [
-      -0.9192,
-      -1.0172,
-      0.3832
+      5.8768,
+      1.555,
+      0.0
     ],
     "x_axis": [
-      -0.0559,
-      0.8333,
-      -0.55
+      0.1222,
+      0.9925,
+      0.0
     ],
     "y_axis": [
-      0.7294,
-      0.4102,
-      0.5475
+      -0.9925,
+      0.1222,
+      0.0
     ],
     "z_axis": [
-      0.6818,
-      -0.3706,
-      -0.6307
+      0.0,
+      -0.0,
+      1.0
     ]
   },
   "connected_beams": [
     "a13",
-    "a16"
+    "a14",
+    "a17",
+    "a22"
   ],
   "global_position": {
     "centerline_start": [
-      -0.9018,
-      -1.2762,
-      0.5541
+      5.823,
+      1.1182,
+      0.0
     ],
     "centerline_end": [
-      -0.9398,
-      -0.7091,
-      0.1798
+      5.9309,
+      1.9944,
+      0.0
     ],
     "midpoint": [
-      -0.9208,
-      -0.9927,
-      0.367
+      5.8769,
+      1.5563,
+      0.0
     ],
     "midpoint_normalized": [
-      0.0254,
-      0.1964,
-      0.133
+      0.9994,
+      0.6668,
+      0.0
     ]
   },
   "joints": {
     "all": [
-      "243",
-      "240"
+      "334",
+      "338",
+      "340",
+      "341"
     ],
     "xlap": [],
-    "tbutt": [
-      "240"
-    ],
-    "lmiter": []
+    "tbutt": [],
+    "lmiter": [
+      "334"
+    ]
   },
+  "features": [],
+  "processing": [],
   "3d_model": "beams/a15/a15.stl",
   "geometry_model": "beams/a15/a15.stl",
   "blank_model": "beams/a15/a15_blank.stl"

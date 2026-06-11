@@ -2,79 +2,74 @@
   "beam ID": "c23",
   "name": "C23",
   "module": "C",
-  "is_key_beam": false,
+  "is_key_beam": true,
   "width (m)": 0.06,
   "height (m)": 0.08,
-  "length (m)": 1.12,
-  "volume (cm\u00b3)": 5397.87,
-  "weight (kg)": 2.7,
+  "length (m)": 0.69,
+  "blank_length (m)": 0.73,
+  "volume (cm\u00b3)": 3289.99,
+  "weight (kg)": 1.64,
   "local_frame": {
     "origin": [
-      2.0322,
-      -0.1297,
-      2.1095
+      0.775,
+      3.0568,
+      1.7289
     ],
     "x_axis": [
-      -0.5065,
-      -0.8591,
-      0.0738
+      -0.2851,
+      -0.8474,
+      -0.4479
     ],
     "y_axis": [
-      -0.8369,
-      0.4692,
-      -0.2818
+      -0.8259,
+      0.4544,
+      -0.3339
     ],
     "z_axis": [
-      0.2075,
-      -0.2045,
-      -0.9566
+      0.4865,
+      0.2747,
+      -0.8294
     ]
   },
   "connected_beams": [
-    "c22",
-    "c24",
-    "c28",
-    "c3"
+    "c21",
+    "e26"
   ],
   "global_position": {
     "centerline_start": [
-      2.3145,
-      0.349,
-      2.0684
+      0.8688,
+      3.3355,
+      1.8762
     ],
     "centerline_end": [
-      1.7449,
-      -0.6171,
-      2.1513
+      0.6734,
+      2.7547,
+      1.5692
     ],
     "midpoint": [
-      2.0297,
-      -0.134,
-      2.1099
+      0.7711,
+      3.0451,
+      1.7227
     ],
     "midpoint_normalized": [
-      0.4483,
-      0.3549,
-      0.7648
+      0.2684,
+      0.9416,
+      0.6245
     ]
   },
   "joints": {
     "all": [
-      "119",
-      "106",
-      "105",
-      "94"
+      "60",
+      "54"
     ],
-    "xlap": [
-      "119",
-      "105"
-    ],
+    "xlap": [],
     "tbutt": [
-      "106",
-      "94"
+      "54"
     ],
     "lmiter": []
   },
+  "features": [],
+  "processing": [],
   "3d_model": "beams/c23/c23.stl",
   "geometry_model": "beams/c23/c23.stl",
   "blank_model": "beams/c23/c23_blank.stl"

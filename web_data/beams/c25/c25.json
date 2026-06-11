@@ -3,78 +3,75 @@
   "name": "C25",
   "module": "C",
   "is_key_beam": false,
-  "width (m)": 0.06,
-  "height (m)": 0.08,
-  "length (m)": 1.12,
-  "volume (cm\u00b3)": 5357.4,
-  "weight (kg)": 2.68,
+  "width (m)": 0.12,
+  "height (m)": 0.14,
+  "length (m)": 1.36,
+  "blank_length (m)": 1.37,
+  "volume (cm\u00b3)": 22889.2,
+  "weight (kg)": 11.44,
   "local_frame": {
     "origin": [
-      3.0629,
-      0.5252,
-      2.0066
+      -1.0561,
+      2.3629,
+      0.0
     ],
     "x_axis": [
-      -0.4599,
-      -0.8661,
-      0.1961
+      -0.3629,
+      0.9318,
+      0.0
     ],
     "y_axis": [
-      -0.8599,
-      0.4894,
-      0.1451
+      -0.9318,
+      -0.3629,
+      0.0
     ],
     "z_axis": [
-      -0.2216,
-      -0.1019,
-      -0.9698
+      0.0,
+      0.0,
+      1.0
     ]
   },
   "connected_beams": [
-    "c21",
-    "c26",
-    "d11",
-    "d22"
+    "c14",
+    "c24",
+    "c26"
   ],
   "global_position": {
     "centerline_start": [
-      3.3172,
-      1.0041,
-      1.8981
+      -0.8103,
+      1.7316,
+      0.0
     ],
     "centerline_end": [
-      2.804,
-      0.0375,
-      2.117
+      -1.3047,
+      3.0012,
+      0.0
     ],
     "midpoint": [
-      3.0606,
-      0.5208,
-      2.0075
+      -1.0575,
+      2.3664,
+      0.0
     ],
     "midpoint_normalized": [
-      0.596,
-      0.4757,
-      0.7278
+      0.0066,
+      0.8163,
+      0.0
     ]
   },
   "joints": {
     "all": [
-      "161",
-      "152",
-      "151",
-      "132"
+      "246",
+      "238",
+      "237"
     ],
-    "xlap": [
-      "161",
-      "151"
-    ],
-    "tbutt": [
-      "152",
-      "132"
-    ],
-    "lmiter": []
+    "xlap": [],
+    "tbutt": [],
+    "lmiter": [
+      "246"
+    ]
   },
+  "features": [],
+  "processing": [],
   "3d_model": "beams/c25/c25.stl",
   "geometry_model": "beams/c25/c25.stl",
   "blank_model": "beams/c25/c25_blank.stl"

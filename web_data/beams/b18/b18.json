@@ -3,78 +3,78 @@
   "name": "B18",
   "module": "B",
   "is_key_beam": false,
-  "width (m)": 0.06,
-  "height (m)": 0.08,
-  "length (m)": 1.13,
-  "volume (cm\u00b3)": 5403.76,
-  "weight (kg)": 2.7,
+  "width (m)": 0.12,
+  "height (m)": 0.14,
+  "length (m)": 0.56,
+  "blank_length (m)": 0.57,
+  "volume (cm\u00b3)": 9440.95,
+  "weight (kg)": 4.72,
   "local_frame": {
     "origin": [
-      0.6285,
-      2.7527,
-      1.5358
+      5.8126,
+      0.2492,
+      0.0
     ],
     "x_axis": [
-      -0.7935,
-      -0.1418,
-      -0.5918
+      -0.0476,
+      0.9989,
+      0.0
     ],
     "y_axis": [
-      -0.2549,
-      0.9605,
-      0.1117
+      -0.9989,
+      -0.0476,
+      0.0
     ],
     "z_axis": [
-      0.5526,
-      0.2395,
-      -0.7983
+      0.0,
+      0.0,
+      1.0
     ]
   },
   "connected_beams": [
-    "b15",
+    "a22",
+    "b17",
     "b19",
-    "b20",
-    "d5"
+    "b22"
   ],
   "global_position": {
     "centerline_start": [
-      1.0712,
-      2.8318,
-      1.866
+      5.826,
+      -0.0314,
+      0.0
     ],
     "centerline_end": [
-      0.1779,
-      2.6722,
-      1.1997
+      5.7992,
+      0.5299,
+      0.0
     ],
     "midpoint": [
-      0.6246,
-      2.752,
-      1.5328
+      5.8126,
+      0.2493,
+      0.0
     ],
     "midpoint_normalized": [
-      0.2469,
-      0.8875,
-      0.5557
+      0.9902,
+      0.4256,
+      0.0
     ]
   },
   "joints": {
     "all": [
-      "70",
-      "54",
-      "53",
-      "274"
+      "335",
+      "337",
+      "333",
+      "331"
     ],
-    "xlap": [
-      "70",
-      "53"
-    ],
-    "tbutt": [
-      "54",
-      "274"
-    ],
-    "lmiter": []
+    "xlap": [],
+    "tbutt": [],
+    "lmiter": [
+      "335",
+      "331"
+    ]
   },
+  "features": [],
+  "processing": [],
   "3d_model": "beams/b18/b18.stl",
   "geometry_model": "beams/b18/b18.stl",
   "blank_model": "beams/b18/b18_blank.stl"

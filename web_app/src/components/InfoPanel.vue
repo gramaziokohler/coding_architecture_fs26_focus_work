@@ -12,23 +12,23 @@ const beamData = ref(null);
 const loading = ref(true);
 const error = ref(null);
 
-const HIDDEN_KEYS = [
-    "name",
-    "3d_model",
-    "geometry_model",
-    "blank_model",
-    "frame",
-    "local_frame",
-    "global_position",
-    "connected_beams",
-    "joints",
-    "processing",
-    "processings",
-    "features",
-    "machining",
-    "key_beam",
-    "is_key_beam",
-];
+const isHidden = (key) => {
+    const normalized = key.toLowerCase().replace(/[^a-z0-9]/g, "");
+    const hiddenNormalized = [
+        "name", "3dmodel", "geometrymodel", "blankmodel", "frame",
+        "localframe", "globalposition", "connectedbeams", "joints",
+        "processing", "processings", "features", "machining",
+        "keybeam", "iskeybeam", "blank", "origin", "featuresmodel",
+        "blankframeorigin", "blanklength", "blanklengthm",
+    ];
+    return hiddenNormalized.includes(normalized);
+};
+
+const blankLength = computed(() => {
+    const data = beamData.value;
+    if (!data) return null;
+    return data["blank_length (m)"] ?? data["blank length (m)"] ?? data.blank_length ?? data.blankLength ?? null;
+});
 
 const engravingText = computed(() =>
     beamData.value?.engraving_text || beamData.value?.name || beamData.value?.["beam ID"]
@@ -52,7 +52,7 @@ const loadBeamInfo = async () => {
         const response = await fetch(jsonUrl);
         if (!response.ok) throw new Error(`Failed to fetch beam data: ${response.status} ${response.statusText}`);
         beamData.value = await response.json();
-        console.log("is_key_beam value:", beamData.value?.is_key_beam);
+        console.log("All keys:", Object.keys(beamData.value));
     } catch (e) {
         error.value = e.message;
         console.error("InfoPanel error:", e);
@@ -76,19 +76,12 @@ const formatValue = (value) => {
 const formatLabel = (key) => key.replace(/_/g, " ").replace("cm3", "cm³");
 
 const formatJointValue = (jointData) => {
-    if (jointData === null || jointData === undefined) {
-        return "—";
-    }
-
-    if (isArray(jointData)) {
-        return jointData.length === 0 ? "—" : jointData.join(", ");
-    }
-
+    if (jointData === null || jointData === undefined) return "—";
+    if (isArray(jointData)) return jointData.length === 0 ? "—" : jointData.join(", ");
     if (isObject(jointData)) {
         const values = Object.values(jointData);
         return values.length === 0 ? "—" : values.join(", ");
     }
-
     return jointData || "—";
 };
 </script>
@@ -116,17 +109,22 @@ const formatJointValue = (jointData) => {
                             <span class="label">module</span>
                             <span class="value">{{ beamData.module }}</span>
                         </li>
+                        <!-- key beam subito dopo module -->
                         <li v-if="beamData.is_key_beam === true || beamData.is_key_beam === 'true'" class="spec-item">
                             <span class="label">key beam</span>
                             <span class="value">Yes</span>
                         </li>
                         <template v-for="(value, key) in beamData" :key="key">
                             <li
-                                v-if="!HIDDEN_KEYS.includes(key) && key !== 'beam ID' && key !== 'module' && key !== 'engraving_text'"
+                                v-if="!isHidden(key) && key !== 'beam ID' && key !== 'module' && key !== 'engraving_text'"
                                 class="spec-item"
                             >
                                 <span class="label">{{ formatLabel(key) }}</span>
                                 <span class="value">{{ formatValue(value) }}</span>
+                            </li>
+                            <li v-if="key === 'length (m)' && blankLength !== null" class="spec-item">
+                                <span class="label">blank length (m)</span>
+                                <span class="value">{{ formatValue(blankLength) }}</span>
                             </li>
                         </template>
                         <li v-if="beamData.connected_beams" class="spec-item">

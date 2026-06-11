@@ -3,6 +3,118 @@ from compas_timber.connections import LMiterJoint
 from compas_timber.fabrication import LapProxy
 
 _ARCH_INCLINATION_THRESHOLD = 0.15
+_METAL_PLATE_LAP_TAG = "metal_plate_lap"
+
+
+def _beam_side_axis(beam, desired_normal):
+    """Return the beam cross-section axis closest to ``desired_normal``."""
+
+    candidates = [
+        (Vector(*beam.frame.yaxis), getattr(beam, "width", None)),
+        (Vector(*beam.frame.zaxis), getattr(beam, "height", None)),
+    ]
+    desired = Vector(*desired_normal)
+    if desired.length:
+        desired.unitize()
+
+    best_axis = candidates[0][0]
+    best_size = candidates[0][1]
+    best_dot = -1.0
+
+    for axis, size in candidates:
+        axis = Vector(*axis)
+        if not axis.length:
+            continue
+        axis.unitize()
+        dot = abs(axis.dot(desired))
+        if dot > best_dot:
+            best_axis = axis
+            best_size = size
+            best_dot = dot
+
+    if best_axis.dot(desired) < 0:
+        best_axis *= -1.0
+
+    return best_axis, best_size
+
+
+def _beam_local_lap_frame(beam, origin, normal, preferred_xaxis=None):
+    """Create a BTLx-friendly lap frame aligned to the target beam."""
+
+    lap_zaxis = Vector(*normal)
+    lap_zaxis.unitize()
+
+    lap_xaxis = Vector(*(preferred_xaxis if preferred_xaxis is not None else beam.frame.xaxis))
+    lap_xaxis = lap_xaxis - lap_zaxis * lap_xaxis.dot(lap_zaxis)
+    if lap_xaxis.length < 0.01:
+        lap_xaxis = Vector(*beam.frame.xaxis)
+        lap_xaxis = lap_xaxis - lap_zaxis * lap_xaxis.dot(lap_zaxis)
+    lap_xaxis.unitize()
+
+    lap_yaxis = lap_zaxis.cross(lap_xaxis)
+    lap_yaxis.unitize()
+
+    return Frame(origin, lap_xaxis, lap_yaxis)
+
+
+def _rotate_frame_in_plane(frame):
+    """Rotate a frame 90 degrees around its normal without moving its origin."""
+
+    return Frame(frame.point, frame.yaxis, frame.xaxis * -1.0)
+
+
+def _mark_metal_plate_lap(feature):
+    try:
+        feature.__dict__["_metal_plate_lap_source"] = _METAL_PLATE_LAP_TAG
+    except Exception:
+        pass
+
+
+def _is_metal_plate_lap(feature):
+    try:
+        if getattr(feature, "_metal_plate_lap_source", None) == _METAL_PLATE_LAP_TAG:
+            return True
+    except Exception:
+        pass
+
+    try:
+        attributes = getattr(feature, "attributes", None) or {}
+        if attributes.get("source") == _METAL_PLATE_LAP_TAG:
+            return True
+    except Exception:
+        pass
+
+    return False
+
+
+def _clear_existing_metal_plate_laps(beams):
+    cleared = 0
+    seen = set()
+
+    for beam in beams:
+        beam_key = id(beam)
+        if beam_key in seen:
+            continue
+        seen.add(beam_key)
+
+        features = getattr(beam, "features", None)
+        if not features:
+            continue
+
+        kept = []
+        for feature in features:
+            if _is_metal_plate_lap(feature):
+                cleared += 1
+            else:
+                kept.append(feature)
+
+        if len(kept) != len(features):
+            beam.features = kept
+
+    if cleared:
+        print("  Cleared {} previous metal plate laps".format(cleared))
+
+    return cleared
 
 
 def _is_arch_joint(beam_a, beam_b):
@@ -56,12 +168,14 @@ def create_metal_plates(
         cat_a = getattr(beam_a, "attributes", {}).get("category", "inner")
         cat_b = getattr(beam_b, "attributes", {}).get("category", "inner")
         is_base_joint = cat_a == "base" or cat_b == "base"
+        is_base_base_joint = cat_a == "base" and cat_b == "base"
 
         # LLap joint: no metal plates on base beams.
         # LMiter joint (use_llap_joint=False): include base beam joints.
         # Non-base arch joints: always included regardless of toggle.
-        # Skip base beam joints when toggle is LLap; include them for LMiter.
-        if is_base_joint and use_llap_joint:
+        # Skip mixed base/arch joints when toggle is LLap; base-base LMiter
+        # joints still need their metal plate pockets.
+        if is_base_joint and not is_base_base_joint and use_llap_joint:
             continue
 
         joint_pt = joint.location
@@ -119,23 +233,28 @@ def create_metal_plates(
             if is_base_joint:
                 # Use same world-Z direction as the visual plate so pockets land
                 # on the top/bottom surfaces, not the side faces.
-                bn = normal
-                bw = fallback_width
+                desired_normal = normal
             else:
-                bn = _project_off_bisector(Vector(*beam.frame.yaxis))
-                if bn.length < 0.01:
-                    bn = normal
-                else:
-                    bn.unitize()
-                try:
-                    bw = beam.width
-                except AttributeError:
-                    bw = fallback_width
-            f = Frame.from_plane(Plane(joint_pt, bn))
-            f.translate(bn * side * (bw / 2 - plate_thickness / 2))
-            f.yaxis = f.zaxis.cross(bisector)
-            f.xaxis = bisector
-            return Box(*plate_size, frame=f)
+                # The visual plate follows the joint bisector, but BTLx Lap
+                # parameters are more reliable when the final negative volume
+                # snaps to the closest target beam reference side.
+                desired_normal = _project_off_bisector(Vector(*beam.frame.yaxis))
+                if desired_normal.length < 0.01:
+                    desired_normal = normal
+
+            local_normal, beam_size = _beam_side_axis(beam, desired_normal)
+            if beam_size is None:
+                beam_size = fallback_width
+
+            lap_normal = local_normal * side
+            lap_origin = joint_pt + lap_normal * (beam_size / 2 - plate_thickness / 2)
+            lap_frame = _beam_local_lap_frame(beam, lap_origin, lap_normal, bisector)
+            return Box(
+                plate_size[1],
+                plate_size[0],
+                plate_size[2],
+                frame=_rotate_frame_in_plane(lap_frame),
+            )
 
         for side in [1, -1]:
             # Visual plate at the averaged normal position.
@@ -168,7 +287,7 @@ def create_metal_plates(
     return results
 
 
-def apply_laps(brep_beam_pairs):
+def apply_laps(brep_beam_pairs, clear_existing=True):
     """
     Apply a LapProxy feature to each (brep, beam) pair.
 
@@ -184,9 +303,15 @@ def apply_laps(brep_beam_pairs):
     """
     lap_beam_pairs = []
 
-    for brep, beam in brep_beam_pairs:
+    pairs = list(brep_beam_pairs)
+
+    if clear_existing:
+        _clear_existing_metal_plate_laps([beam for _, beam in pairs])
+
+    for brep, beam in pairs:
         try:
             lap = LapProxy.from_volume_and_beam(brep, beam)
+            _mark_metal_plate_lap(lap)
             beam.add_feature(lap)
             lap_beam_pairs.append((lap, beam))
             print("  Lap added")
