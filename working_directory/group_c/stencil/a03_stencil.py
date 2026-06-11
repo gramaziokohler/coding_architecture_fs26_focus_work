@@ -1,5 +1,5 @@
 """
-Stencil helpers for plates with circular openings and 60x80 timber beams.
+Stencil helpers for plates with circular openings and mixed timber beams.
 """
 
 import math
@@ -80,6 +80,7 @@ def hole_openings(rectangle, points, hole_radius=0.015, hole_segments=24):
 
 
 def make_plate(rectangle, points, plate_thickness=0.010, hole_radius=0.015, hole_segments=24):
+    # Übergibt die kreisförmigen Öffnungen direkt an die Plate-Instanz
     return Plate.from_outline_thickness(
         rectangle_outline(rectangle),
         plate_thickness,
@@ -129,6 +130,7 @@ def add_lap_joints(model, joint_max_distance=0.020, lap_cut_plane_bias=0.5, flip
 
 
 def element_geometry(element, errors, compute_plate_geometry=True):
+    # Wenn False, wird nur das rohe Blank-Mesh ohne Bearbeitungen generiert
     if isinstance(element, Plate) and not compute_plate_geometry:
         try:
             return element.blank.to_mesh()
@@ -136,12 +138,14 @@ def element_geometry(element, errors, compute_plate_geometry=True):
             errors.append("Plate blank preview: {!r}".format(error))
 
     try:
+        # Berechnet das finale Element inklusive aller Features (wie z.B. Openings)
         return element.geometry
     except Exception as error:
         errors.append("{} geometry: {!r}".format(type(element).__name__, error))
         if isinstance(element, Plate):
             try:
-                geometry = element.compute_elementgeometry(include_features=False)
+                # Expliziter Fallback-Versuch mit erzwungenen Features
+                geometry = element.compute_elementgeometry(include_features=True)
                 return geometry.transformed(element.modeltransformation)
             except Exception as fallback_error:
                 errors.append("Plate shape fallback: {!r}".format(fallback_error))
@@ -183,22 +187,22 @@ def make_geometry_outputs(plates, beams, compute_plate_geometry=True):
 def create_stencil(
     rectangles,
     points,
-    frame_beam_lines=None,  # Neu aufgeteilt
-    plate_beam_lines=None,  # Neu aufgeteilt
+    frame_beam_lines=None,
+    plate_beam_lines=None,
     plate_thickness=0.010,
     hole_radius=0.015,
     hole_segments=24,
-    frame_beam_width=0.060,   # Separat für Rahmen
-    frame_beam_height=0.080,  # Separat für Rahmen
-    plate_beam_width=0.090,   # Separat für Plattenbalken (Beispielwert)
-    plate_beam_height=0.090,  # Separat für Plattenbalken (Beispielwert)
+    frame_beam_width=0.060,
+    frame_beam_height=0.080,
+    plate_beam_width=0.090,
+    plate_beam_height=0.090,
     joint_max_distance=0.020,
     tbutt_mill_depth=0.001,
     lap_cut_plane_bias=0.5,
     flip_lap_side=False,
     include_x_lap=True,
     process_joinery=False,
-    compute_plate_geometry=False,
+    compute_plate_geometry=True,  # Standardmäßig auf True gesetzt für echte Löcher
 ):
     """Create plates, beams, lap joints, and preview geometry with mixed beam sizes."""
 
@@ -207,7 +211,7 @@ def create_stencil(
     frame_beam_lines = frame_beam_lines or []
     plate_beam_lines = plate_beam_lines or []
 
-    # 1. Platten erstellen
+    # 1. Platten mit innenliegenden Bohrungen erstellen
     plates = [
         make_plate(
             rectangle,
@@ -239,7 +243,7 @@ def create_stencil(
     for beam in beams:
         timber_model.add_element(beam)
 
-    # Verbindungen berechnen (Verbindet frame_beams und plate_beams automatisch, falls sie sich schneiden)
+    # Verbindungen berechnen
     joining_errors, unjoined_clusters = add_lap_joints(
         timber_model,
         joint_max_distance=joint_max_distance,
@@ -251,19 +255,17 @@ def create_stencil(
     if process_joinery:
         timber_model.process_joinery()
 
-    # 4. Geometrie-Ausgabe generieren
-    # Da make_geometry_outputs Listen verarbeitet, können wir die Geometrien getrennt jagen
+    # 4. Geometrie-Ausgabe generieren (Hier werden die Löcher physisch abgezogen)
     geometry_errors = []
     plates_out = [element_geometry(plate, geometry_errors, compute_plate_geometry) for plate in plates]
     
-    # Ausgaben für Rhino getrennt berechnen
     frame_beams_out = [element_geometry(beam, geometry_errors) for beam in frame_beams]
     plate_beams_out = [element_geometry(beam, geometry_errors) for beam in plate_beams]
     
     frame_beams_rhino = [rhino_geometry(geom, geometry_errors) for geom in frame_beams_out]
     plate_beams_rhino = [rhino_geometry(geom, geometry_errors) for geom in plate_beams_out]
 
-    # Löcher und Platten-Rhino-Geometrie
+    # Kurven/Polylines der Löcher für optionale 2D-Ausgaben extrahieren
     plate_holes_out = []
     for plate in plates:
         for opening in plate.plate_geometry.openings:
@@ -281,7 +283,6 @@ def create_stencil(
         joint_types[joint_type] = joint_types.get(joint_type, 0) + 1
     joint_errors = [getattr(error, "debug_info", repr(error)) for error in joining_errors]
 
-    # Rückgabe-Dictionary anpassen
     return {
         "plates": plates,
         "frame_beams": frame_beams,
