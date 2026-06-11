@@ -302,10 +302,23 @@ def create_stencil(
 
     for plate in plates:
         for opening in plate.plate_geometry.openings:
-            ref_pt = opening.points[0]  # Erster Punkt der Kurve als Positionscheck
+            ref_pt = opening.points[0]  # Das ist der Punkt
             
-            # Nur hinzufügen, wenn an dieser Stelle noch keine Kurve liegt
-            if not any(ref_pt.distance(seen) < 0.005 for seen in seen_centers): # <-- distance statt distance_to
+            # Wir holen uns einfach die nackten Zahlen (X und Y Koordinaten)
+            x1, y1 = ref_pt.x, ref_pt.y
+            
+            # Wir prüfen, ob wir schon einen Punkt haben, der fast identisch ist
+            is_duplicate = False
+            for seen in seen_centers:
+                x2, y2 = seen.x, seen.y
+                # Distanzberechnung per Pythagoras: c = sqrt((x1-x2)^2 + (y1-y2)^2)
+                distance_squared = (x1 - x2)**2 + (y1 - y2)**2
+                if distance_squared < 0.0001:  # Wenn der Abstand winzig ist, ist es ein Duplikat
+                    is_duplicate = True
+                    break
+            
+            # Nur hinzufügen, wenn es kein Duplikat ist
+            if not is_duplicate:
                 plate_holes_out.append(opening.transformed(plate.modeltransformation))
                 seen_centers.append(ref_pt)
 
