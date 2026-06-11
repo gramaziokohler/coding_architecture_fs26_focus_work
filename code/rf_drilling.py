@@ -433,7 +433,76 @@ class DrillingProcessor:
 
         return self._generate_features(hw_lines, [abut_beam], joint_label, final_screw_length)
 
+    # def _resolve_shallow_drilling(self, abut_beam, cont_beam, intersection_pt):
+    #     dir_abut = abut_beam.centerline.direction.copy()
+    #     vec_to_mid = Vector.from_start_end(intersection_pt, abut_beam.centerline.midpoint)
+    #     if dir_abut.dot(vec_to_mid) < 0: 
+    #         dir_abut.scale(-1)
+    #     dir_abut.unitize()
+        
+    #     dir_cont = cont_beam.centerline.direction.copy()
+    #     dir_cont.unitize()
+    #     if dir_cont.dot(dir_abut) < 0:
+    #         dir_cont.scale(-1)
+            
+    #     plane_normal = dir_cont.cross(dir_abut)
+    #     if plane_normal.length < 1e-5: 
+    #         plane_normal = Vector(0, 0, 1)
+    #     plane_normal.unitize()
+        
+    #     target_angle_rad = math.radians(40.0)
+        
+    #     v_perp = plane_normal.cross(dir_cont)
+    #     v_perp.unitize()
+    #     if v_perp.dot(dir_abut) < 0: 
+    #         v_perp.scale(-1)
+            
+    #     ideal_screw_dir = dir_cont * math.cos(target_angle_rad) + v_perp * math.sin(target_angle_rad)
+    #     ideal_screw_dir.unitize()
+    #     screw_dir = ideal_screw_dir * -1
+
+    #     walk_step = 0.010 
+    #     max_steps = 60    
+    #     anchor_depth = 0.060
+    #     min_abut_length = 0.040 
+        
+    #     cat_a = abut_beam.attributes.get("category", "inner")
+    #     cat_c = cont_beam.attributes.get("category", "inner")
+    #     joint_label = "TButtJoint - arch (40° Fixed)" if cat_a == "arch" or cat_c == "arch" else "TButtJoint - inner (40° Fixed)"
+        
+    #     for step in range(max_steps):
+    #         piece_pt = intersection_pt + (dir_cont * (step * walk_step))
+    #         exit_dist = _ray_obb_exit(piece_pt, ideal_screw_dir, abut_beam)
+            
+    #         if exit_dist is not None and exit_dist >= min_abut_length:
+    #             max_allowed_ray = 0.150 + 0.020
+    #             if exit_dist > max_allowed_ray:
+    #                 exit_dist = max_allowed_ray
+
+    #             start_pt = piece_pt + (ideal_screw_dir * exit_dist)
+    #             req_screw_length = math.ceil((exit_dist + anchor_depth) / 0.010) * 0.010
+    #             end_pt = start_pt + (screw_dir * req_screw_length)
+                
+    #             offset_dir = screw_dir.cross(dir_cont)
+    #             if offset_dir.length < 1e-5: offset_dir = Vector(0, 0, 1)
+    #             offset_dir.unitize()
+    #             offset_vec = offset_dir * (self.screw_spacing / 2.0)
+                
+    #             hw_line_1 = Line(start_pt + offset_vec, end_pt + offset_vec)
+    #             hw_line_2 = Line(start_pt - offset_vec, end_pt - offset_vec)
+                
+    #             self._generate_features(
+    #                 [hw_line_1, hw_line_2],
+    #                 [cont_beam],
+    #                 joint_label,
+    #                 req_screw_length
+    #             )
+    #             return True
+                
+    #     return False
+
     def _resolve_shallow_drilling(self, abut_beam, cont_beam, intersection_pt):
+        # 1. Establish coordinate vectors
         dir_abut = abut_beam.centerline.direction.copy()
         vec_to_mid = Vector.from_start_end(intersection_pt, abut_beam.centerline.midpoint)
         if dir_abut.dot(vec_to_mid) < 0: 
@@ -445,11 +514,13 @@ class DrillingProcessor:
         if dir_cont.dot(dir_abut) < 0:
             dir_cont.scale(-1)
             
+        # Define the local plane of the joint
         plane_normal = dir_cont.cross(dir_abut)
         if plane_normal.length < 1e-5: 
             plane_normal = Vector(0, 0, 1)
         plane_normal.unitize()
         
+        # 2. Construct the exact 40-degree target vector
         target_angle_rad = math.radians(40.0)
         
         v_perp = plane_normal.cross(dir_cont)
@@ -457,47 +528,84 @@ class DrillingProcessor:
         if v_perp.dot(dir_abut) < 0: 
             v_perp.scale(-1)
             
+        # ideal_screw_dir points OUTWARDS from the continuous beam towards the abutting beam
         ideal_screw_dir = dir_cont * math.cos(target_angle_rad) + v_perp * math.sin(target_angle_rad)
         ideal_screw_dir.unitize()
+        
+        # The actual drilling direction is the reverse (from outside face into the continuous beam)
         screw_dir = ideal_screw_dir * -1
 
-        walk_step = 0.010 
-        max_steps = 60    
+        # 3. Optimization Setup
+        walk_step = 0.005  # 5 mm increments for fine-tuning
+        max_steps = 120    # Walk up to 600 mm down the beam
         anchor_depth = 0.060
-        min_abut_length = 0.040 
+        fixed_screw_length = 0.150
+        abut_length = fixed_screw_length - anchor_depth # 0.090 m inside the abutting beam
+        buffer_zone = 0.020
+        min_exit_dist = abut_length + buffer_zone # 0.110 m minimum safe raycast
         
         cat_a = abut_beam.attributes.get("category", "inner")
         cat_c = cont_beam.attributes.get("category", "inner")
         joint_label = "TButtJoint - arch (40° Fixed)" if cat_a == "arch" or cat_c == "arch" else "TButtJoint - inner (40° Fixed)"
         
-        for step in range(max_steps):
-            piece_pt = intersection_pt + (dir_cont * (step * walk_step))
-            exit_dist = _ray_obb_exit(piece_pt, ideal_screw_dir, abut_beam)
-            
-            if exit_dist is not None and exit_dist >= min_abut_length:
-                max_allowed_ray = 0.150 + 0.020
-                if exit_dist > max_allowed_ray:
-                    exit_dist = max_allowed_ray
+        best_step = None
+        min_dist_to_centerline = float('inf')
+        best_hw_lines = []
+        
+        # Cache the abutting centerline for distance evaluations
+        abut_A = abut_beam.centerline.start
+        abut_B = abut_beam.centerline.end
+        abut_axis = Vector.from_start_end(abut_A, abut_B)
+        abut_axis_len = abut_axis.length
 
-                start_pt = piece_pt + (ideal_screw_dir * exit_dist)
-                req_screw_length = math.ceil((exit_dist + anchor_depth) / 0.010) * 0.010
-                end_pt = start_pt + (screw_dir * req_screw_length)
+        # 4. The "Slide and Optimize" Loop
+        for step in range(max_steps):
+            pierce_pt = intersection_pt + (dir_cont * (step * walk_step))
+            
+            # Check volumetric boundaries
+            exit_dist = _ray_obb_exit(pierce_pt, ideal_screw_dir, abut_beam)
+            
+            # The ray must contain the 90 mm screw length PLUS the 20 mm buffer (110 mm total)
+            if exit_dist is not None and exit_dist >= min_exit_dist:
                 
-                offset_dir = screw_dir.cross(dir_cont)
-                if offset_dir.length < 1e-5: offset_dir = Vector(0, 0, 1)
-                offset_dir.unitize()
-                offset_vec = offset_dir * (self.screw_spacing / 2.0)
+                # Calculate the exact geometric endpoints for a 150 mm screw
+                # Head is 90 mm away from the interface inside the abutting beam
+                head_pt = pierce_pt + (ideal_screw_dir * abut_length)
+                # Tail is 60 mm inside the continuous beam
+                tail_pt = pierce_pt + (screw_dir * anchor_depth)
                 
-                hw_line_1 = Line(start_pt + offset_vec, end_pt + offset_vec)
-                hw_line_2 = Line(start_pt - offset_vec, end_pt - offset_vec)
+                # Measure how close the screw is to the abutting beam's centerline
+                # We evaluate the midpoint of the screw segment inside the abutting beam
+                screw_mid = pierce_pt + (ideal_screw_dir * (abut_length / 2.0))
+                vec_AP = Vector.from_start_end(abut_A, screw_mid)
                 
-                self._generate_features(
-                    [hw_line_1, hw_line_2],
-                    [cont_beam],
-                    joint_label,
-                    req_screw_length
-                )
-                return True
+                # Calculate absolute cross-product distance to the infinite centerline
+                dist_to_cl = vec_AP.cross(abut_axis).length / abut_axis_len if abut_axis_len > 1e-5 else float('inf')
+                
+                # If this placement is closer to the true centerline, store it
+                if dist_to_cl < min_dist_to_centerline:
+                    min_dist_to_centerline = dist_to_cl
+                    best_step = step
+                    
+                    # Generate offset lines for lateral spacing
+                    offset_dir = screw_dir.cross(dir_cont)
+                    if offset_dir.length < 1e-5: offset_dir = Vector(0, 0, 1)
+                    offset_dir.unitize()
+                    offset_vec = offset_dir * (self.screw_spacing / 2.0)
+                    
+                    hw_line_1 = Line(head_pt + offset_vec, tail_pt + offset_vec)
+                    hw_line_2 = Line(head_pt - offset_vec, tail_pt - offset_vec)
+                    best_hw_lines = [hw_line_1, hw_line_2]
+
+        # 5. Apply the optimized lines
+        if best_step is not None:
+            self._generate_features(
+                best_hw_lines,
+                [cont_beam],
+                joint_label,
+                fixed_screw_length
+            )
+            return True
                 
         return False
 
