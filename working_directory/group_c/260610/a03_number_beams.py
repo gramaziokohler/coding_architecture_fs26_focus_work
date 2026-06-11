@@ -755,6 +755,9 @@ def vector_cross(a, b):
         a[0] * b[1] - a[1] * b[0],
     ]
 
+def vector_dot(a, b):
+    return sum(a[i] * b[i] for i in range(3))
+
 def vector_length(v):
     return math.sqrt(sum(c * c for c in v))
 
@@ -881,6 +884,57 @@ def get_beam_weight(beam, length, density=500):
     w_m = w if w < 1 else w / 100.0
     h_m = h if h < 1 else h / 100.0
     return w_m * h_m * length * density
+
+def get_blank_length(beam, fallback=None):
+    def positive_number(value):
+        try:
+            number = float(value)
+            return number if number > 0 else None
+        except:
+            return None
+
+    for attr in ("blank_length", "blank_len"):
+        number = positive_number(getattr(beam, attr, None))
+        if number:
+            return number
+
+    attributes = getattr(beam, "attributes", None)
+    if isinstance(attributes, dict):
+        for key in ("blank_length", "blank_len"):
+            number = positive_number(attributes.get(key))
+            if number:
+                return number
+
+    blank = getattr(beam, "blank", None)
+    for attr in ("length", "xsize", "x_size", "size_x"):
+        number = positive_number(getattr(blank, attr, None))
+        if number:
+            return number
+
+    blank_attributes = getattr(blank, "attributes", None)
+    if isinstance(blank_attributes, dict):
+        for key in ("length", "blank_length", "xsize", "x_size", "size_x"):
+            number = positive_number(blank_attributes.get(key))
+            if number:
+                return number
+
+    try:
+        mesh_data = geometry_to_vertices_and_faces_any(blank)
+        if mesh_data:
+            vertices, _ = mesh_data
+            blank_frame = getattr(blank, "frame", None)
+            frame = blank_frame or getattr(beam, "frame", None)
+            axis = xyz_to_list(getattr(frame, "xaxis", None)) if frame else None
+            if axis:
+                axis = vector_normalize(axis)
+                projections = [vector_dot(vertex, axis) for vertex in vertices]
+                number = positive_number(max(projections) - min(projections))
+                if number:
+                    return number
+    except:
+        pass
+
+    return fallback
 
 def get_beam_local_frame(beam):
     try:
@@ -1824,6 +1878,7 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
                 except:
                     length = 0.0
 
+                blank_length = get_blank_length(beam, length)
                 w, h = get_beam_section(beam)
                 w_m = w if (w is not None and w < 1) else (w / 100.0 if w is not None else None)
                 h_m = h if (h is not None and h < 1) else (h / 100.0 if h is not None else None)
@@ -1898,6 +1953,7 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
                     "width (m)": round(w_m, 4) if w_m else None,
                     "height (m)": round(h_m, 4) if h_m else None,
                     "length (m)": round(length, 2),
+                    "blank_length (m)": round(blank_length, 2) if blank_length else None,
                     "volume (cm³)": round(volume_m3 * 1_000_000, 2),
                     "weight (kg)": round(weight, 2),
                     "local_frame": local_frame,

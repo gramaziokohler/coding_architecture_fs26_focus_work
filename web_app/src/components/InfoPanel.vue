@@ -13,16 +13,22 @@ const loading = ref(true);
 const error = ref(null);
 
 const isHidden = (key) => {
-    const normalized = key.toLowerCase().replace(/[\s_-]/g, "");
+    const normalized = key.toLowerCase().replace(/[^a-z0-9]/g, "");
     const hiddenNormalized = [
         "name", "3dmodel", "geometrymodel", "blankmodel", "frame",
         "localframe", "globalposition", "connectedbeams", "joints",
         "processing", "processings", "features", "machining",
         "keybeam", "iskeybeam", "blank", "origin", "featuresmodel",
-        "blankframeorigin",
+        "blankframeorigin", "blanklength", "blanklengthm",
     ];
     return hiddenNormalized.includes(normalized);
 };
+
+const blankLength = computed(() => {
+    const data = beamData.value;
+    if (!data) return null;
+    return data["blank_length (m)"] ?? data["blank length (m)"] ?? data.blank_length ?? data.blankLength ?? null;
+});
 
 const engravingText = computed(() =>
     beamData.value?.engraving_text || beamData.value?.name || beamData.value?.["beam ID"]
@@ -115,6 +121,10 @@ const formatJointValue = (jointData) => {
                             >
                                 <span class="label">{{ formatLabel(key) }}</span>
                                 <span class="value">{{ formatValue(value) }}</span>
+                            </li>
+                            <li v-if="key === 'length (m)' && blankLength !== null" class="spec-item">
+                                <span class="label">blank length (m)</span>
+                                <span class="value">{{ formatValue(blankLength) }}</span>
                             </li>
                         </template>
                         <li v-if="beamData.connected_beams" class="spec-item">
