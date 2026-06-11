@@ -290,6 +290,9 @@ def run_packing(timber_model, origin, stock_length_beam_6x8, stock_length_beam_1
         b_guid = str(beam.guid)
         correct_name = guid_to_custom_name.get(b_guid, "B{:02d}".format(idx + 1))
 
+        # === ACCORDO SULLA SORGENTE BLANK LENGTH RICHIESTA ===
+        native_blank_len, blank_source = get_native_blank_length(beam)
+        
         blank_geo = getattr(beam, "blank", None)
         raw_blank_brep = get_rhino_brep_from_compas_geometry(blank_geo)
         if raw_blank_brep is None:
@@ -313,6 +316,9 @@ def run_packing(timber_model, origin, stock_length_beam_6x8, stock_length_beam_1
         if blank_edge_len is None:
             raise ValueError("Beam {} beam.blank has no measurable Brep edges.".format(correct_name))
 
+        # Se abbiamo estratto con successo la blank_length sincronizzata, la usiamo come valore di packing sovrano
+        chosen_packing_length = native_blank_len if native_blank_len is not None else blank_edge_len
+
         local_bbox = straight_blank_brep.GetBoundingBox(True)
         if local_bbox and local_bbox.IsValid:
             size_box = local_bbox.Max - local_bbox.Min
@@ -320,7 +326,6 @@ def run_packing(timber_model, origin, stock_length_beam_6x8, stock_length_beam_1
         else:
             width_box, height_box = 0.12, 0.14
 
-        native_blank_len, blank_source = get_native_blank_length(beam)
         if native_blank_len is None:
             print("BLANK LENGTH CHECK | {} | beam.blank_length missing | beam.blank longest edge = {:.6f}m".format(correct_name, blank_edge_len))
         else:
@@ -329,27 +334,37 @@ def run_packing(timber_model, origin, stock_length_beam_6x8, stock_length_beam_1
                 correct_name, native_blank_len, blank_edge_len, blank_delta
             ))
 
+        # === RECUPERO DELLA VERA GEOMETRIA FINALE TAGLIATA E SAGOMATA (BEAM GEOMETRY) ===
+        straight_cut_brep = None
         cut_length = None
         raw_cut_brep = get_pure_brep(beam.geometry)
         if raw_cut_brep is not None:
-            cut_brep = duplicate_rhino_geometry(raw_cut_brep)
-            if cut_brep is not None:
+            straight_cut_brep = duplicate_rhino_geometry(raw_cut_brep)
+            if straight_cut_brep is not None:
                 if hasattr(beam, "frame") and beam.frame:
-                    cut_brep.Transform(rg.Transform.PlaneToPlane(compas_frame_to_rhino_plane(beam.frame), rg.Plane.WorldXY))
-                cut_brep.Transform(rotate_90_x)
-                cut_bbox = cut_brep.GetBoundingBox(True)
+                    straight_cut_brep.Transform(rg.Transform.PlaneToPlane(compas_frame_to_rhino_plane(beam.frame), rg.Plane.WorldXY))
+                straight_cut_brep.Transform(rotate_90_x)
+                cut_bbox = straight_cut_brep.GetBoundingBox(True)
                 if cut_bbox and cut_bbox.IsValid:
                     cut_length = (cut_bbox.Max - cut_bbox.Min).X
 
-        needed_len = blank_edge_len + total_target_gap
+        needed_len = chosen_packing_length + total_target_gap
         
         section_key = (width_box, height_box)
         if section_key not in beams_by_section: beams_by_section[section_key] = []
         beams_by_section[section_key].append({
-            "beam_obj": beam, "geo_brep": straight_blank_brep, "name": correct_name,
-            "length_x": blank_edge_len, "blank_length": blank_edge_len, "blank_length_attr": native_blank_len,
-            "cut_length": cut_length, "blank_source": "beam.blank longest Brep edge; check source: {}".format(blank_source),
-            "width_y": width_box, "height_z": height_box, "needed_len": needed_len
+            "beam_obj": beam, 
+            "blank_brep": straight_blank_brep, 
+            "cut_brep": straight_cut_brep, # Geometria reale con tagli conservata per l'output fisso
+            "name": correct_name,
+            "length_x": chosen_packing_length, 
+            "blank_length": chosen_packing_length, 
+            "blank_length_attr": native_blank_len,
+            "cut_length": cut_length, 
+            "blank_source": "Check source: {}".format(blank_source),
+            "width_y": width_box, 
+            "height_z": height_box, 
+            "needed_len": needed_len
         })
 
     # 3. ESECUZIONE ALGORITMO BIN PACKING
@@ -360,7 +375,7 @@ def run_packing(timber_model, origin, stock_length_beam_6x8, stock_length_beam_1
         current_allowed_s_len = get_assigned_stock_length(sec_w, sec_h)
         usable_cutting_length = current_allowed_s_len - (2.0 * stock_edge_gap)
         
-        # Packing calibrato sulle lunghezze grezze totali
+        # Packing ordinato calibrato stabilmente sulle lunghezze grezze totali inserite
         section_beams = sorted(beams_by_section[section_key], key=lambda x: x["blank_length"], reverse=True)
         
         section_bars = []
@@ -385,7 +400,7 @@ def run_packing(timber_model, origin, stock_length_beam_6x8, stock_length_beam_1
                 packed_bars.append(new_bar)
                 bar_global_counter += 1
 
-    # 4. GENERAZIONE DEL LAYOUT SPAZIALE COERENTE + SPOSTAMENTO VELOCE ENGRAVING + ADATTAMENTO CONTINUO VACUUM
+    # 4. GENERAZIONE DEL LAYOUT SPAZIALE COERENTE
     arranged_boxes, max_len_boxes, stock_beams, max_len_lines, arranged_names, label_curves, max_len_num_txt, engraving, dimensions, report_sections = [], [], [], [], [], [], [], [], [], []
     vacuum_surfaces_out = [] 
     failed_vacuums = [] 
@@ -415,20 +430,26 @@ def run_packing(timber_model, origin, stock_length_beam_6x8, stock_length_beam_1
             item = b_info["item_data"]
             target_x = base_pt.X + b_info["visual_start_x"]
             
-            pure_beam_geo = item["geo_brep"].DuplicateBrep()
-            bbox_init = pure_beam_geo.GetBoundingBox(True)
-            pure_beam_geo.Transform(rg.Transform.Translation(0.0 - bbox_init.Min.X, 0.0 - bbox_init.Min.Y, 0.0 - bbox_init.Min.Z))
-            bbox_current_beam = pure_beam_geo.GetBoundingBox(True)
-            pure_beam_geo.Transform(rg.Transform.Translation(target_x - bbox_current_beam.Min.X, y_pos - bbox_current_beam.Min.Y, base_pt.Z - bbox_current_beam.Min.Z))
-            arranged_boxes.append(pure_beam_geo)
+            # === CORREZIONE: ARRANGED_BOXES RICEVE IL BEAM VERO TAGLIATO CON I GIUNTI ===
+            # Usiamo la geometria reale se disponibile, altrimenti facciamo il fallback sul blank
+            if item["cut_brep"] is not None:
+                real_beam_geo = item["cut_brep"].DuplicateBrep()
+            else:
+                real_beam_geo = item["blank_brep"].DuplicateBrep()
+                
+            bbox_init = real_beam_geo.GetBoundingBox(True)
+            real_beam_geo.Transform(rg.Transform.Translation(0.0 - bbox_init.Min.X, 0.0 - bbox_init.Min.Y, 0.0 - bbox_init.Min.Z))
+            bbox_current_beam = real_beam_geo.GetBoundingBox(True)
+            real_beam_geo.Transform(rg.Transform.Translation(target_x - bbox_current_beam.Min.X, y_pos - bbox_current_beam.Min.Y, base_pt.Z - bbox_current_beam.Min.Z))
+            arranged_boxes.append(real_beam_geo)
 
-            # === SCATOLE DI DIMENSIONE MASSIMA (MAX LEN BOXES) ===
+            # === SCATOLE DI DIMENSIONE MASSIMA (MAX LEN BOXES CON BLANK_LENGTH) ===
             raw_box_geo = rg.Box(rg.Plane.WorldXY, rg.Interval(0, item["blank_length"]), rg.Interval(0, item["width_y"]), rg.Interval(0, item["height_z"])).ToBrep()
             bbox_current_raw = raw_box_geo.GetBoundingBox(True)
             raw_box_geo.Transform(rg.Transform.Translation(target_x - bbox_current_raw.Min.X, y_pos - bbox_current_raw.Min.Y, base_pt.Z - bbox_current_raw.Min.Z))
             max_len_boxes.append(raw_box_geo)
 
-            new_bbox = pure_beam_geo.GetBoundingBox(True)
+            new_bbox = real_beam_geo.GetBoundingBox(True)
             exact_top_z = base_pt.Z + item["height_z"]
             
             max_len_lines.append(rg.Line(rg.Point3d(new_bbox.Min.X, new_bbox.Min.Y, exact_top_z + 0.01), rg.Point3d(new_bbox.Min.X + item["blank_length"], new_bbox.Min.Y, exact_top_z + 0.01)))
@@ -465,7 +486,7 @@ def run_packing(timber_model, origin, stock_length_beam_6x8, stock_length_beam_1
                 area_is_fully_solid = True
                 for pt in test_points:
                     ray = rg.Line(pt, rg.Point3d(pt.X, pt.Y, base_pt.Z - 0.01)).ToNurbsCurve()
-                    intersections = rg.Intersect.Intersection.CurveBrep(ray, pure_beam_geo, 0.001)
+                    intersections = rg.Intersect.Intersection.CurveBrep(ray, real_beam_geo, 0.001)
                     
                     point_hits_solid_wood = False
                     if intersections and len(intersections[2]) > 0:
@@ -523,7 +544,7 @@ def run_packing(timber_model, origin, stock_length_beam_6x8, stock_length_beam_1
                     v_box_z = rg.Interval(base_pt.Z - 0.01, base_pt.Z + 0.02)
                     
                     test_box_brep = rg.Box(rg.Plane.WorldXY, v_box_x, v_box_y, v_box_z).ToBrep()
-                    res_intersections = rg.Brep.CreateBooleanIntersection(pure_beam_geo, test_box_brep, 0.001)
+                    res_intersections = rg.Brep.CreateBooleanIntersection(real_beam_geo, test_box_brep, 0.001)
                     
                     single_vacuum_safe = False
                     if res_intersections:
@@ -584,5 +605,4 @@ def run_packing(timber_model, origin, stock_length_beam_6x8, stock_length_beam_1
     report = "==================================================\n        REPORT DETTAGLIATO DI SECOLO DI TAGLIO    \n==================================================\n" + "\n\n".join(report_sections) + "\n\n--- TOTAL PACKING SUMMARY ---\nTotal Stocks needed: {} pcs\nTotal Material:      {:.2f} m\nTotal Waste:         {:.2f} m\nTotal Efficiency:    {:.1f}%\nTotal Cost:          {:.2f} EUR\n-----------------------------\n==================================================".format(len(packed_bars), total_material_bought, total_waste_material, total_efficiency, total_material_bought * p_lm)
 
     # === ESATTO ORDINE DI RETURN CONSERVATO INVARIATO ===
-
     return arranged_boxes, arranged_names, max_len_boxes, stock_beams, max_len_lines, label_curves, max_len_num_txt, engraving, dimensions, report, vacuum_surfaces_out, failed_vacuums
