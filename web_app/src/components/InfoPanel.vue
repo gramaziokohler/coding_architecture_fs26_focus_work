@@ -12,27 +12,17 @@ const beamData = ref(null);
 const loading = ref(true);
 const error = ref(null);
 
-const HIDDEN_KEYS = [
-    "name",
-    "3d_model",
-    "geometry_model",
-    "blank_model",
-    "frame",
-    "local_frame",
-    "global_position",
-    "connected_beams",
-    "joints",
-    "processing",
-    "processings",
-    "features",
-    "machining",
-    "key_beam",
-    "is_key_beam",
-    "blank",       
-    "origin",         
-    "features_model",
-    "blank frame origin",
-];
+const isHidden = (key) => {
+    const normalized = key.toLowerCase().replace(/[\s_-]/g, "");
+    const hiddenNormalized = [
+        "name", "3dmodel", "geometrymodel", "blankmodel", "frame",
+        "localframe", "globalposition", "connectedbeams", "joints",
+        "processing", "processings", "features", "machining",
+        "keybeam", "iskeybeam", "blank", "origin", "featuresmodel",
+        "blankframeorigin",
+    ];
+    return hiddenNormalized.includes(normalized);
+};
 
 const engravingText = computed(() =>
     beamData.value?.engraving_text || beamData.value?.name || beamData.value?.["beam ID"]
@@ -56,7 +46,7 @@ const loadBeamInfo = async () => {
         const response = await fetch(jsonUrl);
         if (!response.ok) throw new Error(`Failed to fetch beam data: ${response.status} ${response.statusText}`);
         beamData.value = await response.json();
-        console.log("is_key_beam value:", beamData.value?.is_key_beam);
+        console.log("All keys:", Object.keys(beamData.value));
     } catch (e) {
         error.value = e.message;
         console.error("InfoPanel error:", e);
@@ -80,19 +70,12 @@ const formatValue = (value) => {
 const formatLabel = (key) => key.replace(/_/g, " ").replace("cm3", "cm³");
 
 const formatJointValue = (jointData) => {
-    if (jointData === null || jointData === undefined) {
-        return "—";
-    }
-
-    if (isArray(jointData)) {
-        return jointData.length === 0 ? "—" : jointData.join(", ");
-    }
-
+    if (jointData === null || jointData === undefined) return "—";
+    if (isArray(jointData)) return jointData.length === 0 ? "—" : jointData.join(", ");
     if (isObject(jointData)) {
         const values = Object.values(jointData);
         return values.length === 0 ? "—" : values.join(", ");
     }
-
     return jointData || "—";
 };
 </script>
@@ -120,9 +103,14 @@ const formatJointValue = (jointData) => {
                             <span class="label">module</span>
                             <span class="value">{{ beamData.module }}</span>
                         </li>
+                        <!-- key beam subito dopo module -->
+                        <li v-if="beamData.is_key_beam === true || beamData.is_key_beam === 'true'" class="spec-item">
+                            <span class="label">key beam</span>
+                            <span class="value">Yes</span>
+                        </li>
                         <template v-for="(value, key) in beamData" :key="key">
                             <li
-                                v-if="!HIDDEN_KEYS.includes(key) && key !== 'beam ID' && key !== 'module' && key !== 'engraving_text'"
+                                v-if="!isHidden(key) && key !== 'beam ID' && key !== 'module' && key !== 'engraving_text'"
                                 class="spec-item"
                             >
                                 <span class="label">{{ formatLabel(key) }}</span>
@@ -136,10 +124,6 @@ const formatJointValue = (jointData) => {
                                     ? beamData.connected_beams.map(b => b.toUpperCase()).join(", ")
                                     : beamData.connected_beams.toUpperCase() }}
                             </span>
-                        </li>
-                        <li v-if="beamData.is_key_beam === true || beamData.is_key_beam === 'true'" class="spec-item">
-                            <span class="label">key beam</span>
-                            <span class="value">Yes</span>
                         </li>
                     </ul>
                 </div>
