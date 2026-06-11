@@ -62,12 +62,12 @@ def hole_openings_for_plate(rectangle, points, hole_radius, hole_segments):
         if rectangle.Contains(point) != 0:
             compas_point = point_to_compas(point)
             
-            # Punkt in das lokale System des Frames umrechnen
+            # 1. Punkt in das lokale System des Frames umrechnen
             local_point = frame.to_local_coordinates(compas_point)
             
-            # frame.point_at(u, v, w) baut uns den globalen Punkt. 
-            # Indem wir w (Z-Achse) auf 0.0 setzen, klatschen wir den Kreis flach auf die Platte!
-            global_center = frame.point_at(local_point.x, local_point.y, 0.0)
+            # 2. Lokale Koordinaten als Liste/Tupel mit Z=0 an die COMPAS-Methode übergeben
+            # Das projiziert den Punkt flach auf die lokale XY-Ebene der Platte
+            global_center = frame.point_from_local_coordinates([local_point[0], local_point[1], 0.0])
             
             openings.append(circle_polyline(frame, global_center, hole_radius, hole_segments))
 
