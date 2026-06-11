@@ -53,21 +53,24 @@ def circle_polyline(frame, center, radius, segments):
 
 
 def hole_openings_for_plate(rectangle, points, hole_radius, hole_segments):
-    """Projiziert Punkte auf die Platte und erstellt die Kreise OHNE Duplizierung."""
+    """Erstellt Kreise auf der Plattenebene mit purer Vektormathematik – absolut versionssicher."""
     frame = rectangle_frame(rectangle)
     openings = []
 
     for point in points or []:
-        # Nur Punkte nehmen, die mathematisch innerhalb des Rechtecks liegen
+        # Prüfen, ob der Punkt auf der Platte liegt
         if rectangle.Contains(point) != 0:
             compas_point = point_to_compas(point)
             
-            # 1. Punkt in das lokale System des Frames umrechnen
-            local_point = frame.to_local_coordinates(compas_point)
+            # Vektor vom Ursprung der Ebene zum Punkt
+            v = compas_point - frame.origin
             
-            # 2. Lokale Koordinaten als Liste/Tupel mit Z=0 an die COMPAS-Methode übergeben
-            # Das projiziert den Punkt flach auf die lokale XY-Ebene der Platte
-            global_center = frame.point_from_local_coordinates([local_point[0], local_point[1], 0.0])
+            # Projektion des Vektors auf die X- und Y-Achse der Ebene (Skalarprodukt)
+            local_x = v.dot(frame.xaxis)
+            local_y = v.dot(frame.yaxis)
+            
+            # Den neuen globalen Mittelpunkt direkt auf der Ebene zusammenbauen (Z wird ignoriert)
+            global_center = frame.origin + frame.xaxis * local_x + frame.yaxis * local_y
             
             openings.append(circle_polyline(frame, global_center, hole_radius, hole_segments))
 
