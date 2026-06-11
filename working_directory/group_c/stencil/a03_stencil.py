@@ -58,14 +58,17 @@ def hole_openings_for_plate(rectangle, points, hole_radius, hole_segments):
     openings = []
 
     for point in points or []:
-        compas_point = point_to_compas(point)
-        # Punkt auf die lokale Plattenebene projizieren (Z=0)
-        local_point = frame.to_local_coordinates(compas_point)
-        
-        # Nur Punkte nehmen, die auch wirklich auf der Platte liegen
+        # Nur Punkte nehmen, die mathematisch innerhalb des Rechtecks liegen
         if rectangle.Contains(point) != 0:
-            local_point.z = 0.0
-            global_center = frame.to_global_coordinates(local_point)
+            compas_point = point_to_compas(point)
+            
+            # Punkt in das lokale System des Frames umrechnen
+            local_point = frame.to_local_coordinates(compas_point)
+            
+            # frame.point_at(u, v, w) baut uns den globalen Punkt. 
+            # Indem wir w (Z-Achse) auf 0.0 setzen, klatschen wir den Kreis flach auf die Platte!
+            global_center = frame.point_at(local_point.x, local_point.y, 0.0)
+            
             openings.append(circle_polyline(frame, global_center, hole_radius, hole_segments))
 
     return openings
