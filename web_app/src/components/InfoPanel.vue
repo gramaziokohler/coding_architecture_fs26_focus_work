@@ -19,14 +19,14 @@ const engravingText = computed(() => beamData.value?.engraving_text || beamData.
 const beamRows = computed(() => {
     const beam = beamData.value || {};
     return [
-        ["beam ID", beam["beam ID"] || beam.beam_id],
+        ["beam ID", (beam["beam ID"] || beam.beam_id)?.toString().toUpperCase()],
         ["key beam", beam.is_key_beam ? "yes" : "no"],
         ["width (m)", beam["width (m)"]],
         ["height (m)", beam["height (m)"]],
         ["length (m)", beam["length (m)"]],
         ["volume (cm³)", beam["volume (cm³)"] ?? beam["volume (cm3)"]],
         ["weight (kg)", beam["weight (kg)"]],
-        ["connected beams", beam.connected_beams?.join(", ")],
+        ["connected beams", beam.connected_beams?.map(b => b.toString().toUpperCase()).join(", ")],
     ].filter(([, value]) => value !== undefined && value !== null && value !== "");
 });
 
