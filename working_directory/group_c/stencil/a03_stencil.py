@@ -169,9 +169,17 @@ def make_geometry_outputs(plates, beams, compute_plate_geometry=True):
     beams_out = [element_geometry(beam, geometry_errors) for beam in beams]
 
     plate_holes_out = []
+    seen_centers = []  # Liste, um bereits exportierte Loch-Mittelpunkte zu merken
+
     for plate in plates:
         for opening in plate.plate_geometry.openings:
-            plate_holes_out.append(opening.transformed(plate.modeltransformation))
+            # Wir prüfen den Mittelpunkt des Kreises/Polygons, um Duplikate zu vermeiden
+            center_point = opening.center
+            
+            # Falls wir diesen Punkt (mit einer kleinen Toleranz) noch nicht exportiert haben:
+            if not any(center_point.distance_to(seen) < 0.001 for seen in seen_centers):
+                plate_holes_out.append(opening.transformed(plate.modeltransformation))
+                seen_centers.append(center_point)
 
     plate_holes_rhino = [rhino_geometry(hole, geometry_errors) for hole in plate_holes_out]
     plates_rhino = [rhino_geometry(geometry, geometry_errors) for geometry in plates_out]
