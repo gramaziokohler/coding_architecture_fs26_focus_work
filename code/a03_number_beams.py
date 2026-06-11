@@ -1072,10 +1072,6 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
     #   2. poi D19/D20/D21 -> B e F23 -> E
     # =========================================================================
 
-    # --- Tutti gli spostamenti definiti ---
-    # Nota: D19/D20/D21 e F23 vengono calcolati DOPO le rinumerazioni G/H,
-    # quindi usiamo i nomi iniziali pre-qualsiasi spostamento.
-
     manual_moves_ordered = [
         # (nome_iniziale, modulo_target)
         # Prima: estrazione moduli G e H
