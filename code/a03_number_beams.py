@@ -1053,7 +1053,6 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
     for k in base_labels:
         ordered_by_module[k] = connected_growth(seeds[k], groups[k])
 
-    # Funzione di utilità riutilizzabile per l'inserimento geometrico ordinato
     def _insert_by_proximity(target_list, node_to_move):
         if not target_list:
             target_list.append(node_to_move)
@@ -1072,20 +1071,17 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
     # =========================================================================
     # POST-PROCESSING FASE 1: APPLICAZIONE SPOSTAMENTI STORICI (Nomenclatura Corrente)
     # =========================================================================
-    # Ricostruiamo la nomenclatura iniziale assoluta generata dalla griglia pura
     guid_by_pure_grid_name = {}
     for k in base_labels:
         for i, node in enumerate(ordered_by_module[k]):
             pure_name = "{}{}".format(k, i + 1)
             guid_by_pure_grid_name[pure_name] = node
 
-    # Mappa storica dei primi riposizionamenti manuali che definiscono la tua base di partenza
     historical_moves = {
         "B19": "D", "B22": "D", "B23": "D", "B24": "D",
         "A28": "C", "A29": "C", "E36": "C"
     }
 
-    # Rimuoviamo dai moduli originari della griglia
     for pure_name, target_mod in historical_moves.items():
         if pure_name in guid_by_pure_grid_name:
             node_to_move = guid_by_pure_grid_name[pure_name]
@@ -1094,7 +1090,6 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
                     ordered_by_module[mod_k].remove(node_to_move)
                     break
 
-    # Inseriamo nei moduli target storici mantenendo la prossimità geometrica
     for pure_name, target_mod in historical_moves.items():
         if pure_name in guid_by_pure_grid_name:
             node_to_move = guid_by_pure_grid_name[pure_name]
@@ -1104,9 +1099,8 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
     # =========================================================================
     # POST-PROCESSING FASE 2: MAPPATURA DALLA NOMENCLATURA MODIFICATA CORRENTE
     # =========================================================================
-    # Adesso generiamo la mappa partendo dai nomi CHE VEDI TU ADESSO dopo la prima modifica
     guid_by_modified_name = {}
-    node_initial_name = {}  # Per mantenere coerente il tracciamento dei Key Beams finali
+    node_initial_name = {}
 
     for k in base_labels:
         for i, node in enumerate(ordered_by_module[k]):
@@ -1117,9 +1111,7 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
     # =========================================================================
     # POST-PROCESSING FASE 3: NUOVI MODULI G, H E SPOSTAMENTI FINALI RICHIESTI
     # =========================================================================
-    # Le modifiche odierne sono applicate basandoci ESATTAMENTE sulla nomenclatura intermedia
     new_manual_moves_ordered = [
-        # Nuova estrazione per i moduli G e H
         ("A10",  "G"),
         ("C27",  "G"),
         ("C28",  "G"),
@@ -1129,14 +1121,12 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
         ("C25",  "H"),
         ("C26",  "H"),
         ("D22",  "H"),
-        # Spostamenti definitivi intra-modulo
         ("D19",  "B"),
         ("D20",  "B"),
         ("D21",  "B"),
         ("F23",  "E"),
     ]
 
-    # Prima passata della Fase 3: Rimozione dai moduli correnti modificati
     for interim_name, target_mod in new_manual_moves_ordered:
         if interim_name in guid_by_modified_name:
             node_to_move = guid_by_modified_name[interim_name]
@@ -1145,12 +1135,40 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
                     ordered_by_module[mod_k].remove(node_to_move)
                     break
 
-    # Seconda passata della Fase 3: Inserimento integrato nel flusso di assemblaggio per vicinanza spaziale
     for interim_name, target_mod in new_manual_moves_ordered:
         if interim_name in guid_by_modified_name:
             node_to_move = guid_by_modified_name[interim_name]
             _insert_by_proximity(ordered_by_module[target_mod], node_to_move)
             assignment[node_to_move] = target_mod
+
+    # =========================================================================
+    # POST-PROCESSING FASE 4: NUOVA NOMENCLATURA DEI MODULI RICHIESTA
+    # E -> A, F -> B, A -> C, B -> D, C -> E, G -> F, H -> G, D -> H
+    # =========================================================================
+    module_renaming_map = {
+        "E": "A",
+        "F": "B",
+        "A": "C",
+        "B": "D",
+        "C": "E",
+        "G": "F",
+        "H": "G",
+        "D": "H"
+    }
+
+    # Creiamo una copia temporanea del dizionario per applicare la ridenominazione in blocco senza sovrascritture distruttive
+    renamed_ordered_by_module = {k: [] for k in all_labels}
+    for old_mod, new_mod in module_renaming_map.items():
+        renamed_ordered_by_module[new_mod] = ordered_by_module[old_mod]
+    
+    # Aggiorniamo la lista di riferimento principale
+    ordered_by_module = renamed_ordered_by_module
+
+    # Aggiorniamo i metadati dei nodi dentro la mappa globale d'assegnazione
+    for node in assignment:
+        old_assignment = assignment[node]
+        if old_assignment in module_renaming_map:
+            assignment[node] = module_renaming_map[old_assignment]
 
     # =========================
     # 7. GENERAZIONE BEAM OUTPUT
@@ -1165,7 +1183,6 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
             beam = timber_model.get_element(node)
             set_beam_partitioning_attributes(beam, k, i + 1, beam_id=name.lower(), display_name=name)
 
-            # Il controllo del Key Beam avviene in base alla nomenclatura che ha attivato questo script
             orig_name = node_initial_name.get(node, "")
             is_key_beam_by_guid[node] = (orig_name in KEY_BEAMS_LIST)
 
