@@ -28,6 +28,9 @@ const HIDDEN_KEYS = [
     "machining",
     "key_beam",
     "is_key_beam",
+    "blank",       
+    "origin",         
+    "features_model",
 ];
 
 const engravingText = computed(() =>
