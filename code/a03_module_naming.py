@@ -5,7 +5,7 @@ import math
 
 def create_3d_text_engraving_inplace(text, text_height=0.03, engraving_depth=0.005):
     """
-    Genera il testo come solido 3D (Brep) perfettamente centrato sul baricentro XYZ
+    Genera il testo como solido 3D (Brep) perfettamente centrato sul baricentro XYZ
     nell'origine WorldXY, scalato in metri per evitare i limiti di precisione di Rhino.
     """
     try:
@@ -74,68 +74,11 @@ def create_3d_text_engraving_inplace(text, text_height=0.03, engraving_depth=0.0
         return None, 0.0, 0.0
 
 
-def _beam_midpoint(beam):
-    try:
-        point = beam.centerline.midpoint
-        return rg.Point3d(point.x, point.y, point.z)
-    except:
-        point = beam.frame.point
-        return rg.Point3d(point.x, point.y, point.z)
-
-
-def _model_center(beams):
-    points = [_beam_midpoint(beam) for beam in beams]
-    if not points:
-        return rg.Point3d(0, 0, 0)
-    return rg.Point3d(
-        sum(point.X for point in points) / len(points),
-        sum(point.Y for point in points) / len(points),
-        sum(point.Z for point in points) / len(points),
-    )
-
-
-def _dot(a, b):
-    return a.X * b.X + a.Y * b.Y + a.Z * b.Z
-
-
-def _outward_engraving_plane(beam, model_center, beam_width, beam_height):
-    midpoint = _beam_midpoint(beam)
-    outward = rg.Vector3d(midpoint - model_center)
-    if not outward.Unitize():
-        outward = rg.Vector3d(0, 0, 1)
-
-    xaxis = rg.Vector3d(beam.frame.xaxis.x, beam.frame.xaxis.y, beam.frame.xaxis.z)
-    yaxis = rg.Vector3d(beam.frame.yaxis.x, beam.frame.yaxis.y, beam.frame.yaxis.z)
-    zaxis = rg.Vector3d(beam.frame.zaxis.x, beam.frame.zaxis.y, beam.frame.zaxis.z)
-
-    candidates = [
-        (rg.Vector3d(yaxis), beam_width / 2.0),
-        (-rg.Vector3d(yaxis), beam_width / 2.0),
-        (rg.Vector3d(zaxis), beam_height / 2.0),
-        (-rg.Vector3d(zaxis), beam_height / 2.0),
-    ]
-    candidates.sort(key=lambda item: _dot(item[0], outward), reverse=True)
-    normal, offset = candidates[0]
-    normal.Unitize()
-
-    text_yaxis = rg.Vector3d.CrossProduct(normal, xaxis)
-    if not text_yaxis.Unitize():
-        text_yaxis = rg.Vector3d(zaxis)
-        text_yaxis.Unitize()
-
-    # Keep the text upright in the world view while preserving a right-handed plane.
-    if text_yaxis.Z < -0.05:
-        xaxis = -xaxis
-        text_yaxis = -text_yaxis
-
-    origin = midpoint + normal * offset
-    return rg.Plane(origin, xaxis, text_yaxis), normal
-
-
 def run_module_naming(timber_model, TextHeight=0.03):
     """
-    Sincronizza i dati estratti dagli attributi di partizione del componente precedente
-    e genera le marcature 3D solide in-place basate sulla sequenza reale dei moduli.
+    Sincronizza i dati estratti dagli attributi di partizione del componente precedente,
+    genera le marcature 3D solide in-place basate sulla sequenza reale dei moduli e
+    propaga stabilmente l'informazione della blank_length negli attributi del timber_model.
     """
     all_named_labels = []      
     all_beam_geometries = []   
@@ -149,14 +92,12 @@ def run_module_naming(timber_model, TextHeight=0.03):
     if not timber_model:
         return [], [], [], "Errore: timber_model non collegato.", None
 
-    beams = list(timber_model.beams)
-    model_center = _model_center(beams)
-
-    for i, beam in enumerate(beams):
+    for i, beam in enumerate(timber_model.beams):
         
         # === STRATEGIA DI COERENZA SINCRO: LETTURA ATTRIBUTI NATIVI DI NUMBER_BEAMS ===
         module_letter = None
         sequence_number = None
+        blank_length_attr = None
         
         # Estraiamo il dizionario degli attributi interni memorizzato da set_beam_partitioning_attributes
         attributes = getattr(beam, "attributes", {}) or {}
@@ -164,6 +105,9 @@ def run_module_naming(timber_model, TextHeight=0.03):
         if isinstance(attributes, dict):
             module_letter = attributes.get("module")
             sequence_number = attributes.get("number") or attributes.get("beam_number")
+            
+            # Recuperiamo la blank_length calcolata o estratta dal componente a monte (a03_number_beams)
+            blank_length_attr = attributes.get("blank_length") or attributes.get("blank_len")
             
         # Fallback di sicurezza estremo se per qualche motivo gli attributi si sono svuotati nella cache
         if not module_letter or sequence_number is None:
@@ -184,6 +128,25 @@ def run_module_naming(timber_model, TextHeight=0.03):
         # Sincronizziamo anche la proprietà nativa del beam per passarla ai moduli successivi di Nesting
         beam.name = beam_name
             
+        # === INIEZIONE E PROPAGAZIONE DELLA INFO BLANK_LENGTH PER IL NESTING ===
+        try:
+            beam_length = beam.centerline.length
+        except:
+            beam_length = 1.0
+
+        if blank_length_attr is not None:
+            try:
+                final_blank_length = float(blank_length_attr)
+            except:
+                final_blank_length = float(beam_length)
+        else:
+            final_blank_length = float(beam_length)
+
+        # Salviamo la info stabilmente dentro il dizionario degli attributi di COMPAS
+        # Evitiamo l'assegnazione diretta su 'beam' per prevenire l'AttributeError
+        if isinstance(beam.attributes, dict):
+            beam.attributes["blank_length"] = final_blank_length
+
         # Estrazione della geometria nativa di Rhino memorizzata in COMPAS
         rh_geo = None
         geo = beam.geometry
@@ -205,12 +168,33 @@ def run_module_naming(timber_model, TextHeight=0.03):
             if not solid_text:
                 continue
             
-            beam_width = float(getattr(beam, "width", 0.060) or 0.060)
-            beam_height = float(getattr(beam, "height", 0.080) or 0.080)
-            beam_plane, engraving_normal = _outward_engraving_plane(beam, model_center, beam_width, beam_height)
+            c_origin = beam.frame.point
+            c_xaxis = beam.frame.xaxis
+            c_yaxis = beam.frame.yaxis
+            c_zaxis = beam.frame.zaxis
+            
+            rh_origin = rg.Point3d(c_origin.x, c_origin.y, c_origin.z)
+            rh_xaxis = rg.Vector3d(c_xaxis.x, c_xaxis.y, c_xaxis.z)
+            rh_yaxis = rg.Vector3d(c_yaxis.x, c_yaxis.y, c_yaxis.z)
+            rh_zaxis = rg.Vector3d(c_zaxis.x, c_zaxis.y, c_zaxis.z)
+            
+            if rh_zaxis.Z < 0:
+                rh_zaxis = -rh_zaxis
+                rh_yaxis = -rh_yaxis
 
-            try: beam_length = beam.centerline.length
-            except: beam_length = 1.0
+            beam_plane = rg.Plane(rh_origin, rh_xaxis, rh_yaxis)
+            
+            h_offset = 0.0
+            for h_attr in ['height', 'h', 'd', 'depth']:
+                if hasattr(beam, h_attr):
+                    h_offset = float(getattr(beam, h_attr))
+                    break
+            
+            if h_offset > 0:
+                beam_plane.Translate(rh_zaxis * (h_offset / 2.0))
+            else:
+                bbox = rh_geo.GetBoundingBox(True)
+                beam_plane.Translate(rh_zaxis * (bbox.Max.Z - rh_origin.Z))
 
             beam_plane.Translate(beam_plane.XAxis * (beam_length / 2.0))
             
@@ -255,16 +239,21 @@ def run_module_naming(timber_model, TextHeight=0.03):
                 current_shift += step
 
             beam_plane = rg.Plane(scan_plane)
+
+            beam_plane.XAxis = -beam_plane.XAxis
+            beam_plane.YAxis = -beam_plane.YAxis
             
             plane_to_plane_xform = rg.Transform.PlaneToPlane(rg.Plane.WorldXY, beam_plane)
             
             oriented_solid = solid_text.DuplicateBrep()
             oriented_solid.Transform(plane_to_plane_xform)
             
-            oriented_solid.Transform(rg.Transform.Translation(-engraving_normal * engrave_depth))
+            oriented_solid.Transform(rg.Transform.Translation(-rh_zaxis * engrave_depth))
             
             all_text_solids.append(oriented_solid)
-            summary_report.append(" -> Sincronizzato {}: (Shift: {:.2f}m)".format(beam_name, current_shift))
+            summary_report.append(" -> Sincronizzato {}: (Shift: {:.2f}m | Blank-L: {:.3f}m)".format(
+                beam_name, current_shift, final_blank_length
+            ))
         except Exception as e:
             summary_report.append(" -> Errore trave {}: {}".format(beam_name, e))
             
