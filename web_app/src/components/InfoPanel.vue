@@ -31,6 +31,7 @@ const HIDDEN_KEYS = [
     "blank",       
     "origin",         
     "features_model",
+    "blank frame origin",
 ];
 
 const engravingText = computed(() =>
