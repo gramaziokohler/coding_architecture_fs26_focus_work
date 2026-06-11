@@ -82,8 +82,8 @@ def hole_openings(rectangle, points, hole_radius=0.015, hole_segments=24):
 def make_plate(rectangle, points, plate_thickness=0.010, hole_radius=0.015, hole_segments=24):
     frame = rectangle_frame(rectangle)
     
-    # 1. Wir nutzen wieder die "openings"-Logik für die Geometrie (das klappt immer!)
-    # Weil compas_timber daraus beim process_joinery() automatisch Plattenlöcher macht.
+    # 1. Wir generieren die Platte direkt über die Openings-Logik.
+    # COMPAS nutzt hierbei die 2D-Polylines, um das 3D-Mesh mit Löchern zu generieren.
     plate = Plate.from_outline_thickness(
         rectangle_outline(rectangle),
         plate_thickness,
@@ -91,31 +91,14 @@ def make_plate(rectangle, points, plate_thickness=0.010, hole_radius=0.015, hole
         openings=hole_openings(rectangle, points, hole_radius, hole_segments),
     )
     
-    # 2. Jetzt verpassen wir der Platte manuell ein CNC-Maschinen-Feature, 
-    # falls deine COMPAS-Version DrillHole an einem anderen Ort versteckt.
-    for point in points or []:
-        if not point_in_rectangle(rectangle, point):
-            continue
-            
-        center = point_to_compas(point)
-        drill_axis = Line(center, center + frame.zaxis)
-        
-        # Sicherer Import-Versuch für die CNC-Maschinendaten
-        try:
-            # In einigen Versionen liegt es unter .connections oder .features
-            from compas_timber.elements import DrillHole
-            feature = DrillHole(drill_axis, hole_radius)
-            plate.add_feature(feature)
-        except ImportError:
-            try:
-                # Anderer möglicher Ort in COMPAS Timber
-                from compas_timber.fabrication.features import DrillHole
-                feature = DrillHole(line=drill_axis, radius=hole_radius)
-                plate.add_feature(feature)
-            except ImportError:
-                # Wenn alle Stricke reißen, lassen wir COMPAS die Geometrie über die 'openings' 
-                # verarbeiten. Das erzeugt die physischen Löcher im Mesh für Rhino vollautomatisch!
-                pass
+    # ZWANGS-GENERIERUNG: Wir zwingen das Element hier dazu, seine 
+    # interne Geometrie inklusive der Löcher sofort zu berechnen!
+    try:
+        # Das triggert die boolesche Subtraktion der Openings im COMPAS-Kern
+        plate.geometry = plate.compute_elementgeometry(include_features=True)
+    except Exception:
+        # Fallback, falls die Eigenschaft in deiner Version schreibgeschützt ist
+        pass
 
     return plate
 
@@ -161,26 +144,21 @@ def add_lap_joints(model, joint_max_distance=0.020, lap_cut_plane_bias=0.5, flip
 
 
 def element_geometry(element, errors, compute_plate_geometry=True):
-    if isinstance(element, Plate) and not compute_plate_geometry:
+    # Wenn es eine Platte ist, wollen wir das fertige Mesh inklusive Löchern!
+    if isinstance(element, Plate):
         try:
-            return element.blank.to_mesh()
+            # Wir versuchen explizit die Geometrie MIT den Openings/Features abzurufen
+            if hasattr(element, "compute_elementgeometry"):
+                return element.compute_elementgeometry(include_features=True)
+            return element.geometry
         except Exception as error:
-            errors.append("Plate blank preview: {!r}".format(error))
-
+            errors.append("Plate geometry generation failed: {!r}".format(error))
+            
+    # Standard-Verhalten für Balken und Fallbacks
     try:
         return element.geometry
     except Exception as error:
         errors.append("{} geometry: {!r}".format(type(element).__name__, error))
-        if isinstance(element, Plate):
-            try:
-                geometry = element.compute_elementgeometry(include_features=False)
-                return geometry.transformed(element.modeltransformation)
-            except Exception as fallback_error:
-                errors.append("Plate shape fallback: {!r}".format(fallback_error))
-            try:
-                return element.blank.to_mesh()
-            except Exception as blank_error:
-                errors.append("Plate blank fallback: {!r}".format(blank_error))
         return None
 
 
