@@ -70,11 +70,17 @@ def hole_openings(rectangle, points, hole_radius=0.015, hole_segments=24):
     openings = []
 
     for point in points or []:
-        if not point_in_rectangle(rectangle, point):
-            continue
+        # 1. Punkt in das lokale Koordinatensystem der Platte umrechnen
+        # Dadurch eliminieren wir Höhenversätze (Z-Achse) im Rhino-Raum
+        compas_point = point_to_compas(point)
+        local_point = frame.to_local_coordinates(compas_point)
+        
+        # 2. Den Punkt exakt auf die 2D-Plattenebene zwingen (Z = 0)
+        local_point.z = 0.0
+        global_center = frame.to_global_coordinates(local_point)
 
-        center = point_to_compas(point)
-        openings.append(circle_polyline(frame, center, hole_radius, hole_segments))
+        # 3. Kreis direkt auf der Ebene erstellen
+        openings.append(circle_polyline(frame, global_center, hole_radius, hole_segments))
 
     return openings
 
