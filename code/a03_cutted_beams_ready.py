@@ -3,7 +3,6 @@
 import Rhino.Geometry as rg
 import math
 from importlib import reload
-from compas.datastructures import Graph
 
 class CutItem:
     def __init__(self, beam_id, beam_name, original_beam, width, length, height):
@@ -220,77 +219,22 @@ def run_packing(timber_model, origin, stock_length_beam_6x8, stock_length_beam_1
         elif (cm_w == 12.0 and cm_h == 14.0) or (cm_w == 14.0 and cm_h == 12.0): return len_12x14
         return 5.0
 
-    # 1. GENERAZIONE MAPPA NOMI INDUSTRIALI VIA COMPAS GRAPH
-    g = Graph()
-    for joint in timber_model.joints:
-        ea, eb = joint.elements
-        pa, pb = ea.centerline.midpoint, eb.centerline.midpoint
-        na = g.add_node(str(ea.guid), x=pa.x, y=pa.y, z=pa.z)
-        nb = g.add_node(str(eb.guid), x=pb.x, y=pb.y, z=pb.z)
-        g.add_edge(na, nb)
-
-    pts = {n: g.node_attributes(n, ['x','y','z']) for n in g.nodes()}
-    min_x, max_x = min(p[0] for p in pts.values()), max(p[0] for p in pts.values())
-    min_y, max_y = min(p[1] for p in pts.values()), max(p[1] for p in pts.values())
-    nx, ny = 3, 2
-    dx, dy = (max_x - min_x) / nx, (max_y - min_y) / ny
-
-    cells = []
-    for i in range(nx):
-        for j in range(ny): cells.append((min_x + dx * (i + 0.5), min_y + dy * (j + 0.5)))
-
-    labels_keys = ["A", "B", "C", "D", "E", "F"]
-    def dist2(a, b): return (a[0]-b[0])**2 + (a[1]-b[1])**2
-
-    seeds = {}
-    for key, (cx, cy) in zip(labels_keys, cells):
-        seeds[key] = min(pts, key=lambda n: dist2(pts[n], (cx, cy)))
-
-    groups = {k: [] for k in seeds}
-    for node, p in pts.items():
-        best_k, best_d = None, 1e9
-        for k, seed_node in seeds.items():
-            sx, sy, _ = pts[seed_node]
-            d = dist2(p, (sx, sy))
-            if d < best_d: best_d, best_k = d, k
-        groups[best_k].append(node)
-
-    def connected_growth(seed, group_nodes):
-        group_set = set(group_nodes)
-        visited, order, frontier = set([seed]), [seed], [seed]
-        while len(order) < len(group_set):
-            best_candidate, best_dist = None, 1e9
-            for f in frontier:
-                for nbr in g.neighbors(f):
-                    if nbr in group_set and nbr not in visited:
-                        px, py, pz = pts[f]
-                        nx_pt, ny_pt, nz_pt = pts[nbr]
-                        d = (px-nx_pt)**2 + (py-ny_pt)**2 + (pz-nz_pt)**2
-                        if d < best_dist: best_dist, best_candidate = d, nbr
-            if best_candidate is None:
-                for r in list(group_set - visited):
-                    for v in visited:
-                        d = (pts[v][0]-pts[r][0])**2 + (pts[v][1]-pts[r][1])**2 + (pts[v][2]-pts[r][2])**2
-                        if d < best_dist: best_dist, best_candidate = d, r
-            visited.add(best_candidate)
-            order.append(best_candidate)
-            frontier.append(best_candidate)
-        return order
-
-    guid_to_custom_name = {}
-    for k in labels_keys:
-        ordered = connected_growth(seeds[k], groups[k])
-        for i, node in enumerate(ordered):
-            beam = timber_model.get_element(node)
-            if beam: guid_to_custom_name[str(beam.guid)] = "{}{}".format(k, i + 1)
-
-    # 2. RADDRIZZAMENTO, ROTAZIONE DI 90° E RAGGRUPPAMENTO DEI BEAM PER SEZIONE
+    # 1. RADDRIZZAMENTO, ROTAZIONE DI 90° E RAGGRUPPAMENTO DEI BEAM PER SEZIONE
     beams_by_section = {}
     for idx, beam in enumerate(timber_model.beams):
-        b_guid = str(beam.guid)
-        correct_name = guid_to_custom_name.get(b_guid, "B{:02d}".format(idx + 1))
+        
+        # === RECUPERO DIRETTO DEL NOME DAL COMPONENTE DI NOMENCLATURA PRECEDENTE ===
+        correct_name = None
+        if hasattr(beam, "name") and beam.name:
+            correct_name = str(beam.name)
+        elif hasattr(beam, "attributes") and isinstance(beam.attributes, dict) and "name" in beam.attributes:
+            correct_name = str(beam.attributes["name"])
+            
+        # Fallback estremo se la stringa dovesse essere vuota
+        if not correct_name:
+            correct_name = "B{:02d}".format(idx + 1)
 
-        # === ACCORDO SULLA SORGENTE BLANK LENGTH RICHIESTA ===
+        # Accordo sulla sorgente blank length
         native_blank_len, blank_source = get_native_blank_length(beam)
         
         blank_geo = getattr(beam, "blank", None)
@@ -308,7 +252,7 @@ def run_packing(timber_model, origin, stock_length_beam_6x8, stock_length_beam_1
             flatten_trans = rg.Transform.PlaneToPlane(local_plane, rg.Plane.WorldXY)
             straight_blank_brep.Transform(flatten_trans)
             
-        # === FILP LONGITUDINALE DI 90 GRADI ALLINEATO ALL'ASSE X ===
+        # Flip longitudinale di 90 gradi allineato all'asse X
         rotate_90_x = rg.Transform.Rotation(math.pi / 2.0, rg.Vector3d.XAxis, rg.Point3d(0, 0, 0))
         straight_blank_brep.Transform(rotate_90_x)
         
@@ -316,7 +260,7 @@ def run_packing(timber_model, origin, stock_length_beam_6x8, stock_length_beam_1
         if blank_edge_len is None:
             raise ValueError("Beam {} beam.blank has no measurable Brep edges.".format(correct_name))
 
-        # Se abbiamo estratto con successo la blank_length sincronizzata, la usiamo come valore di packing sovrano
+        # Uso della blank_length sincronizzata come valore sovrano
         chosen_packing_length = native_blank_len if native_blank_len is not None else blank_edge_len
 
         local_bbox = straight_blank_brep.GetBoundingBox(True)
@@ -326,15 +270,7 @@ def run_packing(timber_model, origin, stock_length_beam_6x8, stock_length_beam_1
         else:
             width_box, height_box = 0.12, 0.14
 
-        if native_blank_len is None:
-            print("BLANK LENGTH CHECK | {} | beam.blank_length missing | beam.blank longest edge = {:.6f}m".format(correct_name, blank_edge_len))
-        else:
-            blank_delta = native_blank_len - blank_edge_len
-            print("BLANK LENGTH CHECK | {} | beam.blank_length = {:.6f}m | beam.blank longest edge = {:.6f}m | delta = {:.6f}m".format(
-                correct_name, native_blank_len, blank_edge_len, blank_delta
-            ))
-
-        # === RECUPERO DELLA VERA GEOMETRIA FINALE TAGLIATA E SAGOMATA (BEAM GEOMETRY) ===
+        # Recupero della vera geometria finale tagliata e sagomata (beam geometry)
         straight_cut_brep = None
         cut_length = None
         raw_cut_brep = get_pure_brep(beam.geometry)
@@ -355,7 +291,7 @@ def run_packing(timber_model, origin, stock_length_beam_6x8, stock_length_beam_1
         beams_by_section[section_key].append({
             "beam_obj": beam, 
             "blank_brep": straight_blank_brep, 
-            "cut_brep": straight_cut_brep, # Geometria reale con tagli conservata per l'output fisso
+            "cut_brep": straight_cut_brep, 
             "name": correct_name,
             "length_x": chosen_packing_length, 
             "blank_length": chosen_packing_length, 
@@ -367,7 +303,7 @@ def run_packing(timber_model, origin, stock_length_beam_6x8, stock_length_beam_1
             "needed_len": needed_len
         })
 
-    # 3. ESECUZIONE ALGORITMO BIN PACKING
+    # 2. ESECUZIONE ALGORITMO BIN PACKING
     packed_bars = []
     bar_global_counter = 1
     for section_key in sorted(beams_by_section.keys()):
@@ -375,7 +311,6 @@ def run_packing(timber_model, origin, stock_length_beam_6x8, stock_length_beam_1
         current_allowed_s_len = get_assigned_stock_length(sec_w, sec_h)
         usable_cutting_length = current_allowed_s_len - (2.0 * stock_edge_gap)
         
-        # Packing ordinato calibrato stabilmente sulle lunghezze grezze totali inserite
         section_beams = sorted(beams_by_section[section_key], key=lambda x: x["blank_length"], reverse=True)
         
         section_bars = []
@@ -400,7 +335,7 @@ def run_packing(timber_model, origin, stock_length_beam_6x8, stock_length_beam_1
                 packed_bars.append(new_bar)
                 bar_global_counter += 1
 
-    # 4. GENERAZIONE DEL LAYOUT SPAZIALE COERENTE
+    # 3. GENERAZIONE DEL LAYOUT SPAZIALE COERENTE
     arranged_boxes, max_len_boxes, stock_beams, max_len_lines, arranged_names, label_curves, max_len_num_txt, engraving, dimensions, report_sections = [], [], [], [], [], [], [], [], [], []
     vacuum_surfaces_out = [] 
     failed_vacuums = [] 
@@ -419,7 +354,7 @@ def run_packing(timber_model, origin, stock_length_beam_6x8, stock_length_beam_1
         this_bar_stock_len = bar["stock_len_assigned"]
         total_material_bought += this_bar_stock_len
 
-        # === CONTENITORI COMMERCIALI (STOCK BEAMS) ===
+        # CONTENITORI COMMERCIALI (STOCK BEAMS)
         stock_x_interval, stock_y_interval, stock_z_interval = rg.Interval(0, this_bar_stock_len), rg.Interval(0, sec_w), rg.Interval(0, sec_h)
         single_stock_bar = rg.Box(rg.Plane.WorldXY, stock_x_interval, stock_y_interval, stock_z_interval).ToBrep()
         bbox_stock = single_stock_bar.GetBoundingBox(True)
@@ -430,8 +365,6 @@ def run_packing(timber_model, origin, stock_length_beam_6x8, stock_length_beam_1
             item = b_info["item_data"]
             target_x = base_pt.X + b_info["visual_start_x"]
             
-            # === CORREZIONE: ARRANGED_BOXES RICEVE IL BEAM VERO TAGLIATO CON I GIUNTI ===
-            # Usiamo la geometria reale se disponibile, altrimenti facciamo il fallback sul blank
             if item["cut_brep"] is not None:
                 real_beam_geo = item["cut_brep"].DuplicateBrep()
             else:
@@ -443,7 +376,7 @@ def run_packing(timber_model, origin, stock_length_beam_6x8, stock_length_beam_1
             real_beam_geo.Transform(rg.Transform.Translation(target_x - bbox_current_beam.Min.X, y_pos - bbox_current_beam.Min.Y, base_pt.Z - bbox_current_beam.Min.Z))
             arranged_boxes.append(real_beam_geo)
 
-            # === SCATOLE DI DIMENSIONE MASSIMA (MAX LEN BOXES CON BLANK_LENGTH) ===
+            # SCATOLE DI DIMENSIONE MASSIMA (MAX LEN BOXES CON BLANK_LENGTH)
             raw_box_geo = rg.Box(rg.Plane.WorldXY, rg.Interval(0, item["blank_length"]), rg.Interval(0, item["width_y"]), rg.Interval(0, item["height_z"])).ToBrep()
             bbox_current_raw = raw_box_geo.GetBoundingBox(True)
             raw_box_geo.Transform(rg.Transform.Translation(target_x - bbox_current_raw.Min.X, y_pos - bbox_current_raw.Min.Y, base_pt.Z - bbox_current_raw.Min.Z))
@@ -464,7 +397,7 @@ def run_packing(timber_model, origin, stock_length_beam_6x8, stock_length_beam_1
             label_curves.extend(create_geometry_text(item["name"], rg.Point3d(lbl_x, lbl_y_under, exact_top_z), text_height=0.04))
             max_len_num_txt.extend(create_geometry_text("{:.1f}cm".format(length_in_cm), rg.Point3d(lbl_x, lbl_y_under - 0.06, exact_top_z), text_height=0.04))
 
-            # === LOGICA DI CONTROLLO MATRICE A 5 PUNTI SULLA QUOTA SUPERIORE (TESTO) ===
+            # LOGICA DI CONTROLLO MATRICE A 5 PUNTI SULLA QUOTA SUPERIORE (TESTO)
             lbl_y = lbl_y_center
             test_x = lbl_x
             step = 0.02  
@@ -510,13 +443,11 @@ def run_packing(timber_model, origin, stock_length_beam_6x8, stock_length_beam_1
             if solid_text:
                 engraving.append(solid_text)
 
-            # === LOGICA ADATTIVA CONFRONTO DI AREA ESATTA VACUUM ===
+            # LOGICA ADATTIVA CONFRONTO DI AREA ESATTA VACUUM
             v_width = 0.075
             v_length = 0.14
-            
             half_l = v_length / 2.0
             half_w = v_width / 2.0
-            
             vacuums_placed_count = 0
             first_vacuum_x = None  
             
@@ -527,13 +458,9 @@ def run_packing(timber_model, origin, stock_length_beam_6x8, stock_length_beam_1
             for v_ratio in [0.33, 0.66]:
                 x_offset_from_center = (item["length_x"] * v_ratio) - (item["length_x"] / 2.0)
                 current_v_x = test_x + x_offset_from_center
-                
-                if current_v_x < min_v_x:
-                    current_v_x = min_v_x
-                
+                if current_v_x < min_v_x: current_v_x = min_v_x
                 if first_vacuum_x is not None:
-                    if current_v_x < first_vacuum_x + v_length + 0.01:
-                        current_v_x = first_vacuum_x + v_length + 0.01
+                    if current_v_x < first_vacuum_x + v_length + 0.01: current_v_x = first_vacuum_x + v_length + 0.01
                 
                 step_v = 0.01
                 vacuum_success = False
@@ -550,7 +477,6 @@ def run_packing(timber_model, origin, stock_length_beam_6x8, stock_length_beam_1
                     if res_intersections:
                         total_contact_area = 0.0
                         slice_plane = rg.Plane(rg.Point3d(0, 0, base_pt.Z + 0.001), rg.Vector3d.ZAxis)
-                        
                         for piece in res_intersections:
                             contour_curves = rg.Brep.CreateContourCurves(piece, slice_plane)
                             if contour_curves:
@@ -559,39 +485,30 @@ def run_packing(timber_model, origin, stock_length_beam_6x8, stock_length_beam_1
                                         amp = rg.AreaMassProperties.Compute(crv)
                                         if amp: total_contact_area += amp.Area
                                             
-                        if abs(total_contact_area - target_area) < 1e-5:
-                            single_vacuum_safe = True
+                        if abs(total_contact_area - target_area) < 1e-5: single_vacuum_safe = True
                     
                     if single_vacuum_safe:
                         vacuum_success = True
                         break 
-                        
                     current_v_x += step_v 
                 
                 if vacuum_success:
-                    if first_vacuum_x is None:
-                        first_vacuum_x = current_v_x
-                        
+                    if first_vacuum_x is None: first_vacuum_x = current_v_x
                     vacuum_plane = rg.Plane(rg.Point3d(current_v_x, lbl_y_center, 0.0), rg.Vector3d.XAxis, rg.Vector3d.YAxis)
-                    vacuum_surf = rg.PlaneSurface(
-                        vacuum_plane, 
-                        rg.Interval(-half_l, half_l), 
-                        rg.Interval(-half_w, half_w)
-                    )
+                    vacuum_surf = rg.PlaneSurface(vacuum_plane, rg.Interval(-half_l, half_l), rg.Interval(-half_w, half_w))
                     vacuum_surfaces_out.append(vacuum_surf)
                     vacuums_placed_count += 1
 
             if vacuums_placed_count < 2:
                 failed_vacuums.append(item["name"])
 
-            # === AGGIUNTA LOG DI TRACCIAMENTO SUL PIN DIMENSIONS ===
             cut_length_txt = "{:.3f}m".format(item["cut_length"]) if item["cut_length"] is not None else "n/a"
             attr_blank_txt = "{:.3f}m".format(item["blank_length_attr"]) if item["blank_length_attr"] is not None else "n/a"
             dimensions.append("Stock bar n°: {} | {} | Sezione: {:.1f}x{:.1f}cm | L_cut_geom: {} | L_blank_edge: {:.3f}m | L_blank_attr: {} -> [SORGENTE DATI: {}]".format(
                 bar["id"], item["name"], sec_w*100.0, sec_h*100.0, cut_length_txt, item["blank_length"], attr_blank_txt, item["blank_source"]
             ))
 
-    # 5. RENDICONTO STATISTICO
+    # 4. RENDICONTO STATISTICO
     for sec in sorted(beams_by_section.keys()):
         sec_bars = [b for b in packed_bars if b["section"] == sec]
         sec_num_stocks = len(sec_bars)
@@ -604,5 +521,4 @@ def run_packing(timber_model, origin, stock_length_beam_6x8, stock_length_beam_1
     total_efficiency = ((total_material_bought - total_waste_material) / total_material_bought) * 100.0 if total_material_bought > 0 else 0.0
     report = "==================================================\n        REPORT DETTAGLIATO DI SECOLO DI TAGLIO    \n==================================================\n" + "\n\n".join(report_sections) + "\n\n--- TOTAL PACKING SUMMARY ---\nTotal Stocks needed: {} pcs\nTotal Material:      {:.2f} m\nTotal Waste:         {:.2f} m\nTotal Efficiency:    {:.1f}%\nTotal Cost:          {:.2f} EUR\n-----------------------------\n==================================================".format(len(packed_bars), total_material_bought, total_waste_material, total_efficiency, total_material_bought * p_lm)
 
-    # === ESATTO ORDINE DI RETURN CONSERVATO INVARIATO ===
     return arranged_boxes, arranged_names, max_len_boxes, stock_beams, max_len_lines, label_curves, max_len_num_txt, engraving, dimensions, report, vacuum_surfaces_out, failed_vacuums
