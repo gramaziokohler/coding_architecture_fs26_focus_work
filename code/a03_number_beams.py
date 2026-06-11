@@ -522,7 +522,7 @@ def point_list(value):
         value = value.get("data", value)
         if all(key in value for key in ("x", "y", "z")):
             return [float(value["x"]), float(value["y"]), float(value["z"])]
-        if all(key in value for key in ("X", "Y", "Z")):
+        if Singapore_key := all(key in value for key in ("X", "Y", "Z")):
             return [float(value["X"]), float(value["Y"]), float(value["Z"])]
     try:
         return xyz_to_list(value)
@@ -1142,29 +1142,26 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
             assignment[node_to_move] = target_mod
 
     # =========================================================================
-    # POST-PROCESSING FASE 4: NUOVA NOMENCLATURA DEI MODULI RICHIESTA
-    # E -> A, F -> B, A -> C, B -> D, C -> E, G -> F, H -> G, D -> H
+    # POST-PROCESSING FASE 4: NUOVA NOMENCLATURA DEI MODULI CON INVERSIONI CORRETTE
+    # E->B, F->A, A->D, B->C, C->H, G->F, H->G, D->E
     # =========================================================================
     module_renaming_map = {
-        "E": "A",
-        "F": "B",
-        "A": "C",
-        "B": "D",
-        "C": "E",
+        "F": "A",
+        "E": "B",
+        "B": "C",
+        "A": "D",
+        "D": "E",
         "G": "F",
         "H": "G",
-        "D": "H"
+        "C": "H"
     }
 
-    # Creiamo una copia temporanea del dizionario per applicare la ridenominazione in blocco senza sovrascritture distruttive
     renamed_ordered_by_module = {k: [] for k in all_labels}
     for old_mod, new_mod in module_renaming_map.items():
         renamed_ordered_by_module[new_mod] = ordered_by_module[old_mod]
     
-    # Aggiorniamo la lista di riferimento principale
     ordered_by_module = renamed_ordered_by_module
 
-    # Aggiorniamo i metadati dei nodi dentro la mappa globale d'assegnazione
     for node in assignment:
         old_assignment = assignment[node]
         if old_assignment in module_renaming_map:
