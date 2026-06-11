@@ -39,7 +39,7 @@
       ],
       "connected_beams": [
         "a2",
-        "a22",
+        "a21",
         "a3",
         "a6"
       ]
@@ -70,8 +70,8 @@
       ],
       "connected_beams": [
         "a1",
-        "a12",
-        "a25",
+        "a11",
+        "a24",
         "a3"
       ]
     },
@@ -101,7 +101,7 @@
       ],
       "connected_beams": [
         "a1",
-        "a11",
+        "a10",
         "a2",
         "a4"
       ]
@@ -131,7 +131,7 @@
         0.3643
       ],
       "connected_beams": [
-        "a20",
+        "a19",
         "a3",
         "a5",
         "a6"
@@ -162,7 +162,7 @@
         0.4137
       ],
       "connected_beams": [
-        "a21",
+        "a20",
         "a4",
         "a6",
         "a7"
@@ -224,10 +224,10 @@
         0.5352
       ],
       "connected_beams": [
-        "a10",
         "a5",
         "a8",
-        "a9"
+        "a9",
+        "g1"
       ]
     },
     {
@@ -288,43 +288,12 @@
       "connected_beams": [
         "a7",
         "a8",
-        "c29",
-        "c4"
+        "c4",
+        "g2"
       ]
     },
     {
       "beam_id": "a10",
-      "module": "A",
-      "is_key_beam": true,
-      "centerline_start": [
-        1.3395,
-        1.0574,
-        1.713
-      ],
-      "centerline_end": [
-        0.8303,
-        0.1348,
-        1.5154
-      ],
-      "midpoint": [
-        1.0849,
-        0.5961,
-        1.6142
-      ],
-      "midpoint_normalized": [
-        0.3129,
-        0.4896,
-        0.5852
-      ],
-      "connected_beams": [
-        "a7",
-        "c29",
-        "d18",
-        "d19"
-      ]
-    },
-    {
-      "beam_id": "a11",
       "module": "A",
       "is_key_beam": false,
       "centerline_start": [
@@ -348,13 +317,13 @@
         0.1416
       ],
       "connected_beams": [
-        "a12",
-        "a17",
+        "a11",
+        "a16",
         "a3"
       ]
     },
     {
-      "beam_id": "a12",
+      "beam_id": "a11",
       "module": "A",
       "is_key_beam": false,
       "centerline_start": [
@@ -378,14 +347,14 @@
         0.1443
       ],
       "connected_beams": [
-        "a11",
+        "a10",
+        "a12",
         "a13",
-        "a14",
         "a2"
       ]
     },
     {
-      "beam_id": "a13",
+      "beam_id": "a12",
       "module": "A",
       "is_key_beam": false,
       "centerline_start": [
@@ -409,13 +378,13 @@
         0.0671
       ],
       "connected_beams": [
-        "a12",
-        "a14",
-        "a15"
+        "a11",
+        "a13",
+        "a14"
       ]
     },
     {
-      "beam_id": "a14",
+      "beam_id": "a13",
       "module": "A",
       "is_key_beam": false,
       "centerline_start": [
@@ -439,14 +408,14 @@
         0.0
       ],
       "connected_beams": [
+        "a11",
         "a12",
-        "a13",
-        "a16",
-        "a18"
+        "a15",
+        "a17"
       ]
     },
     {
-      "beam_id": "a15",
+      "beam_id": "a14",
       "module": "A",
       "is_key_beam": false,
       "centerline_start": [
@@ -470,43 +439,43 @@
         0.135
       ],
       "connected_beams": [
+        "a12",
+        "a15"
+      ]
+    },
+    {
+      "beam_id": "a15",
+      "module": "A",
+      "is_key_beam": false,
+      "centerline_start": [
+        -1.3109,
+        -1.0757,
+        0.0
+      ],
+      "centerline_end": [
+        -0.4358,
+        -1.5385,
+        1.1215
+      ],
+      "midpoint": [
+        -0.8734,
+        -1.3071,
+        0.5607
+      ],
+      "midpoint_normalized": [
+        0.0322,
+        0.1383,
+        0.2033
+      ],
+      "connected_beams": [
         "a13",
-        "a16"
+        "a14",
+        "a24",
+        "a25"
       ]
     },
     {
       "beam_id": "a16",
-      "module": "A",
-      "is_key_beam": false,
-      "centerline_start": [
-        -1.3091,
-        -1.1009,
-        -0.0112
-      ],
-      "centerline_end": [
-        -0.4356,
-        -1.5386,
-        1.1217
-      ],
-      "midpoint": [
-        -0.8723,
-        -1.3197,
-        0.5552
-      ],
-      "midpoint_normalized": [
-        0.0323,
-        0.136,
-        0.2013
-      ],
-      "connected_beams": [
-        "a14",
-        "a15",
-        "a25",
-        "a26"
-      ]
-    },
-    {
-      "beam_id": "a17",
       "module": "A",
       "is_key_beam": false,
       "centerline_start": [
@@ -530,13 +499,13 @@
         0.0608
       ],
       "connected_beams": [
-        "a11",
-        "a18",
-        "a19"
+        "a10",
+        "a17",
+        "a18"
       ]
     },
     {
-      "beam_id": "a18",
+      "beam_id": "a17",
       "module": "A",
       "is_key_beam": false,
       "centerline_start": [
@@ -560,14 +529,14 @@
         0.0
       ],
       "connected_beams": [
-        "a14",
-        "a17",
-        "a19",
+        "a13",
+        "a16",
+        "a18",
         "b11"
       ]
     },
     {
-      "beam_id": "a19",
+      "beam_id": "a18",
       "module": "A",
       "is_key_beam": false,
       "centerline_start": [
@@ -591,16 +560,16 @@
         0.1395
       ],
       "connected_beams": [
+        "a16",
         "a17",
-        "a18",
-        "a20",
+        "a19",
         "b12"
       ]
     },
     {
-      "beam_id": "a20",
+      "beam_id": "a19",
       "module": "A",
-      "is_key_beam": false,
+      "is_key_beam": true,
       "centerline_start": [
         -0.1834,
         1.0483,
@@ -622,14 +591,14 @@
         0.2795
       ],
       "connected_beams": [
-        "a19",
-        "a21",
+        "a18",
+        "a20",
         "a4",
         "b7"
       ]
     },
     {
-      "beam_id": "a21",
+      "beam_id": "a20",
       "module": "A",
       "is_key_beam": true,
       "centerline_start": [
@@ -653,14 +622,14 @@
         0.3341
       ],
       "connected_beams": [
-        "a20",
+        "a19",
         "a5",
         "b6",
         "b7"
       ]
     },
     {
-      "beam_id": "a22",
+      "beam_id": "a21",
       "module": "A",
       "is_key_beam": false,
       "centerline_start": [
@@ -685,13 +654,13 @@
       ],
       "connected_beams": [
         "a1",
-        "a23",
-        "a25",
-        "a27"
+        "a22",
+        "a24",
+        "a26"
       ]
     },
     {
-      "beam_id": "a23",
+      "beam_id": "a22",
       "module": "A",
       "is_key_beam": false,
       "centerline_start": [
@@ -715,14 +684,14 @@
         0.4967
       ],
       "connected_beams": [
-        "a22",
+        "a21",
+        "a23",
         "a24",
-        "a25",
-        "c32"
+        "a27"
       ]
     },
     {
-      "beam_id": "a24",
+      "beam_id": "a23",
       "module": "A",
       "is_key_beam": false,
       "centerline_start": [
@@ -746,12 +715,12 @@
         0.4817
       ],
       "connected_beams": [
-        "a23",
-        "a26"
+        "a22",
+        "a25"
       ]
     },
     {
-      "beam_id": "a25",
+      "beam_id": "a24",
       "module": "A",
       "is_key_beam": false,
       "centerline_start": [
@@ -775,14 +744,14 @@
         0.4133
       ],
       "connected_beams": [
-        "a16",
+        "a15",
         "a2",
-        "a22",
-        "a23"
+        "a21",
+        "a22"
       ]
     },
     {
-      "beam_id": "a26",
+      "beam_id": "a25",
       "module": "A",
       "is_key_beam": false,
       "centerline_start": [
@@ -806,15 +775,15 @@
         0.5903
       ],
       "connected_beams": [
-        "a16",
-        "a24",
-        "c30"
+        "a15",
+        "a23",
+        "g6"
       ]
     },
     {
-      "beam_id": "a27",
+      "beam_id": "a26",
       "module": "A",
-      "is_key_beam": true,
+      "is_key_beam": false,
       "centerline_start": [
         1.0657,
         -1.2281,
@@ -836,10 +805,72 @@
         0.6247
       ],
       "connected_beams": [
-        "a22",
-        "c32",
-        "c33",
+        "a21",
+        "a27",
+        "a28",
         "c6"
+      ]
+    },
+    {
+      "beam_id": "a27",
+      "module": "A",
+      "is_key_beam": false,
+      "centerline_start": [
+        0.4492,
+        -0.8733,
+        1.5005
+      ],
+      "centerline_end": [
+        0.8353,
+        -1.9401,
+        2.2837
+      ],
+      "midpoint": [
+        0.6423,
+        -1.4067,
+        1.8921
+      ],
+      "midpoint_normalized": [
+        0.2494,
+        0.12,
+        0.6859
+      ],
+      "connected_beams": [
+        "a22",
+        "a26",
+        "a28",
+        "g6"
+      ]
+    },
+    {
+      "beam_id": "a28",
+      "module": "A",
+      "is_key_beam": false,
+      "centerline_start": [
+        0.5058,
+        -1.6807,
+        1.9265
+      ],
+      "centerline_end": [
+        1.1832,
+        -0.8102,
+        1.973
+      ],
+      "midpoint": [
+        0.8445,
+        -1.2454,
+        1.9497
+      ],
+      "midpoint_normalized": [
+        0.2784,
+        0.1497,
+        0.7068
+      ],
+      "connected_beams": [
+        "a26",
+        "a27",
+        "c25",
+        "c5"
       ]
     },
     {
@@ -961,9 +992,9 @@
       ],
       "connected_beams": [
         "b1",
+        "b26",
         "b5",
-        "b6",
-        "d20"
+        "b6"
       ]
     },
     {
@@ -1022,10 +1053,10 @@
         0.4034
       ],
       "connected_beams": [
-        "a21",
+        "a20",
+        "b25",
         "b4",
-        "b5",
-        "d19"
+        "b5"
       ]
     },
     {
@@ -1053,8 +1084,8 @@
         0.2735
       ],
       "connected_beams": [
+        "a19",
         "a20",
-        "a21",
         "b12",
         "b5"
       ]
@@ -1115,7 +1146,7 @@
         0.1241
       ],
       "connected_beams": [
-        "b21",
+        "b28",
         "b3",
         "b8"
       ]
@@ -1175,9 +1206,9 @@
         0.0
       ],
       "connected_beams": [
-        "a18",
+        "a17",
         "b10",
-        "b22",
+        "b29",
         "b8"
       ]
     },
@@ -1206,7 +1237,7 @@
         0.1393
       ],
       "connected_beams": [
-        "a19",
+        "a18",
         "b10",
         "b7"
       ]
@@ -1270,7 +1301,7 @@
         "b1",
         "b13",
         "b15",
-        "b19"
+        "b23"
       ]
     },
     {
@@ -1330,7 +1361,7 @@
       ],
       "connected_beams": [
         "b13",
-        "b23"
+        "b30"
       ]
     },
     {
@@ -1359,8 +1390,8 @@
       ],
       "connected_beams": [
         "b15",
-        "b23",
-        "d32"
+        "b30",
+        "d22"
       ]
     },
     {
@@ -1390,14 +1421,138 @@
       "connected_beams": [
         "b15",
         "b19",
-        "b20",
-        "d5"
+        "b23",
+        "b24"
       ]
     },
     {
       "beam_id": "b19",
       "module": "B",
       "is_key_beam": false,
+      "centerline_start": [
+        0.7403,
+        2.1263,
+        1.4427
+      ],
+      "centerline_end": [
+        1.0813,
+        3.3482,
+        1.9718
+      ],
+      "midpoint": [
+        0.9108,
+        2.7373,
+        1.7072
+      ],
+      "midpoint_normalized": [
+        0.2879,
+        0.8848,
+        0.6189
+      ],
+      "connected_beams": [
+        "b18",
+        "b23",
+        "d22",
+        "d4"
+      ]
+    },
+    {
+      "beam_id": "b20",
+      "module": "B",
+      "is_key_beam": false,
+      "centerline_start": [
+        2.5697,
+        2.8979,
+        2.23
+      ],
+      "centerline_end": [
+        3.0926,
+        1.8792,
+        1.9998
+      ],
+      "midpoint": [
+        2.8311,
+        2.3886,
+        2.1149
+      ],
+      "midpoint_normalized": [
+        0.5631,
+        0.8204,
+        0.7667
+      ],
+      "connected_beams": [
+        "b21",
+        "b22",
+        "d13",
+        "d19"
+      ]
+    },
+    {
+      "beam_id": "b21",
+      "module": "B",
+      "is_key_beam": false,
+      "centerline_start": [
+        2.7536,
+        2.1371,
+        2.0733
+      ],
+      "centerline_end": [
+        3.1947,
+        3.163,
+        2.2308
+      ],
+      "midpoint": [
+        2.9741,
+        2.65,
+        2.1521
+      ],
+      "midpoint_normalized": [
+        0.5836,
+        0.8687,
+        0.7802
+      ],
+      "connected_beams": [
+        "b20",
+        "b22",
+        "d14",
+        "f30"
+      ]
+    },
+    {
+      "beam_id": "b22",
+      "module": "B",
+      "is_key_beam": false,
+      "centerline_start": [
+        3.285,
+        2.6771,
+        2.178
+      ],
+      "centerline_end": [
+        2.3392,
+        2.7533,
+        2.174
+      ],
+      "midpoint": [
+        2.8121,
+        2.7152,
+        2.176
+      ],
+      "midpoint_normalized": [
+        0.5604,
+        0.8807,
+        0.7888
+      ],
+      "connected_beams": [
+        "b20",
+        "b21",
+        "d18",
+        "h3"
+      ]
+    },
+    {
+      "beam_id": "b23",
+      "module": "B",
+      "is_key_beam": true,
       "centerline_start": [
         0.4578,
         2.908,
@@ -1421,14 +1576,14 @@
       "connected_beams": [
         "b14",
         "b18",
-        "d5",
-        "d6"
+        "b19",
+        "d5"
       ]
     },
     {
-      "beam_id": "b20",
+      "beam_id": "b24",
       "module": "B",
-      "is_key_beam": true,
+      "is_key_beam": false,
       "centerline_start": [
         0.8688,
         3.3355,
@@ -1451,11 +1606,104 @@
       ],
       "connected_beams": [
         "b18",
-        "d32"
+        "d22"
       ]
     },
     {
-      "beam_id": "b21",
+      "beam_id": "b25",
+      "module": "B",
+      "is_key_beam": false,
+      "centerline_start": [
+        0.6512,
+        1.6144,
+        1.3078
+      ],
+      "centerline_end": [
+        1.1151,
+        0.6353,
+        1.6271
+      ],
+      "midpoint": [
+        0.8831,
+        1.1249,
+        1.4674
+      ],
+      "midpoint_normalized": [
+        0.2839,
+        0.5872,
+        0.532
+      ],
+      "connected_beams": [
+        "b26",
+        "b27",
+        "b6",
+        "g1"
+      ]
+    },
+    {
+      "beam_id": "b26",
+      "module": "B",
+      "is_key_beam": false,
+      "centerline_start": [
+        1.3099,
+        1.4559,
+        1.7896
+      ],
+      "centerline_end": [
+        0.3553,
+        1.4157,
+        1.0949
+      ],
+      "midpoint": [
+        0.8326,
+        1.4358,
+        1.4422
+      ],
+      "midpoint_normalized": [
+        0.2767,
+        0.6446,
+        0.5228
+      ],
+      "connected_beams": [
+        "b25",
+        "b27",
+        "b4",
+        "d5"
+      ]
+    },
+    {
+      "beam_id": "b27",
+      "module": "B",
+      "is_key_beam": false,
+      "centerline_start": [
+        0.861,
+        0.8674,
+        1.4381
+      ],
+      "centerline_end": [
+        1.2711,
+        1.8629,
+        1.7295
+      ],
+      "midpoint": [
+        1.0661,
+        1.3652,
+        1.5838
+      ],
+      "midpoint_normalized": [
+        0.3102,
+        0.6315,
+        0.5741
+      ],
+      "connected_beams": [
+        "b25",
+        "b26",
+        "d6",
+        "g3"
+      ]
+    },
+    {
+      "beam_id": "b28",
       "module": "B",
       "is_key_beam": false,
       "centerline_start": [
@@ -1479,13 +1727,13 @@
         0.0686
       ],
       "connected_beams": [
-        "b22",
-        "b23",
+        "b29",
+        "b30",
         "b9"
       ]
     },
     {
-      "beam_id": "b22",
+      "beam_id": "b29",
       "module": "B",
       "is_key_beam": false,
       "centerline_start": [
@@ -1510,39 +1758,39 @@
       ],
       "connected_beams": [
         "b11",
-        "b21",
-        "b23"
+        "b28",
+        "b30"
       ]
     },
     {
-      "beam_id": "b23",
+      "beam_id": "b30",
       "module": "B",
       "is_key_beam": false,
       "centerline_start": [
-        -1.2641,
-        2.772,
-        -0.001
+        -1.2644,
+        2.7699,
+        0.0
       ],
       "centerline_end": [
-        -0.3321,
+        -0.3322,
         3.0889,
         0.9563
       ],
       "midpoint": [
-        -0.7981,
-        2.9305,
-        0.4777
+        -0.7983,
+        2.9294,
+        0.4781
       ],
       "midpoint_normalized": [
-        0.043,
-        0.9204,
-        0.1732
+        0.0429,
+        0.9203,
+        0.1733
       ],
       "connected_beams": [
         "b16",
         "b17",
-        "b21",
-        "b22"
+        "b28",
+        "b29"
       ]
     },
     {
@@ -1571,7 +1819,7 @@
       ],
       "connected_beams": [
         "c2",
-        "c22",
+        "c21",
         "c3",
         "c7"
       ]
@@ -1634,7 +1882,7 @@
       "connected_beams": [
         "c1",
         "c2",
-        "c23",
+        "c22",
         "c4"
       ]
     },
@@ -1694,8 +1942,8 @@
         0.7168
       ],
       "connected_beams": [
+        "a28",
         "c2",
-        "c33",
         "c4",
         "c6"
       ]
@@ -1725,7 +1973,7 @@
         0.6582
       ],
       "connected_beams": [
-        "a27",
+        "a26",
         "a8",
         "c4",
         "c5"
@@ -1819,9 +2067,9 @@
       ],
       "connected_beams": [
         "c2",
-        "c30",
         "c7",
-        "c8"
+        "c8",
+        "g6"
       ]
     },
     {
@@ -1849,8 +2097,8 @@
         0.9427
       ],
       "connected_beams": [
-        "c30",
-        "c8"
+        "c8",
+        "g6"
       ]
     },
     {
@@ -1880,7 +2128,7 @@
       "connected_beams": [
         "c12",
         "c13",
-        "c17",
+        "c16",
         "c7"
       ]
     },
@@ -1912,7 +2160,7 @@
         "c11",
         "c13",
         "c14",
-        "c16"
+        "c15"
       ]
     },
     {
@@ -1942,14 +2190,14 @@
       "connected_beams": [
         "c11",
         "c12",
-        "c15",
-        "c8"
+        "c8",
+        "e37"
       ]
     },
     {
       "beam_id": "c14",
       "module": "C",
-      "is_key_beam": false,
+      "is_key_beam": true,
       "centerline_start": [
         3.3227,
         -1.8985,
@@ -1972,46 +2220,13 @@
       ],
       "connected_beams": [
         "c12",
-        "c15"
+        "e37"
       ]
     },
     {
       "beam_id": "c15",
       "module": "C",
-      "is_key_beam": false,
-      "centerline_start": [
-        2.9696,
-        -2.0095,
-        2.7519
-      ],
-      "centerline_end": [
-        4.1089,
-        -1.6422,
-        2.1136
-      ],
-      "midpoint": [
-        3.5393,
-        -1.8259,
-        2.4327
-      ],
-      "midpoint_normalized": [
-        0.6646,
-        0.0426,
-        0.8819
-      ],
-      "connected_beams": [
-        "c13",
-        "c14",
-        "c34",
-        "e34",
-        "e35",
-        "e5"
-      ]
-    },
-    {
-      "beam_id": "c16",
-      "module": "C",
-      "is_key_beam": false,
+      "is_key_beam": true,
       "centerline_start": [
         2.6597,
         -0.9284,
@@ -2034,13 +2249,13 @@
       ],
       "connected_beams": [
         "c12",
+        "c16",
         "c17",
-        "c18",
-        "e30"
+        "e31"
       ]
     },
     {
-      "beam_id": "c17",
+      "beam_id": "c16",
       "module": "C",
       "is_key_beam": false,
       "centerline_start": [
@@ -2065,13 +2280,13 @@
       ],
       "connected_beams": [
         "c11",
-        "c16",
-        "c18",
-        "c20"
+        "c15",
+        "c17",
+        "c19"
       ]
     },
     {
-      "beam_id": "c18",
+      "beam_id": "c17",
       "module": "C",
       "is_key_beam": false,
       "centerline_start": [
@@ -2095,14 +2310,14 @@
         0.7776
       ],
       "connected_beams": [
+        "c15",
         "c16",
-        "c17",
-        "c19",
-        "e29"
+        "c18",
+        "e30"
       ]
     },
     {
-      "beam_id": "c19",
+      "beam_id": "c18",
       "module": "C",
       "is_key_beam": false,
       "centerline_start": [
@@ -2126,14 +2341,14 @@
         0.7644
       ],
       "connected_beams": [
-        "c18",
+        "c17",
+        "c19",
         "c20",
-        "c21",
-        "c26"
+        "h1"
       ]
     },
     {
-      "beam_id": "c20",
+      "beam_id": "c19",
       "module": "C",
       "is_key_beam": false,
       "centerline_start": [
@@ -2157,14 +2372,14 @@
         0.7874
       ],
       "connected_beams": [
-        "c17",
-        "c19",
-        "c21",
-        "c22"
+        "c16",
+        "c18",
+        "c20",
+        "c21"
       ]
     },
     {
-      "beam_id": "c21",
+      "beam_id": "c20",
       "module": "C",
       "is_key_beam": false,
       "centerline_start": [
@@ -2188,14 +2403,14 @@
         0.7667
       ],
       "connected_beams": [
+        "c18",
         "c19",
-        "c20",
-        "c24",
-        "c25"
+        "c23",
+        "c24"
       ]
     },
     {
-      "beam_id": "c22",
+      "beam_id": "c21",
       "module": "C",
       "is_key_beam": false,
       "centerline_start": [
@@ -2220,13 +2435,13 @@
       ],
       "connected_beams": [
         "c1",
-        "c20",
-        "c23",
-        "c24"
+        "c19",
+        "c22",
+        "c23"
       ]
     },
     {
-      "beam_id": "c23",
+      "beam_id": "c22",
       "module": "C",
       "is_key_beam": false,
       "centerline_start": [
@@ -2250,14 +2465,14 @@
         0.7648
       ],
       "connected_beams": [
-        "c22",
-        "c24",
-        "c28",
-        "c3"
+        "c21",
+        "c23",
+        "c3",
+        "g4"
       ]
     },
     {
-      "beam_id": "c24",
+      "beam_id": "c23",
       "module": "C",
       "is_key_beam": false,
       "centerline_start": [
@@ -2281,14 +2496,14 @@
         0.7622
       ],
       "connected_beams": [
+        "c20",
         "c21",
         "c22",
-        "c23",
-        "c27"
+        "h2"
       ]
     },
     {
-      "beam_id": "c25",
+      "beam_id": "c24",
       "module": "C",
       "is_key_beam": false,
       "centerline_start": [
@@ -2312,171 +2527,14 @@
         0.7278
       ],
       "connected_beams": [
-        "c21",
-        "c26",
-        "d11",
-        "d22"
-      ]
-    },
-    {
-      "beam_id": "c26",
-      "module": "C",
-      "is_key_beam": false,
-      "centerline_start": [
-        2.822,
-        0.4403,
-        2.1465
-      ],
-      "centerline_end": [
-        3.8144,
-        0.4368,
-        1.7354
-      ],
-      "midpoint": [
-        3.3182,
-        0.4385,
-        1.9409
-      ],
-      "midpoint_normalized": [
-        0.633,
-        0.4605,
-        0.7036
-      ],
-      "connected_beams": [
-        "c19",
-        "c25",
-        "d22",
-        "e28"
-      ]
-    },
-    {
-      "beam_id": "c27",
-      "module": "C",
-      "is_key_beam": false,
-      "centerline_start": [
-        1.7606,
-        0.0839,
-        1.9784
-      ],
-      "centerline_end": [
-        2.2945,
-        1.1553,
-        2.0147
-      ],
-      "midpoint": [
-        2.0275,
-        0.6196,
-        1.9966
-      ],
-      "midpoint_normalized": [
-        0.448,
-        0.4939,
-        0.7238
-      ],
-      "connected_beams": [
-        "c24",
-        "c28",
+        "c20",
         "d10",
-        "d17"
+        "g5",
+        "h1"
       ]
     },
     {
-      "beam_id": "c28",
-      "module": "C",
-      "is_key_beam": false,
-      "centerline_start": [
-        1.6246,
-        0.921,
-        1.8348
-      ],
-      "centerline_end": [
-        2.0651,
-        -0.0894,
-        2.1077
-      ],
-      "midpoint": [
-        1.8449,
-        0.4158,
-        1.9713
-      ],
-      "midpoint_normalized": [
-        0.4218,
-        0.4563,
-        0.7146
-      ],
-      "connected_beams": [
-        "c23",
-        "c27",
-        "c29",
-        "d17"
-      ]
-    },
-    {
-      "beam_id": "c29",
-      "module": "C",
-      "is_key_beam": true,
-      "centerline_start": [
-        0.8365,
-        0.5236,
-        1.5476
-      ],
-      "centerline_end": [
-        1.8278,
-        0.4757,
-        1.9588
-      ],
-      "midpoint": [
-        1.3322,
-        0.4996,
-        1.7532
-      ],
-      "midpoint_normalized": [
-        0.3483,
-        0.4718,
-        0.6356
-      ],
-      "connected_beams": [
-        "a10",
-        "a9",
-        "c28",
-        "d18"
-      ]
-    },
-    {
-      "beam_id": "c30",
-      "module": "C",
-      "is_key_beam": false,
-      "centerline_start": [
-        0.6099,
-        -1.9106,
-        2.1352
-      ],
-      "centerline_end": [
-        1.775,
-        -2.1038,
-        2.7652
-      ],
-      "midpoint": [
-        1.1924,
-        -2.0072,
-        2.4502
-      ],
-      "midpoint_normalized": [
-        0.3283,
-        0.0091,
-        0.8882
-      ],
-      "connected_beams": [
-        "a26",
-        "c10",
-        "c31",
-        "c32",
-        "c34",
-        "c9"
-      ]
-    },
-    {
-      "beam_id": "c31",
+      "beam_id": "c25",
       "module": "C",
       "is_key_beam": false,
       "centerline_start": [
@@ -2500,74 +2558,12 @@
         0.7869
       ],
       "connected_beams": [
-        "c30",
-        "c33"
+        "a28",
+        "g6"
       ]
     },
     {
-      "beam_id": "c32",
-      "module": "C",
-      "is_key_beam": false,
-      "centerline_start": [
-        0.4492,
-        -0.8733,
-        1.5005
-      ],
-      "centerline_end": [
-        0.8353,
-        -1.9401,
-        2.2837
-      ],
-      "midpoint": [
-        0.6423,
-        -1.4067,
-        1.8921
-      ],
-      "midpoint_normalized": [
-        0.2494,
-        0.12,
-        0.6859
-      ],
-      "connected_beams": [
-        "a23",
-        "a27",
-        "c30",
-        "c33"
-      ]
-    },
-    {
-      "beam_id": "c33",
-      "module": "C",
-      "is_key_beam": false,
-      "centerline_start": [
-        0.5058,
-        -1.6807,
-        1.9265
-      ],
-      "centerline_end": [
-        1.1832,
-        -0.8102,
-        1.973
-      ],
-      "midpoint": [
-        0.8445,
-        -1.2454,
-        1.9497
-      ],
-      "midpoint_normalized": [
-        0.2784,
-        0.1497,
-        0.7068
-      ],
-      "connected_beams": [
-        "a27",
-        "c31",
-        "c32",
-        "c5"
-      ]
-    },
-    {
-      "beam_id": "c34",
+      "beam_id": "c26",
       "module": "C",
       "is_key_beam": false,
       "centerline_start": [
@@ -2591,8 +2587,8 @@
         1.0
       ],
       "connected_beams": [
-        "c15",
-        "c30"
+        "e37",
+        "g6"
       ]
     },
     {
@@ -2620,10 +2616,10 @@
         0.729
       ],
       "connected_beams": [
+        "d19",
         "d2",
-        "d29",
         "d3",
-        "d8"
+        "d7"
       ]
     },
     {
@@ -2653,8 +2649,8 @@
       "connected_beams": [
         "d1",
         "d3",
-        "d7",
-        "d9"
+        "d6",
+        "d8"
       ]
     },
     {
@@ -2684,7 +2680,7 @@
       "connected_beams": [
         "d1",
         "d2",
-        "d30",
+        "d20",
         "d4"
       ]
     },
@@ -2713,45 +2709,14 @@
         0.6336
       ],
       "connected_beams": [
+        "b19",
         "d3",
         "d5",
-        "d6",
-        "d7"
+        "d6"
       ]
     },
     {
       "beam_id": "d5",
-      "module": "D",
-      "is_key_beam": false,
-      "centerline_start": [
-        0.7403,
-        2.1263,
-        1.4427
-      ],
-      "centerline_end": [
-        1.0813,
-        3.3482,
-        1.9718
-      ],
-      "midpoint": [
-        0.9108,
-        2.7373,
-        1.7072
-      ],
-      "midpoint_normalized": [
-        0.2879,
-        0.8848,
-        0.6189
-      ],
-      "connected_beams": [
-        "b18",
-        "b19",
-        "d32",
-        "d4"
-      ]
-    },
-    {
-      "beam_id": "d6",
       "module": "D",
       "is_key_beam": false,
       "centerline_start": [
@@ -2775,14 +2740,14 @@
         0.5919
       ],
       "connected_beams": [
-        "b19",
-        "d20",
+        "b23",
+        "b26",
         "d4",
-        "d7"
+        "d6"
       ]
     },
     {
-      "beam_id": "d7",
+      "beam_id": "d6",
       "module": "D",
       "is_key_beam": false,
       "centerline_start": [
@@ -2806,14 +2771,14 @@
         0.6317
       ],
       "connected_beams": [
+        "b27",
         "d2",
-        "d21",
         "d4",
-        "d6"
+        "d5"
       ]
     },
     {
-      "beam_id": "d8",
+      "beam_id": "d7",
       "module": "D",
       "is_key_beam": false,
       "centerline_start": [
@@ -2838,13 +2803,13 @@
       ],
       "connected_beams": [
         "d1",
-        "d10",
-        "d13",
+        "d12",
+        "d8",
         "d9"
       ]
     },
     {
-      "beam_id": "d9",
+      "beam_id": "d8",
       "module": "D",
       "is_key_beam": false,
       "centerline_start": [
@@ -2868,14 +2833,14 @@
         0.7168
       ],
       "connected_beams": [
-        "d10",
-        "d17",
+        "d16",
         "d2",
-        "d8"
+        "d7",
+        "d9"
       ]
     },
     {
-      "beam_id": "d10",
+      "beam_id": "d9",
       "module": "D",
       "is_key_beam": false,
       "centerline_start": [
@@ -2899,14 +2864,14 @@
         0.7302
       ],
       "connected_beams": [
-        "c27",
-        "d11",
+        "d10",
+        "d7",
         "d8",
-        "d9"
+        "h2"
       ]
     },
     {
-      "beam_id": "d11",
+      "beam_id": "d10",
       "module": "D",
       "is_key_beam": false,
       "centerline_start": [
@@ -2930,14 +2895,14 @@
         0.7295
       ],
       "connected_beams": [
-        "c25",
-        "d10",
+        "c24",
+        "d11",
         "d12",
-        "d13"
+        "d9"
       ]
     },
     {
-      "beam_id": "d12",
+      "beam_id": "d11",
       "module": "D",
       "is_key_beam": false,
       "centerline_start": [
@@ -2961,14 +2926,14 @@
         0.7171
       ],
       "connected_beams": [
-        "d11",
-        "d13",
-        "d16",
-        "d22"
+        "d10",
+        "d12",
+        "d15",
+        "g5"
       ]
     },
     {
-      "beam_id": "d13",
+      "beam_id": "d12",
       "module": "D",
       "is_key_beam": false,
       "centerline_start": [
@@ -2992,14 +2957,14 @@
         0.7306
       ],
       "connected_beams": [
+        "d10",
         "d11",
-        "d12",
-        "d14",
-        "d8"
+        "d13",
+        "d7"
       ]
     },
     {
-      "beam_id": "d14",
+      "beam_id": "d13",
       "module": "D",
       "is_key_beam": false,
       "centerline_start": [
@@ -3023,14 +2988,14 @@
         0.726
       ],
       "connected_beams": [
-        "d13",
-        "d15",
-        "d16",
-        "d23"
+        "b20",
+        "d12",
+        "d14",
+        "d15"
       ]
     },
     {
-      "beam_id": "d15",
+      "beam_id": "d14",
       "module": "D",
       "is_key_beam": false,
       "centerline_start": [
@@ -3054,14 +3019,14 @@
         0.7155
       ],
       "connected_beams": [
-        "d14",
-        "d16",
-        "d24",
-        "f26"
+        "b21",
+        "d13",
+        "d15",
+        "f25"
       ]
     },
     {
-      "beam_id": "d16",
+      "beam_id": "d15",
       "module": "D",
       "is_key_beam": false,
       "centerline_start": [
@@ -3085,14 +3050,14 @@
         0.6957
       ],
       "connected_beams": [
-        "d12",
+        "d11",
+        "d13",
         "d14",
-        "d15",
-        "f25"
+        "f24"
       ]
     },
     {
-      "beam_id": "d17",
+      "beam_id": "d16",
       "module": "D",
       "is_key_beam": false,
       "centerline_start": [
@@ -3116,291 +3081,14 @@
         0.6952
       ],
       "connected_beams": [
-        "c27",
-        "c28",
-        "d18",
-        "d9"
+        "d8",
+        "g3",
+        "g4",
+        "h2"
       ]
     },
     {
-      "beam_id": "d18",
-      "module": "D",
-      "is_key_beam": false,
-      "centerline_start": [
-        1.55,
-        0.2621,
-        1.8615
-      ],
-      "centerline_end": [
-        1.0383,
-        1.3164,
-        1.5646
-      ],
-      "midpoint": [
-        1.2942,
-        0.7892,
-        1.7131
-      ],
-      "midpoint_normalized": [
-        0.3429,
-        0.5253,
-        0.621
-      ],
-      "connected_beams": [
-        "a10",
-        "c29",
-        "d17",
-        "d21"
-      ]
-    },
-    {
-      "beam_id": "d19",
-      "module": "D",
-      "is_key_beam": false,
-      "centerline_start": [
-        0.6512,
-        1.6144,
-        1.3078
-      ],
-      "centerline_end": [
-        1.1151,
-        0.6353,
-        1.6271
-      ],
-      "midpoint": [
-        0.8831,
-        1.1249,
-        1.4674
-      ],
-      "midpoint_normalized": [
-        0.2839,
-        0.5872,
-        0.532
-      ],
-      "connected_beams": [
-        "a10",
-        "b6",
-        "d20",
-        "d21"
-      ]
-    },
-    {
-      "beam_id": "d20",
-      "module": "D",
-      "is_key_beam": false,
-      "centerline_start": [
-        1.3099,
-        1.4559,
-        1.7896
-      ],
-      "centerline_end": [
-        0.3553,
-        1.4157,
-        1.0949
-      ],
-      "midpoint": [
-        0.8326,
-        1.4358,
-        1.4422
-      ],
-      "midpoint_normalized": [
-        0.2767,
-        0.6446,
-        0.5228
-      ],
-      "connected_beams": [
-        "b4",
-        "d19",
-        "d21",
-        "d6"
-      ]
-    },
-    {
-      "beam_id": "d21",
-      "module": "D",
-      "is_key_beam": false,
-      "centerline_start": [
-        0.861,
-        0.8674,
-        1.4381
-      ],
-      "centerline_end": [
-        1.2711,
-        1.8629,
-        1.7295
-      ],
-      "midpoint": [
-        1.0661,
-        1.3652,
-        1.5838
-      ],
-      "midpoint_normalized": [
-        0.3102,
-        0.6315,
-        0.5741
-      ],
-      "connected_beams": [
-        "d18",
-        "d19",
-        "d20",
-        "d7"
-      ]
-    },
-    {
-      "beam_id": "d22",
-      "module": "D",
-      "is_key_beam": true,
-      "centerline_start": [
-        3.5048,
-        0.2455,
-        1.8901
-      ],
-      "centerline_end": [
-        3.0213,
-        1.242,
-        1.9819
-      ],
-      "midpoint": [
-        3.263,
-        0.7437,
-        1.936
-      ],
-      "midpoint_normalized": [
-        0.6251,
-        0.5169,
-        0.7018
-      ],
-      "connected_beams": [
-        "c25",
-        "c26",
-        "d12",
-        "f23"
-      ]
-    },
-    {
-      "beam_id": "d23",
-      "module": "D",
-      "is_key_beam": false,
-      "centerline_start": [
-        2.5697,
-        2.8979,
-        2.23
-      ],
-      "centerline_end": [
-        3.0926,
-        1.8792,
-        1.9998
-      ],
-      "midpoint": [
-        2.8311,
-        2.3886,
-        2.1149
-      ],
-      "midpoint_normalized": [
-        0.5631,
-        0.8204,
-        0.7667
-      ],
-      "connected_beams": [
-        "d14",
-        "d24",
-        "d25",
-        "d29"
-      ]
-    },
-    {
-      "beam_id": "d24",
-      "module": "D",
-      "is_key_beam": false,
-      "centerline_start": [
-        2.7536,
-        2.1371,
-        2.0733
-      ],
-      "centerline_end": [
-        3.1947,
-        3.163,
-        2.2308
-      ],
-      "midpoint": [
-        2.9741,
-        2.65,
-        2.1521
-      ],
-      "midpoint_normalized": [
-        0.5836,
-        0.8687,
-        0.7802
-      ],
-      "connected_beams": [
-        "d15",
-        "d23",
-        "d25",
-        "f31"
-      ]
-    },
-    {
-      "beam_id": "d25",
-      "module": "D",
-      "is_key_beam": false,
-      "centerline_start": [
-        3.285,
-        2.6771,
-        2.178
-      ],
-      "centerline_end": [
-        2.3392,
-        2.7533,
-        2.174
-      ],
-      "midpoint": [
-        2.8121,
-        2.7152,
-        2.176
-      ],
-      "midpoint_normalized": [
-        0.5604,
-        0.8807,
-        0.7888
-      ],
-      "connected_beams": [
-        "d23",
-        "d24",
-        "d26",
-        "d28"
-      ]
-    },
-    {
-      "beam_id": "d26",
-      "module": "D",
-      "is_key_beam": false,
-      "centerline_start": [
-        2.8962,
-        3.2409,
-        2.2962
-      ],
-      "centerline_end": [
-        2.7845,
-        2.7341,
-        2.1818
-      ],
-      "midpoint": [
-        2.8404,
-        2.9875,
-        2.239
-      ],
-      "midpoint_normalized": [
-        0.5645,
-        0.931,
-        0.8117
-      ],
-      "connected_beams": [
-        "d25",
-        "d27"
-      ]
-    },
-    {
-      "beam_id": "d27",
+      "beam_id": "d17",
       "module": "D",
       "is_key_beam": false,
       "centerline_start": [
@@ -3424,14 +3112,14 @@
         0.826
       ],
       "connected_beams": [
-        "d26",
-        "d28",
-        "d32",
-        "f31"
+        "d18",
+        "d22",
+        "f30",
+        "h3"
       ]
     },
     {
-      "beam_id": "d28",
+      "beam_id": "d18",
       "module": "D",
       "is_key_beam": false,
       "centerline_start": [
@@ -3455,14 +3143,14 @@
         0.7982
       ],
       "connected_beams": [
-        "d25",
-        "d27",
-        "d29",
-        "d30"
+        "b22",
+        "d17",
+        "d19",
+        "d20"
       ]
     },
     {
-      "beam_id": "d29",
+      "beam_id": "d19",
       "module": "D",
       "is_key_beam": false,
       "centerline_start": [
@@ -3486,14 +3174,14 @@
         0.773
       ],
       "connected_beams": [
+        "b20",
         "d1",
-        "d23",
-        "d28",
-        "d30"
+        "d18",
+        "d20"
       ]
     },
     {
-      "beam_id": "d30",
+      "beam_id": "d20",
       "module": "D",
       "is_key_beam": false,
       "centerline_start": [
@@ -3517,16 +3205,16 @@
         0.7708
       ],
       "connected_beams": [
-        "d28",
-        "d29",
-        "d3",
-        "d31"
+        "d18",
+        "d19",
+        "d21",
+        "d3"
       ]
     },
     {
-      "beam_id": "d31",
+      "beam_id": "d21",
       "module": "D",
-      "is_key_beam": true,
+      "is_key_beam": false,
       "centerline_start": [
         1.6679,
         3.3833,
@@ -3548,12 +3236,12 @@
         0.7874
       ],
       "connected_beams": [
-        "d30",
-        "d32"
+        "d20",
+        "d22"
       ]
     },
     {
-      "beam_id": "d32",
+      "beam_id": "d22",
       "module": "D",
       "is_key_beam": false,
       "centerline_start": [
@@ -3578,10 +3266,10 @@
       ],
       "connected_beams": [
         "b17",
-        "b20",
-        "d27",
-        "d31",
-        "d5"
+        "b19",
+        "b24",
+        "d17",
+        "d21"
       ]
     },
     {
@@ -3611,7 +3299,7 @@
       "connected_beams": [
         "e2",
         "e3",
-        "e32",
+        "e33",
         "e6"
       ]
     },
@@ -3642,7 +3330,7 @@
       "connected_beams": [
         "e1",
         "e3",
-        "e33",
+        "e34",
         "e5"
       ]
     },
@@ -3731,9 +3419,9 @@
         0.5839
       ],
       "connected_beams": [
-        "c15",
         "e2",
-        "e23"
+        "e23",
+        "e37"
       ]
     },
     {
@@ -4269,17 +3957,17 @@
       ],
       "centerline_end": [
         5.9475,
-        -0.5689,
-        -0.0003
+        -0.5683,
+        0.0
       ],
       "midpoint": [
         5.5303,
-        -0.8455,
-        0.5538
+        -0.8451,
+        0.5539
       ],
       "midpoint_normalized": [
         0.95,
-        0.2235,
+        0.2236,
         0.2008
       ],
       "connected_beams": [
@@ -4317,7 +4005,7 @@
         "e11",
         "e25",
         "e26",
-        "e31"
+        "e32"
       ]
     },
     {
@@ -4379,7 +4067,7 @@
         "e24",
         "e25",
         "e28",
-        "e29"
+        "e30"
       ]
     },
     {
@@ -4409,8 +4097,8 @@
       "connected_beams": [
         "e25",
         "e28",
-        "f18",
-        "f23"
+        "e29",
+        "f18"
       ]
     },
     {
@@ -4438,14 +4126,45 @@
         0.6297
       ],
       "connected_beams": [
-        "c26",
         "e26",
         "e27",
-        "f23"
+        "e29",
+        "h1"
       ]
     },
     {
       "beam_id": "e29",
+      "module": "E",
+      "is_key_beam": false,
+      "centerline_start": [
+        4.2699,
+        0.6539,
+        1.5296
+      ],
+      "centerline_end": [
+        3.278,
+        0.6942,
+        1.9352
+      ],
+      "midpoint": [
+        3.774,
+        0.674,
+        1.7324
+      ],
+      "midpoint_normalized": [
+        0.6983,
+        0.504,
+        0.628
+      ],
+      "connected_beams": [
+        "e27",
+        "e28",
+        "f20",
+        "g5"
+      ]
+    },
+    {
+      "beam_id": "e30",
       "module": "E",
       "is_key_beam": false,
       "centerline_start": [
@@ -4469,14 +4188,14 @@
         0.6895
       ],
       "connected_beams": [
-        "c18",
+        "c17",
         "e26",
-        "e30",
-        "e31"
+        "e31",
+        "e32"
       ]
     },
     {
-      "beam_id": "e30",
+      "beam_id": "e31",
       "module": "E",
       "is_key_beam": false,
       "centerline_start": [
@@ -4500,14 +4219,14 @@
         0.7132
       ],
       "connected_beams": [
-        "c16",
-        "e29",
-        "e31",
-        "e34"
+        "c15",
+        "e30",
+        "e32",
+        "e35"
       ]
     },
     {
-      "beam_id": "e31",
+      "beam_id": "e32",
       "module": "E",
       "is_key_beam": false,
       "centerline_start": [
@@ -4532,13 +4251,13 @@
       ],
       "connected_beams": [
         "e24",
-        "e29",
         "e30",
-        "e32"
+        "e31",
+        "e33"
       ]
     },
     {
-      "beam_id": "e32",
+      "beam_id": "e33",
       "module": "E",
       "is_key_beam": false,
       "centerline_start": [
@@ -4563,13 +4282,13 @@
       ],
       "connected_beams": [
         "e1",
-        "e31",
-        "e33",
-        "e34"
+        "e32",
+        "e34",
+        "e35"
       ]
     },
     {
-      "beam_id": "e33",
+      "beam_id": "e34",
       "module": "E",
       "is_key_beam": false,
       "centerline_start": [
@@ -4594,13 +4313,13 @@
       ],
       "connected_beams": [
         "e2",
-        "e32",
-        "e34",
-        "e35"
+        "e33",
+        "e35",
+        "e36"
       ]
     },
     {
-      "beam_id": "e34",
+      "beam_id": "e35",
       "module": "E",
       "is_key_beam": false,
       "centerline_start": [
@@ -4624,14 +4343,14 @@
         0.7263
       ],
       "connected_beams": [
-        "c15",
-        "e30",
-        "e32",
-        "e33"
+        "e31",
+        "e33",
+        "e34",
+        "e37"
       ]
     },
     {
-      "beam_id": "e35",
+      "beam_id": "e36",
       "module": "E",
       "is_key_beam": true,
       "centerline_start": [
@@ -4655,8 +4374,41 @@
         0.7335
       ],
       "connected_beams": [
-        "c15",
-        "e33"
+        "e34",
+        "e37"
+      ]
+    },
+    {
+      "beam_id": "e37",
+      "module": "E",
+      "is_key_beam": false,
+      "centerline_start": [
+        2.9696,
+        -2.0095,
+        2.7519
+      ],
+      "centerline_end": [
+        4.1089,
+        -1.6422,
+        2.1136
+      ],
+      "midpoint": [
+        3.5393,
+        -1.8259,
+        2.4327
+      ],
+      "midpoint_normalized": [
+        0.6646,
+        0.0426,
+        0.8819
+      ],
+      "connected_beams": [
+        "c13",
+        "c14",
+        "c26",
+        "e35",
+        "e36",
+        "e5"
       ]
     },
     {
@@ -4685,7 +4437,7 @@
       ],
       "connected_beams": [
         "f2",
-        "f28",
+        "f27",
         "f3",
         "f4"
       ]
@@ -4745,7 +4497,7 @@
       ],
       "connected_beams": [
         "f1",
-        "f29",
+        "f28",
         "f4",
         "f6"
       ]
@@ -4808,7 +4560,7 @@
       "connected_beams": [
         "f17",
         "f2",
-        "f31"
+        "f30"
       ]
     },
     {
@@ -5158,19 +4910,19 @@
         0.9388
       ],
       "centerline_end": [
-        5.9387,
-        1.7232,
-        0.0023
+        5.9394,
+        1.728,
+        0.0
       ],
       "midpoint": [
-        5.5278,
-        2.0046,
-        0.4705
+        5.5282,
+        2.007,
+        0.4694
       ],
       "midpoint_normalized": [
         0.9497,
-        0.7496,
-        0.1706
+        0.75,
+        0.1702
       ],
       "connected_beams": [
         "f15",
@@ -5237,7 +4989,7 @@
       "connected_beams": [
         "f18",
         "f20",
-        "f24",
+        "f23",
         "f9"
       ]
     },
@@ -5266,10 +5018,10 @@
         0.5697
       ],
       "connected_beams": [
+        "e29",
         "f18",
         "f19",
-        "f23",
-        "f25"
+        "f24"
       ]
     },
     {
@@ -5336,37 +5088,6 @@
     {
       "beam_id": "f23",
       "module": "F",
-      "is_key_beam": true,
-      "centerline_start": [
-        4.2699,
-        0.6539,
-        1.5296
-      ],
-      "centerline_end": [
-        3.278,
-        0.6942,
-        1.9352
-      ],
-      "midpoint": [
-        3.774,
-        0.674,
-        1.7324
-      ],
-      "midpoint_normalized": [
-        0.6983,
-        0.504,
-        0.628
-      ],
-      "connected_beams": [
-        "d22",
-        "e27",
-        "e28",
-        "f20"
-      ]
-    },
-    {
-      "beam_id": "f24",
-      "module": "F",
       "is_key_beam": false,
       "centerline_start": [
         3.7311,
@@ -5390,13 +5111,13 @@
       ],
       "connected_beams": [
         "f19",
+        "f24",
         "f25",
-        "f26",
-        "f29"
+        "f28"
       ]
     },
     {
-      "beam_id": "f25",
+      "beam_id": "f24",
       "module": "F",
       "is_key_beam": false,
       "centerline_start": [
@@ -5420,14 +5141,14 @@
         0.6242
       ],
       "connected_beams": [
-        "d16",
+        "d15",
         "f20",
-        "f24",
-        "f26"
+        "f23",
+        "f25"
       ]
     },
     {
-      "beam_id": "f26",
+      "beam_id": "f25",
       "module": "F",
       "is_key_beam": false,
       "centerline_start": [
@@ -5451,14 +5172,14 @@
         0.6383
       ],
       "connected_beams": [
-        "d15",
+        "d14",
+        "f23",
         "f24",
-        "f25",
-        "f27"
+        "f26"
       ]
     },
     {
-      "beam_id": "f27",
+      "beam_id": "f26",
       "module": "F",
       "is_key_beam": false,
       "centerline_start": [
@@ -5482,14 +5203,14 @@
         0.6059
       ],
       "connected_beams": [
-        "f26",
+        "f25",
+        "f27",
         "f28",
-        "f29",
-        "f30"
+        "f29"
       ]
     },
     {
-      "beam_id": "f28",
+      "beam_id": "f27",
       "module": "F",
       "is_key_beam": false,
       "centerline_start": [
@@ -5514,13 +5235,13 @@
       ],
       "connected_beams": [
         "f1",
-        "f27",
-        "f29",
-        "f31"
+        "f26",
+        "f28",
+        "f30"
       ]
     },
     {
-      "beam_id": "f29",
+      "beam_id": "f28",
       "module": "F",
       "is_key_beam": false,
       "centerline_start": [
@@ -5544,14 +5265,14 @@
         0.5352
       ],
       "connected_beams": [
-        "f24",
+        "f23",
+        "f26",
         "f27",
-        "f28",
         "f3"
       ]
     },
     {
-      "beam_id": "f30",
+      "beam_id": "f29",
       "module": "F",
       "is_key_beam": false,
       "centerline_start": [
@@ -5575,12 +5296,12 @@
         0.6616
       ],
       "connected_beams": [
-        "f27",
-        "f31"
+        "f26",
+        "f30"
       ]
     },
     {
-      "beam_id": "f31",
+      "beam_id": "f30",
       "module": "F",
       "is_key_beam": false,
       "centerline_start": [
@@ -5604,11 +5325,290 @@
         0.7304
       ],
       "connected_beams": [
-        "d24",
-        "d27",
-        "f28",
-        "f30",
+        "b21",
+        "d17",
+        "f27",
+        "f29",
         "f5"
+      ]
+    },
+    {
+      "beam_id": "g1",
+      "module": "G",
+      "is_key_beam": false,
+      "centerline_start": [
+        1.3395,
+        1.0574,
+        1.713
+      ],
+      "centerline_end": [
+        0.8303,
+        0.1348,
+        1.5154
+      ],
+      "midpoint": [
+        1.0849,
+        0.5961,
+        1.6142
+      ],
+      "midpoint_normalized": [
+        0.3129,
+        0.4896,
+        0.5852
+      ],
+      "connected_beams": [
+        "a7",
+        "b25",
+        "g2",
+        "g3"
+      ]
+    },
+    {
+      "beam_id": "g2",
+      "module": "G",
+      "is_key_beam": false,
+      "centerline_start": [
+        0.8365,
+        0.5236,
+        1.5476
+      ],
+      "centerline_end": [
+        1.8278,
+        0.4757,
+        1.9588
+      ],
+      "midpoint": [
+        1.3322,
+        0.4996,
+        1.7532
+      ],
+      "midpoint_normalized": [
+        0.3483,
+        0.4718,
+        0.6356
+      ],
+      "connected_beams": [
+        "a9",
+        "g1",
+        "g3",
+        "g4"
+      ]
+    },
+    {
+      "beam_id": "g3",
+      "module": "G",
+      "is_key_beam": false,
+      "centerline_start": [
+        1.55,
+        0.2621,
+        1.8615
+      ],
+      "centerline_end": [
+        1.0383,
+        1.3164,
+        1.5646
+      ],
+      "midpoint": [
+        1.2942,
+        0.7892,
+        1.7131
+      ],
+      "midpoint_normalized": [
+        0.3429,
+        0.5253,
+        0.621
+      ],
+      "connected_beams": [
+        "b27",
+        "d16",
+        "g1",
+        "g2"
+      ]
+    },
+    {
+      "beam_id": "g4",
+      "module": "G",
+      "is_key_beam": false,
+      "centerline_start": [
+        1.6246,
+        0.921,
+        1.8348
+      ],
+      "centerline_end": [
+        2.0651,
+        -0.0894,
+        2.1077
+      ],
+      "midpoint": [
+        1.8449,
+        0.4158,
+        1.9713
+      ],
+      "midpoint_normalized": [
+        0.4218,
+        0.4563,
+        0.7146
+      ],
+      "connected_beams": [
+        "c22",
+        "d16",
+        "g2",
+        "h2"
+      ]
+    },
+    {
+      "beam_id": "g5",
+      "module": "G",
+      "is_key_beam": false,
+      "centerline_start": [
+        3.5048,
+        0.2455,
+        1.8901
+      ],
+      "centerline_end": [
+        3.0213,
+        1.242,
+        1.9819
+      ],
+      "midpoint": [
+        3.263,
+        0.7437,
+        1.936
+      ],
+      "midpoint_normalized": [
+        0.6251,
+        0.5169,
+        0.7018
+      ],
+      "connected_beams": [
+        "c24",
+        "d11",
+        "e29",
+        "h1"
+      ]
+    },
+    {
+      "beam_id": "g6",
+      "module": "G",
+      "is_key_beam": false,
+      "centerline_start": [
+        0.6099,
+        -1.9106,
+        2.1352
+      ],
+      "centerline_end": [
+        1.775,
+        -2.1038,
+        2.7652
+      ],
+      "midpoint": [
+        1.1924,
+        -2.0072,
+        2.4502
+      ],
+      "midpoint_normalized": [
+        0.3283,
+        0.0091,
+        0.8882
+      ],
+      "connected_beams": [
+        "a25",
+        "a27",
+        "c10",
+        "c25",
+        "c26",
+        "c9"
+      ]
+    },
+    {
+      "beam_id": "h1",
+      "module": "H",
+      "is_key_beam": false,
+      "centerline_start": [
+        2.822,
+        0.4403,
+        2.1465
+      ],
+      "centerline_end": [
+        3.8144,
+        0.4368,
+        1.7354
+      ],
+      "midpoint": [
+        3.3182,
+        0.4385,
+        1.9409
+      ],
+      "midpoint_normalized": [
+        0.633,
+        0.4605,
+        0.7036
+      ],
+      "connected_beams": [
+        "c18",
+        "c24",
+        "e28",
+        "g5"
+      ]
+    },
+    {
+      "beam_id": "h2",
+      "module": "H",
+      "is_key_beam": false,
+      "centerline_start": [
+        1.7606,
+        0.0839,
+        1.9784
+      ],
+      "centerline_end": [
+        2.2945,
+        1.1553,
+        2.0147
+      ],
+      "midpoint": [
+        2.0275,
+        0.6196,
+        1.9966
+      ],
+      "midpoint_normalized": [
+        0.448,
+        0.4939,
+        0.7238
+      ],
+      "connected_beams": [
+        "c23",
+        "d16",
+        "d9",
+        "g4"
+      ]
+    },
+    {
+      "beam_id": "h3",
+      "module": "H",
+      "is_key_beam": false,
+      "centerline_start": [
+        2.8962,
+        3.2409,
+        2.2962
+      ],
+      "centerline_end": [
+        2.7845,
+        2.7341,
+        2.1818
+      ],
+      "midpoint": [
+        2.8404,
+        2.9875,
+        2.239
+      ],
+      "midpoint_normalized": [
+        0.5645,
+        0.931,
+        0.8117
+      ],
+      "connected_beams": [
+        "b22",
+        "d17"
       ]
     }
   ]

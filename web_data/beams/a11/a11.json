@@ -5,76 +5,73 @@
   "is_key_beam": false,
   "width (m)": 0.06,
   "height (m)": 0.08,
-  "length (m)": 1.03,
-  "volume (cm\u00b3)": 4959.86,
-  "weight (kg)": 2.48,
+  "length (m)": 1.12,
+  "blank_length (m)": 1.14,
+  "volume (cm\u00b3)": 5365.96,
+  "weight (kg)": 2.68,
   "local_frame": {
     "origin": [
-      -0.5539,
-      -0.1832,
-      0.3882
+      -0.599,
+      -0.4224,
+      0.3979
     ],
     "x_axis": [
-      -0.1919,
-      0.8842,
-      -0.4259
+      0.6711,
+      -0.1373,
+      0.7285
     ],
     "y_axis": [
-      0.6576,
-      0.4381,
-      0.613
+      -0.2778,
+      -0.9577,
+      0.0755
     ],
     "z_axis": [
-      0.7285,
-      -0.1624,
-      -0.6655
+      0.6873,
+      -0.2531,
+      -0.6808
     ]
   },
-  "blank_frame_origin": [
-    -0.4517,
-    -0.6539,
-    0.6149
-  ],
   "connected_beams": [
+    "a10",
     "a12",
-    "a17",
-    "a3"
+    "a13",
+    "a2"
   ],
   "global_position": {
     "centerline_start": [
-      -0.4536,
-      -0.6451,
-      0.6107
+      -0.9741,
+      -0.3457,
+      -0.0093
     ],
     "centerline_end": [
-      -0.6519,
-      0.2685,
-      0.1705
+      -0.2239,
+      -0.4992,
+      0.8052
     ],
     "midpoint": [
-      -0.5528,
-      -0.1883,
-      0.3906
+      -0.599,
+      -0.4224,
+      0.3979
     ],
     "midpoint_normalized": [
-      0.0781,
-      0.3448,
-      0.1416
+      0.0715,
+      0.3016,
+      0.1443
     ]
   },
   "joints": {
     "all": [
-      "18",
-      "255",
-      "251"
+      "241",
+      "19",
+      "20",
+      "267"
     ],
     "xlap": [
-      "18"
+      "20"
     ],
-    "llap": [],
     "tbutt": [
-      "255",
-      "251"
+      "19",
+      "267"
     ],
     "lmiter": []
   },
@@ -84,6 +81,84 @@
       "type": "Screw",
       "data": {
         "type": "Screw",
+        "joint_type": "TButtJoint - inner",
+        "start": [
+          -0.6185399281315039,
+          -0.38691754632532216,
+          0.375271010079699
+        ],
+        "end": [
+          -0.7231633434748448,
+          -0.47688072137511206,
+          0.31644441663034434
+        ],
+        "diameter_m": 0.0064,
+        "length_m": 0.15,
+        "length_mm": 150.0,
+        "assigned_length_mm": 150
+      },
+      "start": [
+        -0.6185,
+        -0.3869,
+        0.3753
+      ],
+      "end": [
+        -0.7232,
+        -0.4769,
+        0.3164
+      ],
+      "line_length_m": 0.15,
+      "diameter_m": 0.0064,
+      "length_m": 0.15,
+      "length_mm": 150.0,
+      "assigned_length_mm": 150,
+      "joint_type": "TButtJoint - inner",
+      "has_stl_geometry": true
+    },
+    {
+      "id": "web-2",
+      "type": "Screw",
+      "data": {
+        "type": "Screw",
+        "joint_type": "TButtJoint - inner",
+        "start": [
+          -0.5986708587088262,
+          -0.3968346793337043,
+          0.35509997755355216
+        ],
+        "end": [
+          -0.703294274052167,
+          -0.4867978543834942,
+          0.2962733841041975
+        ],
+        "diameter_m": 0.0064,
+        "length_m": 0.15,
+        "length_mm": 150.0,
+        "assigned_length_mm": 150
+      },
+      "start": [
+        -0.5987,
+        -0.3968,
+        0.3551
+      ],
+      "end": [
+        -0.7033,
+        -0.4868,
+        0.2963
+      ],
+      "line_length_m": 0.15,
+      "diameter_m": 0.0064,
+      "length_m": 0.15,
+      "length_mm": 150.0,
+      "assigned_length_mm": 150,
+      "joint_type": "TButtJoint - inner",
+      "has_stl_geometry": true
+    },
+    {
+      "id": "web-3",
+      "type": "Screw",
+      "data": {
+        "type": "Screw",
         "joint_type": "XLapJoint",
         "start": [
           -0.456688273627146,
@@ -119,7 +194,7 @@
       "has_stl_geometry": true
     },
     {
-      "id": "web-2",
+      "id": "web-4",
       "type": "Screw",
       "data": {
         "type": "Screw",
@@ -158,20 +233,20 @@
       "has_stl_geometry": true
     },
     {
-      "id": "web-3",
+      "id": "web-5",
       "type": "Screw",
       "data": {
         "type": "Screw",
-        "joint_type": "TButtJoint - inner",
+        "joint_type": "TButtJoint - foundation",
         "start": [
-          -0.5664083529051216,
-          -0.18593677616669407,
-          0.3499307643746618
+          -0.9041095435652181,
+          -0.37535950869018725,
+          0.131180920084249
         ],
         "end": [
-          -0.46746254978790974,
-          -0.21044796369065946,
-          0.45997134657802424
+          -0.9041095435652181,
+          -0.37535950869018725,
+          -0.01881907991575099
         ],
         "diameter_m": 0.0064,
         "length_m": 0.15,
@@ -179,21 +254,60 @@
         "assigned_length_mm": 150
       },
       "start": [
-        -0.5664,
-        -0.1859,
-        0.3499
+        -0.9041,
+        -0.3754,
+        0.1312
       ],
       "end": [
-        -0.4675,
-        -0.2104,
-        0.46
+        -0.9041,
+        -0.3754,
+        -0.0188
       ],
       "line_length_m": 0.15,
       "diameter_m": 0.0064,
       "length_m": 0.15,
       "length_mm": 150.0,
       "assigned_length_mm": 150,
-      "joint_type": "TButtJoint - inner",
+      "joint_type": "TButtJoint - foundation",
+      "has_stl_geometry": true
+    },
+    {
+      "id": "web-6",
+      "type": "Screw",
+      "data": {
+        "type": "Screw",
+        "joint_type": "TButtJoint - foundation",
+        "start": [
+          -0.8980983153911418,
+          -0.34596792595228093,
+          0.12632355856901473
+        ],
+        "end": [
+          -0.8980983153911418,
+          -0.34596792595228093,
+          -0.023676441430985268
+        ],
+        "diameter_m": 0.0064,
+        "length_m": 0.15,
+        "length_mm": 150.0,
+        "assigned_length_mm": 150
+      },
+      "start": [
+        -0.8981,
+        -0.346,
+        0.1263
+      ],
+      "end": [
+        -0.8981,
+        -0.346,
+        -0.0237
+      ],
+      "line_length_m": 0.15,
+      "diameter_m": 0.0064,
+      "length_m": 0.15,
+      "length_mm": 150.0,
+      "assigned_length_mm": 150,
+      "joint_type": "TButtJoint - foundation",
       "has_stl_geometry": true
     }
   ],
@@ -203,6 +317,84 @@
       "type": "Screw",
       "data": {
         "type": "Screw",
+        "joint_type": "TButtJoint - inner",
+        "start": [
+          -0.6185399281315039,
+          -0.38691754632532216,
+          0.375271010079699
+        ],
+        "end": [
+          -0.7231633434748448,
+          -0.47688072137511206,
+          0.31644441663034434
+        ],
+        "diameter_m": 0.0064,
+        "length_m": 0.15,
+        "length_mm": 150.0,
+        "assigned_length_mm": 150
+      },
+      "start": [
+        -0.6185,
+        -0.3869,
+        0.3753
+      ],
+      "end": [
+        -0.7232,
+        -0.4769,
+        0.3164
+      ],
+      "line_length_m": 0.15,
+      "diameter_m": 0.0064,
+      "length_m": 0.15,
+      "length_mm": 150.0,
+      "assigned_length_mm": 150,
+      "joint_type": "TButtJoint - inner",
+      "has_stl_geometry": true
+    },
+    {
+      "id": "web-2",
+      "type": "Screw",
+      "data": {
+        "type": "Screw",
+        "joint_type": "TButtJoint - inner",
+        "start": [
+          -0.5986708587088262,
+          -0.3968346793337043,
+          0.35509997755355216
+        ],
+        "end": [
+          -0.703294274052167,
+          -0.4867978543834942,
+          0.2962733841041975
+        ],
+        "diameter_m": 0.0064,
+        "length_m": 0.15,
+        "length_mm": 150.0,
+        "assigned_length_mm": 150
+      },
+      "start": [
+        -0.5987,
+        -0.3968,
+        0.3551
+      ],
+      "end": [
+        -0.7033,
+        -0.4868,
+        0.2963
+      ],
+      "line_length_m": 0.15,
+      "diameter_m": 0.0064,
+      "length_m": 0.15,
+      "length_mm": 150.0,
+      "assigned_length_mm": 150,
+      "joint_type": "TButtJoint - inner",
+      "has_stl_geometry": true
+    },
+    {
+      "id": "web-3",
+      "type": "Screw",
+      "data": {
+        "type": "Screw",
         "joint_type": "XLapJoint",
         "start": [
           -0.456688273627146,
@@ -238,7 +430,7 @@
       "has_stl_geometry": true
     },
     {
-      "id": "web-2",
+      "id": "web-4",
       "type": "Screw",
       "data": {
         "type": "Screw",
@@ -277,20 +469,20 @@
       "has_stl_geometry": true
     },
     {
-      "id": "web-3",
+      "id": "web-5",
       "type": "Screw",
       "data": {
         "type": "Screw",
-        "joint_type": "TButtJoint - inner",
+        "joint_type": "TButtJoint - foundation",
         "start": [
-          -0.5664083529051216,
-          -0.18593677616669407,
-          0.3499307643746618
+          -0.9041095435652181,
+          -0.37535950869018725,
+          0.131180920084249
         ],
         "end": [
-          -0.46746254978790974,
-          -0.21044796369065946,
-          0.45997134657802424
+          -0.9041095435652181,
+          -0.37535950869018725,
+          -0.01881907991575099
         ],
         "diameter_m": 0.0064,
         "length_m": 0.15,
@@ -298,21 +490,60 @@
         "assigned_length_mm": 150
       },
       "start": [
-        -0.5664,
-        -0.1859,
-        0.3499
+        -0.9041,
+        -0.3754,
+        0.1312
       ],
       "end": [
-        -0.4675,
-        -0.2104,
-        0.46
+        -0.9041,
+        -0.3754,
+        -0.0188
       ],
       "line_length_m": 0.15,
       "diameter_m": 0.0064,
       "length_m": 0.15,
       "length_mm": 150.0,
       "assigned_length_mm": 150,
-      "joint_type": "TButtJoint - inner",
+      "joint_type": "TButtJoint - foundation",
+      "has_stl_geometry": true
+    },
+    {
+      "id": "web-6",
+      "type": "Screw",
+      "data": {
+        "type": "Screw",
+        "joint_type": "TButtJoint - foundation",
+        "start": [
+          -0.8980983153911418,
+          -0.34596792595228093,
+          0.12632355856901473
+        ],
+        "end": [
+          -0.8980983153911418,
+          -0.34596792595228093,
+          -0.023676441430985268
+        ],
+        "diameter_m": 0.0064,
+        "length_m": 0.15,
+        "length_mm": 150.0,
+        "assigned_length_mm": 150
+      },
+      "start": [
+        -0.8981,
+        -0.346,
+        0.1263
+      ],
+      "end": [
+        -0.8981,
+        -0.346,
+        -0.0237
+      ],
+      "line_length_m": 0.15,
+      "diameter_m": 0.0064,
+      "length_m": 0.15,
+      "length_mm": 150.0,
+      "assigned_length_mm": 150,
+      "joint_type": "TButtJoint - foundation",
       "has_stl_geometry": true
     }
   ],

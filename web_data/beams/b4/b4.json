@@ -6,6 +6,7 @@
   "width (m)": 0.06,
   "height (m)": 0.08,
   "length (m)": 1.05,
+  "blank_length (m)": 1.06,
   "volume (cm\u00b3)": 5046.2,
   "weight (kg)": 2.52,
   "local_frame": {
@@ -30,16 +31,11 @@
       -0.7801
     ]
   },
-  "blank_frame_origin": [
-    0.5999,
-    1.0367,
-    1.2464
-  ],
   "connected_beams": [
     "b1",
+    "b26",
     "b5",
-    "b6",
-    "d20"
+    "b6"
   ],
   "global_position": {
     "centerline_start": [
@@ -65,19 +61,18 @@
   },
   "joints": {
     "all": [
-      "48",
-      "42",
-      "41",
-      "31"
+      "50",
+      "44",
+      "43",
+      "33"
     ],
     "xlap": [
-      "48",
-      "41"
+      "50",
+      "43"
     ],
-    "llap": [],
     "tbutt": [
-      "42",
-      "31"
+      "44",
+      "33"
     ],
     "lmiter": []
   },
