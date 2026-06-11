@@ -1053,46 +1053,8 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
     for k in base_labels:
         ordered_by_module[k] = connected_growth(seeds[k], groups[k])
 
-    # =========================================================================
-    # POST-PROCESSING: MAPPATURA NOMI INIZIALI
-    # =========================================================================
-    guid_by_initial_name = {}
-    node_initial_name = {}
-
-    for k in base_labels:
-        for i, node in enumerate(ordered_by_module[k]):
-            initial_name = "{}{}".format(k, i + 1)
-            guid_by_initial_name[initial_name] = node
-            node_initial_name[node] = initial_name
-
-    # =========================================================================
-    # SPOSTAMENTI MANUALI
-    # Ordine di applicazione:
-    #   1. G e H prima (estrazione da moduli base)
-    #   2. poi D19/D20/D21 -> B e F23 -> E
-    # =========================================================================
-
-    manual_moves_ordered = [
-        # (nome_iniziale, modulo_target)
-        # Prima: estrazione moduli G e H
-        ("A10",  "G"),
-        ("C27",  "G"),
-        ("C28",  "G"),
-        ("C29",  "G"),
-        ("D17",  "G"),
-        ("D18",  "G"),
-        ("C25",  "H"),
-        ("C26",  "H"),
-        ("D22",  "H"),
-        # Poi: spostamenti intra-modulo
-        ("D19",  "B"),
-        ("D20",  "B"),
-        ("D21",  "B"),
-        ("F23",  "E"),
-    ]
-
+    # Funzione di utilità riutilizzabile per l'inserimento geometrico ordinato
     def _insert_by_proximity(target_list, node_to_move):
-        """Inserisce node_to_move nella posizione più sensata per prossimità."""
         if not target_list:
             target_list.append(node_to_move)
             return
@@ -1107,19 +1069,86 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
                 best_idx = idx_n
         target_list.insert(best_idx + 1, node_to_move)
 
-    # Prima passata: rimozione dai moduli originali
-    for initial_name, target_mod in manual_moves_ordered:
-        if initial_name in guid_by_initial_name:
-            node_to_move = guid_by_initial_name[initial_name]
+    # =========================================================================
+    # POST-PROCESSING FASE 1: APPLICAZIONE SPOSTAMENTI STORICI (Nomenclatura Corrente)
+    # =========================================================================
+    # Ricostruiamo la nomenclatura iniziale assoluta generata dalla griglia pura
+    guid_by_pure_grid_name = {}
+    for k in base_labels:
+        for i, node in enumerate(ordered_by_module[k]):
+            pure_name = "{}{}".format(k, i + 1)
+            guid_by_pure_grid_name[pure_name] = node
+
+    # Mappa storica dei primi riposizionamenti manuali che definiscono la tua base di partenza
+    historical_moves = {
+        "B19": "D", "B22": "D", "B23": "D", "B24": "D",
+        "A28": "C", "A29": "C", "E36": "C"
+    }
+
+    # Rimuoviamo dai moduli originari della griglia
+    for pure_name, target_mod in historical_moves.items():
+        if pure_name in guid_by_pure_grid_name:
+            node_to_move = guid_by_pure_grid_name[pure_name]
+            for mod_k in base_labels:
+                if node_to_move in ordered_by_module[mod_k]:
+                    ordered_by_module[mod_k].remove(node_to_move)
+                    break
+
+    # Inseriamo nei moduli target storici mantenendo la prossimità geometrica
+    for pure_name, target_mod in historical_moves.items():
+        if pure_name in guid_by_pure_grid_name:
+            node_to_move = guid_by_pure_grid_name[pure_name]
+            _insert_by_proximity(ordered_by_module[target_mod], node_to_move)
+            assignment[node_to_move] = target_mod
+
+    # =========================================================================
+    # POST-PROCESSING FASE 2: MAPPATURA DALLA NOMENCLATURA MODIFICATA CORRENTE
+    # =========================================================================
+    # Adesso generiamo la mappa partendo dai nomi CHE VEDI TU ADESSO dopo la prima modifica
+    guid_by_modified_name = {}
+    node_initial_name = {}  # Per mantenere coerente il tracciamento dei Key Beams finali
+
+    for k in base_labels:
+        for i, node in enumerate(ordered_by_module[k]):
+            current_modified_name = "{}{}".format(k, i + 1)
+            guid_by_modified_name[current_modified_name] = node
+            node_initial_name[node] = current_modified_name
+
+    # =========================================================================
+    # POST-PROCESSING FASE 3: NUOVI MODULI G, H E SPOSTAMENTI FINALI RICHIESTI
+    # =========================================================================
+    # Le modifiche odierne sono applicate basandoci ESATTAMENTE sulla nomenclatura intermedia
+    new_manual_moves_ordered = [
+        # Nuova estrazione per i moduli G e H
+        ("A10",  "G"),
+        ("C27",  "G"),
+        ("C28",  "G"),
+        ("C29",  "G"),
+        ("D17",  "G"),
+        ("D18",  "G"),
+        ("C25",  "H"),
+        ("C26",  "H"),
+        ("D22",  "H"),
+        # Spostamenti definitivi intra-modulo
+        ("D19",  "B"),
+        ("D20",  "B"),
+        ("D21",  "B"),
+        ("F23",  "E"),
+    ]
+
+    # Prima passata della Fase 3: Rimozione dai moduli correnti modificati
+    for interim_name, target_mod in new_manual_moves_ordered:
+        if interim_name in guid_by_modified_name:
+            node_to_move = guid_by_modified_name[interim_name]
             for mod_k in all_labels:
                 if node_to_move in ordered_by_module[mod_k]:
                     ordered_by_module[mod_k].remove(node_to_move)
                     break
 
-    # Seconda passata: inserimento nei moduli target con ordine sensato
-    for initial_name, target_mod in manual_moves_ordered:
-        if initial_name in guid_by_initial_name:
-            node_to_move = guid_by_initial_name[initial_name]
+    # Seconda passata della Fase 3: Inserimento integrato nel flusso di assemblaggio per vicinanza spaziale
+    for interim_name, target_mod in new_manual_moves_ordered:
+        if interim_name in guid_by_modified_name:
+            node_to_move = guid_by_modified_name[interim_name]
             _insert_by_proximity(ordered_by_module[target_mod], node_to_move)
             assignment[node_to_move] = target_mod
 
@@ -1136,7 +1165,7 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
             beam = timber_model.get_element(node)
             set_beam_partitioning_attributes(beam, k, i + 1, beam_id=name.lower(), display_name=name)
 
-            # Key beam: confronto col nome INIZIALE (pre-spostamento)
+            # Il controllo del Key Beam avviene in base alla nomenclatura che ha attivato questo script
             orig_name = node_initial_name.get(node, "")
             is_key_beam_by_guid[node] = (orig_name in KEY_BEAMS_LIST)
 

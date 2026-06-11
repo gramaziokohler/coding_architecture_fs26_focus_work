@@ -2,10 +2,11 @@
   "beam ID": "c14",
   "name": "C14",
   "module": "C",
-  "is_key_beam": false,
+  "is_key_beam": true,
   "width (m)": 0.06,
   "height (m)": 0.08,
   "length (m)": 0.66,
+  "blank_length (m)": 0.69,
   "volume (cm\u00b3)": 3171.72,
   "weight (kg)": 1.59,
   "local_frame": {
@@ -30,11 +31,6 @@
       -0.9019
     ]
   },
-  "blank_frame_origin": [
-    3.3362,
-    -1.9174,
-    2.5916
-  ],
   "connected_beams": [
     "c12",
     "c15"
@@ -64,13 +60,11 @@
   "joints": {
     "all": [
       "300",
-      "141"
+      "143"
     ],
     "xlap": [],
-    "llap": [],
     "tbutt": [
-      "300",
-      "141"
+      "143"
     ],
     "lmiter": []
   },
