@@ -1,24 +1,15 @@
 """
-Stencil helpers for plates with circular openings and mixed timber beams.
+Bereinigte Stencil-Helper für COMPAS Timber.
+Verhindert Kurven-Duplizierung und erzwingt physische Löcher in Platten.
 """
 
 import math
-
-from compas.geometry import Frame
-from compas.geometry import Line
-from compas.geometry import Point
-from compas.geometry import Polyline
-from compas.geometry import Vector
+from compas.geometry import Frame, Line, Point, Polyline, Vector
 from compas.scene import SceneObject
-from compas_timber.connections import JointTopology
-from compas_timber.connections import LLapJoint
-from compas_timber.connections import TLapJoint
-from compas_timber.connections import XLapJoint
-from compas_timber.elements import Beam
-from compas_timber.elements import Plate
+from compas_timber.connections import JointTopology, LLapJoint, TLapJoint, XLapJoint
+from compas_timber.elements import Beam, Plate
 from compas_timber.model import TimberModel
-from timber_design.workflow import JointRuleSolver
-from timber_design.workflow import TopologyRule
+from timber_design.workflow import JointRuleSolver, TopologyRule
 
 
 def point_to_compas(point):
@@ -48,10 +39,6 @@ def rectangle_outline(rectangle):
     return Polyline(corners)
 
 
-def point_in_rectangle(rectangle, point):
-    return rectangle.Contains(point) != 0
-
-
 def circle_polyline(frame, center, radius, segments):
     points = []
     for i in range(segments):
@@ -65,37 +52,35 @@ def circle_polyline(frame, center, radius, segments):
     return Polyline(points)
 
 
-def hole_openings(rectangle, points, hole_radius=0.015, hole_segments=24):
+def hole_openings_for_plate(rectangle, points, hole_radius, hole_segments):
+    """Projiziert Punkte auf die Platte und erstellt die Kreise OHNE Duplizierung."""
     frame = rectangle_frame(rectangle)
     openings = []
 
     for point in points or []:
-        # 1. Punkt in das lokale Koordinatensystem der Platte umrechnen
-        # Dadurch eliminieren wir Höhenversätze (Z-Achse) im Rhino-Raum
         compas_point = point_to_compas(point)
+        # Punkt auf die lokale Plattenebene projizieren (Z=0)
         local_point = frame.to_local_coordinates(compas_point)
         
-        # 2. Den Punkt exakt auf die 2D-Plattenebene zwingen (Z = 0)
-        local_point.z = 0.0
-        global_center = frame.to_global_coordinates(local_point)
-
-        # 3. Kreis direkt auf der Ebene erstellen
-        openings.append(circle_polyline(frame, global_center, hole_radius, hole_segments))
+        # Nur Punkte nehmen, die auch wirklich auf der Platte liegen
+        if rectangle.Contains(point) != 0:
+            local_point.z = 0.0
+            global_center = frame.to_global_coordinates(local_point)
+            openings.append(circle_polyline(frame, global_center, hole_radius, hole_segments))
 
     return openings
 
 
-def make_plate(rectangle, points, plate_thickness=0.010, hole_radius=0.015, hole_segments=24):
-    # Übergibt die kreisförmigen Öffnungen direkt an die Plate-Instanz
+def make_plate(rectangle, points, plate_thickness, hole_radius, hole_segments):
     return Plate.from_outline_thickness(
         rectangle_outline(rectangle),
         plate_thickness,
         vector=rectangle_frame(rectangle).zaxis,
-        openings=hole_openings(rectangle, points, hole_radius, hole_segments),
+        openings=hole_openings_for_plate(rectangle, points, hole_radius, hole_segments),
     )
 
 
-def make_beam(line, beam_width=0.060, beam_height=0.080):
+def make_beam(line, beam_width, beam_height):
     return Beam.from_centerline(
         line_to_compas(line),
         width=beam_width,
@@ -104,39 +89,8 @@ def make_beam(line, beam_width=0.060, beam_height=0.080):
     )
 
 
-def add_lap_joints(model, joint_max_distance=0.020, lap_cut_plane_bias=0.5, flip_lap_side=False, include_x_lap=True):
-    rules = [
-        TopologyRule(
-            JointTopology.TOPO_T,
-            TLapJoint,
-            max_distance=joint_max_distance,
-            cut_plane_bias=lap_cut_plane_bias,
-            flip_lap_side=flip_lap_side,
-        ),
-        TopologyRule(
-            JointTopology.TOPO_L,
-            LLapJoint,
-            max_distance=joint_max_distance,
-            cut_plane_bias=lap_cut_plane_bias,
-            flip_lap_side=flip_lap_side,
-        )
-    ]
-    if include_x_lap:
-        rules.append(
-            TopologyRule(
-                JointTopology.TOPO_X,
-                XLapJoint,
-                max_distance=joint_max_distance,
-                cut_plane_bias=lap_cut_plane_bias,
-                flip_lap_side=flip_lap_side,
-            )
-        )
-    solver = JointRuleSolver(rules)
-    return solver.apply_rules_to_model(model)
-
-
 def element_geometry(element, errors, compute_plate_geometry=True):
-    # Wenn False, wird nur das rohe Blank-Mesh ohne Bearbeitungen generiert
+    """Gibt das fertige Mesh inklusive aller Features (Löcher) zurück."""
     if isinstance(element, Plate) and not compute_plate_geometry:
         try:
             return element.blank.to_mesh()
@@ -144,50 +98,28 @@ def element_geometry(element, errors, compute_plate_geometry=True):
             errors.append("Plate blank preview: {!r}".format(error))
 
     try:
-        # Berechnet das finale Element inklusive aller Features (wie z.B. Openings)
+        # .geometry erzwingt bei COMPAS das Ausstanzen der Löcher im Mesh
         return element.geometry
     except Exception as error:
-        errors.append("{} geometry: {!r}".format(type(element).__name__, error))
+        errors.append("{} geometry error: {!r}".format(type(element).__name__, error))
         if isinstance(element, Plate):
             try:
-                # Expliziter Fallback-Versuch mit erzwungenen Features
-                geometry = element.compute_elementgeometry(include_features=True)
-                return geometry.transformed(element.modeltransformation)
-            except Exception as fallback_error:
-                errors.append("Plate shape fallback: {!r}".format(fallback_error))
-            try:
-                return element.blank.to_mesh()
-            except Exception as blank_error:
-                errors.append("Plate blank fallback: {!r}".format(blank_error))
+                geom = element.compute_elementgeometry(include_features=True)
+                return geom.transformed(element.modeltransformation)
+            except Exception:
+                pass
+            return element.blank.to_mesh()
         return None
 
 
 def rhino_geometry(geometry, errors):
     if geometry is None:
         return None
-
     try:
         return SceneObject(item=geometry).draw()
     except Exception as error:
         errors.append("Rhino conversion: {}".format(error))
         return None
-
-
-def make_geometry_outputs(plates, beams, compute_plate_geometry=True):
-    geometry_errors = []
-    plates_out = [element_geometry(plate, geometry_errors, compute_plate_geometry) for plate in plates]
-    beams_out = [element_geometry(beam, geometry_errors) for beam in beams]
-
-    plate_holes_out = []
-    for plate in plates:
-        for opening in plate.plate_geometry.openings:
-            plate_holes_out.append(opening.transformed(plate.modeltransformation))
-
-    plate_holes_rhino = [rhino_geometry(hole, geometry_errors) for hole in plate_holes_out]
-    plates_rhino = [rhino_geometry(geometry, geometry_errors) for geometry in plates_out]
-    beams_rhino = [rhino_geometry(geometry, geometry_errors) for geometry in beams_out]
-
-    return plates_out, beams_out, plate_holes_out, plate_holes_rhino, plates_rhino, beams_rhino, geometry_errors
 
 
 def create_stencil(
@@ -203,91 +135,65 @@ def create_stencil(
     plate_beam_width=0.090,
     plate_beam_height=0.090,
     joint_max_distance=0.020,
-    tbutt_mill_depth=0.001,
     lap_cut_plane_bias=0.5,
     flip_lap_side=False,
     include_x_lap=True,
     process_joinery=False,
-    compute_plate_geometry=True,  # Standardmäßig auf True gesetzt für echte Löcher
+    compute_plate_geometry=True,
 ):
-    """Create plates, beams, lap joints, and preview geometry with mixed beam sizes."""
-
     rectangles = rectangles or []
     points = points or []
     frame_beam_lines = frame_beam_lines or []
     plate_beam_lines = plate_beam_lines or []
 
-    # 1. Platten mit innenliegenden Bohrungen erstellen
+    # 1. Platten mit zugeordneten Löchern erstellen
     plates = [
-        make_plate(
-            rectangle,
-            points,
-            plate_thickness=plate_thickness,
-            hole_radius=hole_radius,
-            hole_segments=hole_segments,
-        )
-        for rectangle in rectangles
+        make_plate(rect, points, plate_thickness, hole_radius, hole_segments)
+        for rect in rectangles
     ]
     
-    # 2. Balken getrennt mit ihren jeweiligen Dimensionen erstellen
-    frame_beams = [
-        make_beam(line, beam_width=frame_beam_width, beam_height=frame_beam_height) 
-        for line in frame_beam_lines
-    ]
-    plate_beams = [
-        make_beam(line, beam_width=plate_beam_width, beam_height=plate_beam_height) 
-        for line in plate_beam_lines
-    ]
-
-    # Alle Balken für das TimberModel zusammenführen
+    # 2. Balken getrennt erstellen
+    frame_beams = [make_beam(l, frame_beam_width, frame_beam_height) for l in frame_beam_lines]
+    plate_beams = [make_beam(l, plate_beam_width, plate_beam_height) for l in plate_beam_lines]
     beams = frame_beams + plate_beams
 
-    # 3. Timber Model befüllen
+    # 3. Model befüllen
     timber_model = TimberModel()
     for plate in plates:
         timber_model.add_element(plate)
     for beam in beams:
         timber_model.add_element(beam)
 
-    # Verbindungen berechnen
-    joining_errors, unjoined_clusters = add_lap_joints(
-        timber_model,
-        joint_max_distance=joint_max_distance,
-        lap_cut_plane_bias=lap_cut_plane_bias,
-        flip_lap_side=flip_lap_side,
-        include_x_lap=include_x_lap,
-    )
+    # 4. Verbindungen berechnen
+    rules = [
+        TopologyRule(JointTopology.TOPO_T, TLapJoint, max_distance=joint_max_distance, cut_plane_bias=lap_cut_plane_bias, flip_lap_side=flip_lap_side),
+        TopologyRule(JointTopology.TOPO_L, LLapJoint, max_distance=joint_max_distance, cut_plane_bias=lap_cut_plane_bias, flip_lap_side=flip_lap_side)
+    ]
+    if include_x_lap:
+        rules.append(TopologyRule(JointTopology.TOPO_X, XLapJoint, max_distance=joint_max_distance, cut_plane_bias=lap_cut_plane_bias, flip_lap_side=flip_lap_side))
+    
+    solver = JointRuleSolver(rules)
+    joining_errors, unjoined_clusters = solver.apply_rules_to_model(timber_model)
 
     if process_joinery:
         timber_model.process_joinery()
 
-    # 4. Geometrie-Ausgabe generieren (Hier werden die Löcher physisch abgezogen)
+    # 5. Geometrie-Ausgaben erzeugen
     geometry_errors = []
-    plates_out = [element_geometry(plate, geometry_errors, compute_plate_geometry) for plate in plates]
+    plates_out = [element_geometry(p, geometry_errors, compute_plate_geometry) for p in plates]
+    frame_beams_out = [element_geometry(b, geometry_errors) for b in frame_beams]
+    plate_beams_out = [element_geometry(b, geometry_errors) for b in plate_beams]
     
-    frame_beams_out = [element_geometry(beam, geometry_errors) for beam in frame_beams]
-    plate_beams_out = [element_geometry(beam, geometry_errors) for beam in plate_beams]
-    
-    frame_beams_rhino = [rhino_geometry(geom, geometry_errors) for geom in frame_beams_out]
-    plate_beams_rhino = [rhino_geometry(geom, geometry_errors) for geom in plate_beams_out]
+    plates_rhino = [rhino_geometry(g, geometry_errors) for g in plates_out]
+    frame_beams_rhino = [rhino_geometry(g, geometry_errors) for g in frame_beams_out]
+    plate_beams_rhino = [rhino_geometry(g, geometry_errors) for g in plate_beams_out]
 
-    # Kurven/Polylines der Löcher für optionale 2D-Ausgaben extrahieren
+    # Loch-Kurven (Exakt 1x pro Punkt, da direkt aus den berechneten Platten-Openings ausgelesen)
     plate_holes_out = []
     for plate in plates:
         for opening in plate.plate_geometry.openings:
             plate_holes_out.append(opening.transformed(plate.modeltransformation))
-
-    plate_holes_rhino = [rhino_geometry(hole, geometry_errors) for hole in plate_holes_out]
-    plates_rhino = [rhino_geometry(geometry, geometry_errors) for geometry in plates_out]
-
-    # Gelenke auswerten
-    joints = list(getattr(timber_model, "joints", None) or getattr(timber_model, "interactions", None) or [])
-    joint_count = len(joints)
-    joint_types = {}
-    for joint in joints:
-        joint_type = type(joint).__name__
-        joint_types[joint_type] = joint_types.get(joint_type, 0) + 1
-    joint_errors = [getattr(error, "debug_info", repr(error)) for error in joining_errors]
+    plate_holes_rhino = [rhino_geometry(h, geometry_errors) for h in plate_holes_out]
 
     return {
         "plates": plates,
@@ -302,11 +208,11 @@ def create_stencil(
         "frame_beams_rhino": frame_beams_rhino,
         "plate_beams_rhino": plate_beams_rhino,
         "geometry_errors": geometry_errors,
-        "joints": joints,
-        "joint_count": joint_count,
-        "joint_types": joint_types,
-        "joint_errors": joint_errors,
+        "timber_model": timber_model,
+        "joints": list(getattr(timber_model, "joints", None) or []),
+        "joint_count": len(list(getattr(timber_model, "joints", None) or [])),
+        "joint_types": {},
+        "joint_errors": [repr(e) for e in joining_errors],
         "joining_errors": joining_errors,
         "unjoined_clusters": unjoined_clusters,
-        "timber_model": timber_model,
     }
