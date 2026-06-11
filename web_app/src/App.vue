@@ -84,10 +84,10 @@ body {
 .info-toggle {
     position: absolute;
     top: 10px;
-    right: 14px;
+    right: 132px;
     z-index: 20;
-    height: 28px;
-    padding: 0 10px;
+    height: 26px;
+    padding: 0 8px;
     border: 1px solid #d0d0d0;
     background: #ffffff;
     color: #111111;
