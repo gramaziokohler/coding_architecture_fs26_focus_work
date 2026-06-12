@@ -1,0 +1,62 @@
+name: Fabrication sheet sync
+
+on:
+  schedule:
+    - cron: "*/15 * * * *" # recurrent sync; GitHub may delay scheduled runs a few minutes
+  workflow_dispatch:
+    inputs:
+      command:
+        description: "Sync command to run"
+        type: choice
+        default: sync
+        options: [sync, setup, push, pull]
+  push:
+    branches: ["main"]
+    paths:
+      - "timber_models/*.json"
+
+permissions:
+  contents: write
+
+# never run two syncs at once (race between pull/commit and the sheet)
+concurrency:
+  group: fabrication-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    env:
+      # repo variable (Settings -> Secrets and variables -> Actions -> Variables);
+      # falls back to the script's built-in default when unset
+      FABRICATION_MODEL_PATH: ${{ vars.FABRICATION_MODEL_PATH }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install gspread
+
+      - name: Run sync
+        env:
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+          FABRICATION_SPREADSHEET_ID: ${{ secrets.FABRICATION_SPREADSHEET_ID }}
+        run: python code/fabrication_sheet_sync.py "${{ inputs.command || 'sync' }}"
+
+      - name: Commit updated model
+        run: |
+          if ! git diff --quiet; then
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add "${FABRICATION_MODEL_PATH:-timber_models/timber_model_w2-wednesday-03.json}"
+            git commit -m "Sync fabrication status from Google Sheet [skip ci]"
+            git pull --rebase origin main
+            git push
+          else
+            echo "No fabrication status changes."
+          fi
