@@ -522,7 +522,7 @@ def point_list(value):
         value = value.get("data", value)
         if all(key in value for key in ("x", "y", "z")):
             return [float(value["x"]), float(value["y"]), float(value["z"])]
-        if Singapore_key := all(key in value for key in ("X", "Y", "Z")):
+        if all(key in value for key in ("X", "Y", "Z")):
             return [float(value["X"]), float(value["Y"]), float(value["Z"])]
     try:
         return xyz_to_list(value)
@@ -1166,6 +1166,62 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
         old_assignment = assignment[node]
         if old_assignment in module_renaming_map:
             assignment[node] = module_renaming_map[old_assignment]
+
+    # =========================================================================
+    # POST-PROCESSING FASE 5: STRUTTURAZIONE SECONDO I NUOVI INTERVALLI E UNIONI
+    # =========================================================================
+    # Creiamo un dizionario temporaneo per la scomposizione e ricomposizione
+    final_ordered_by_module = {k: [] for k in all_labels}
+
+    # Helper per estrarre elementi per indice (1-based) da una lista di nodi
+    def get_by_indices(nodes_list, start_num, end_num):
+        extracted = []
+        for idx_one, node in enumerate(nodes_list, start=1):
+            if start_num <= idx_one <= end_num:
+                extracted.append(node)
+        return extracted
+
+    # Conserviamo i riferimenti dei moduli attuali prima della sovrascrittura
+    curr_A = list(ordered_by_module["A"])
+    curr_B = list(ordered_by_module["B"])
+    curr_C = list(ordered_by_module["C"])
+    curr_D = list(ordered_by_module["D"])
+    curr_E = list(ordered_by_module["E"])
+    curr_F = list(ordered_by_module["F"])
+    curr_G = list(ordered_by_module["G"])
+    curr_H = list(ordered_by_module["H"])
+
+    # 1. Modulo A resta invariato
+    final_ordered_by_module["A"] = curr_A
+
+    # 2. Modulo B composto da E11 a E21 dell'attuale E
+    final_ordered_by_module["B"] = get_by_indices(curr_E, 11, 21)
+
+    # 3. Modulo C resta invariato
+    final_ordered_by_module["C"] = curr_C
+
+    # 4. Modulo D composto da E1-E10 e E22-E26 dell'attuale E
+    final_ordered_by_module["D"] = get_by_indices(curr_E, 1, 10) + get_by_indices(curr_E, 22, 26)
+
+    # 5. Modulo E eredita l'intero modulo B attuale
+    final_ordered_by_module["E"] = curr_B
+
+    # 6. Modulo F composto da H11-H21 dell'attuale H più tutto il modulo G attuale
+    final_ordered_by_module["F"] = get_by_indices(curr_H, 11, 21) + curr_G
+
+    # 7. Modulo G riceve tutto il modulo D attuale
+    final_ordered_by_module["G"] = curr_D
+
+    # 8. Modulo H composto da H1-H10 e H22-H29 dell'attuale H più tutto il modulo F attuale
+    final_ordered_by_module["H"] = get_by_indices(curr_H, 1, 10) + get_by_indices(curr_H, 22, 29) + curr_F
+
+    # Aggiorniamo la struttura principale con i moduli definitivi
+    ordered_by_module = final_ordered_by_module
+
+    # Sincronizziamo la mappa d'assegnazione globale con i nuovi moduli definitivi
+    for k in all_labels:
+        for node in ordered_by_module[k]:
+            assignment[node] = k
 
     # =========================
     # 7. GENERAZIONE BEAM OUTPUT
