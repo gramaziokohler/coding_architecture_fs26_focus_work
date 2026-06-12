@@ -3,6 +3,7 @@
 import Rhino.Geometry as rg
 import math
 from importlib import reload
+from compas.geometry import Rotation
 
 class CutItem:
     def __init__(self, beam_id, beam_name, original_beam, width, length, height):
@@ -206,6 +207,12 @@ def run_packing(timber_model, origin, stock_length_beam_6x8, stock_length_beam_1
 
     # 1. RADDRIZZAMENTO, ROTAZIONE DI 90° E RAGGRUPPAMENTO DEI BEAM PER SEZIONE
     beams_by_section = {}
+    
+    # NEW: Lists for rotation logic
+    beams_to_rotate_info = [] # Stores (beam_object, original_name) for beams with more bottom joints
+    rotated_beam_names = [] # Stores names of beams that were rotated
+
+    # First Pass: Identify beams for rotation and collect initial joint data
     for idx, beam in enumerate(timber_model.beams):
         
         # === RECUPERO DIRETTO DEL NOME DAL COMPONENTE DI NOMENCLATURA PRECEDENTE ===
@@ -218,6 +225,73 @@ def run_packing(timber_model, origin, stock_length_beam_6x8, stock_length_beam_1
         # Fallback estremo se la stringa dovesse essere vuota
         if not correct_name:
             correct_name = "B{:02d}".format(idx + 1)
+
+        # NEW: Count joints on upper and bottom faces
+        u_count = 0
+        b_count = 0
+        for joint in timber_model.get_joints_for_element(beam):
+            r_idx = None
+            j_name = type(joint).__name__
+            if "TButt" in j_name and getattr(joint, "cross_beam", None) == beam:
+                r_idx = getattr(joint, "cross_beam_ref_side_index", None)
+            elif "Lap" in j_name:
+                if getattr(joint, "beam_a", None) == beam:
+                    r_idx = getattr(joint, "ref_side_index_a", None)
+                elif getattr(joint, "beam_b", None) == beam:
+                    r_idx = getattr(joint, "ref_side_index_b", None)
+            
+            if r_idx is not None:
+                try:
+                    norm = beam.ref_sides[int(r_idx)].normal
+                    if norm.z > 0.7: u_count += 1
+                    elif norm.z < -0.7: b_count += 1
+                except:
+                    pass
+        
+        # Identify beams to rotate
+        if b_count > u_count:
+            beams_to_rotate_info.append((beam, correct_name))
+            
+    # Second Pass: Apply rotations to identified beams
+    for beam_obj, name in beams_to_rotate_info:
+        rotation_axis = beam_obj.frame.xaxis
+        rotation_matrix = Rotation.from_axis_and_angle(rotation_axis, math.pi) # 180 degrees
+        beam_obj.frame.transform(rotation_matrix)
+        rotated_beam_names.append(name)
+        
+    # Third Pass: Recalculate joint counts for the final summary (after rotations)
+    raw_joint_face_summary = []
+    for idx, beam in enumerate(timber_model.beams): # Iterate again to get post-rotation state
+
+        # === RECUPERO DIRETTO DEL NOME ===
+        correct_name = None
+        if hasattr(beam, "name") and beam.name:
+            correct_name = str(beam.name)
+        elif hasattr(beam, "attributes") and isinstance(beam.attributes, dict) and "name" in beam.attributes:
+            correct_name = str(beam.attributes["name"])
+            
+        if not correct_name:
+            correct_name = "B{:02d}".format(idx + 1)
+
+        # Count joints on upper and bottom faces (post-rotation state)
+        u_count, b_count = 0, 0
+        for joint in timber_model.get_joints_for_element(beam):
+            r_idx = None
+            j_name = type(joint).__name__
+            if "TButt" in j_name and getattr(joint, "cross_beam", None) == beam:
+                r_idx = getattr(joint, "cross_beam_ref_side_index", None)
+            elif "Lap" in j_name:
+                if getattr(joint, "beam_a", None) == beam:
+                    r_idx = getattr(joint, "ref_side_index_a", None)
+                elif getattr(joint, "beam_b", None) == beam:
+                    r_idx = getattr(joint, "ref_side_index_b", None)
+            if r_idx is not None:
+                try:
+                    norm = beam.ref_sides[int(r_idx)].normal
+                    if norm.z > 0.7: u_count += 1
+                    elif norm.z < -0.7: b_count += 1
+                except: pass
+        raw_joint_face_summary.append({"name": correct_name, "bottom": b_count, "upper": u_count})
 
         blank_geo = getattr(beam, "blank", None)
         raw_blank_brep = get_rhino_brep_from_compas_geometry(blank_geo)
@@ -291,6 +365,17 @@ def run_packing(timber_model, origin, stock_length_beam_6x8, stock_length_beam_1
             "needed_len": needed_len
         })
 
+    # Sort joint_face_summary by beam name (e.g., A1, A2, B1, B2)
+    joint_face_summary = []
+    # Sort joint_face_summary by beam name (e.g., A1, A2, B1, B2)
+    def sort_key_for_beam_name(item):
+        name = item["name"]
+        import re
+        match = re.match(r'([A-Z]+)(\d+)', name)
+        return (match.group(1), int(match.group(2))) if match else (name, 0)
+
+    for item in sorted(raw_joint_face_summary, key=sort_key_for_beam_name):
+        joint_face_summary.append("beam {}, bottom: {}, upper: {}".format(item["name"], item["bottom"], item["upper"]))
     # 2. ESECUZIONE ALGORITMO BIN PACKING
     packed_bars = []
     bar_global_counter = 1
@@ -324,9 +409,21 @@ def run_packing(timber_model, origin, stock_length_beam_6x8, stock_length_beam_1
                 bar_global_counter += 1
 
     # 3. GENERAZIONE DEL LAYOUT SPAZIALE COERENTE
-    arranged_boxes, max_len_boxes, stock_beams, max_len_lines, arranged_names, label_curves, max_len_num_txt, engraving, dimensions, report_sections = [], [], [], [], [], [], [], [], [], []
+    arranged_boxes_not_rotated = []
+    arranged_boxes_rotated = []
+    max_len_boxes = []
+    stock_beams = []
+    max_len_lines = []
+    arranged_names = []
+    label_curves = []
+    max_len_num_txt = []
+    engraving_not_rotated = []
+    engraving_rotated = []
+    dimensions = []
+    report_sections = []
     vacuum_surfaces_out = [] 
     failed_vacuums = [] 
+    rotated_beam_names_set = set(rotated_beam_names)
     
     total_waste_material, total_material_bought = 0.0, 0.0
     current_y_accumulator = base_pt.Y
@@ -364,7 +461,11 @@ def run_packing(timber_model, origin, stock_length_beam_6x8, stock_length_beam_1
                 y_pos - blank_min_y,
                 base_pt.Z - blank_min_z
             ))
-            arranged_boxes.append(real_beam_geo)
+            
+            if item["name"] in rotated_beam_names_set:
+                arranged_boxes_rotated.append(real_beam_geo)
+            else:
+                arranged_boxes_not_rotated.append(real_beam_geo)
 
             # SCATOLE DI DIMENSIONE MASSIMA (MAX LEN BOXES CON BLANK_LENGTH)
             raw_box_geo = rg.Box(rg.Plane.WorldXY, rg.Interval(0, item["blank_length"]), rg.Interval(0, item["width_y"]), rg.Interval(0, item["height_z"])).ToBrep()
@@ -387,51 +488,116 @@ def run_packing(timber_model, origin, stock_length_beam_6x8, stock_length_beam_1
             label_curves.extend(create_geometry_text(item["name"], rg.Point3d(lbl_x, lbl_y_under, exact_top_z), text_height=0.04))
             max_len_num_txt.extend(create_geometry_text("{:.1f}cm".format(length_in_cm), rg.Point3d(lbl_x, lbl_y_under - 0.06, exact_top_z), text_height=0.04))
 
-            # LOGICA DI CONTROLLO MATRICE A 5 PUNTI SULLA QUOTA SUPERIORE (TESTO)
-            lbl_y = lbl_y_center
-            test_x = lbl_x
+            # --- POSIZIONAMENTO TESTO 3D NELLA STESSA POSIZIONE ORIGINALE ---
+            beam_obj = item["beam_obj"]
+            c_origin = beam_obj.frame.point
+            c_xaxis = beam_obj.frame.xaxis
+            c_yaxis = beam_obj.frame.yaxis
+            c_zaxis = beam_obj.frame.zaxis
+            
+            rh_origin = rg.Point3d(c_origin.x, c_origin.y, c_origin.z)
+            rh_xaxis = rg.Vector3d(c_xaxis.x, c_xaxis.y, c_xaxis.z)
+            rh_yaxis = rg.Vector3d(c_yaxis.x, c_yaxis.y, c_yaxis.z)
+            rh_zaxis = rg.Vector3d(c_zaxis.x, c_zaxis.y, c_zaxis.z)
+
+            beam_plane = rg.Plane(rh_origin, rh_xaxis, rh_yaxis)
+            
+            h_offset = 0.0
+            for h_attr in ['height', 'h', 'd', 'depth']:
+                if hasattr(beam_obj, h_attr):
+                    h_offset = float(getattr(beam_obj, h_attr))
+                    break
+            
+            orig_geo = get_rhino_brep_from_compas_geometry(beam_obj.geometry)
+            if not orig_geo:
+                orig_geo = get_rhino_brep_from_compas_geometry(getattr(beam_obj, "blank", None))
+
+            if h_offset > 0:
+                beam_plane.Translate(rh_zaxis * (h_offset / 2.0))
+            else:
+                if orig_geo:
+                    bbox_orig = orig_geo.GetBoundingBox(True)
+                    if bbox_orig.IsValid:
+                        beam_plane.Translate(rh_zaxis * (bbox_orig.Max.Z - rh_origin.Z))
+
+            beam_length_for_scan = item["blank_length_native"] if item["blank_length_native"] else item["length_x"]
+            beam_plane.Translate(beam_plane.XAxis * (beam_length_for_scan / 2.0))
+            
             step = 0.02  
-            max_shift = (item["length_x"] / 2.0) - 0.10  
+            max_shift = (beam_length_for_scan / 2.0) - 0.10  
             current_shift = 0.0
             
-            t_height = 0.03  
-            t_width_approx = len(item["name"]) * (t_height * 0.7) 
+            scan_plane = rg.Plane(beam_plane)
+            
+            t_height = 0.03
+            t_width_approx = len(item["name"]) * (t_height * 0.7)
+            t_height_box = t_height
             
             while current_shift < max_shift:
                 test_points = [
-                    rg.Point3d(test_x, lbl_y, exact_top_z + 0.01),                       
-                    rg.Point3d(test_x - t_width_approx/2, lbl_y - t_height/2, exact_top_z + 0.01), 
-                    rg.Point3d(test_x + t_width_approx/2, lbl_y - t_height/2, exact_top_z + 0.01), 
-                    rg.Point3d(test_x - t_width_approx/2, lbl_y + t_height/2, exact_top_z + 0.01), 
-                    rg.Point3d(test_x + t_width_approx/2, lbl_y + t_height/2, exact_top_z + 0.01)  
+                    scan_plane.Origin,
+                    scan_plane.Origin - (scan_plane.XAxis * (t_width_approx / 2.0)) - (scan_plane.YAxis * (t_height_box / 2.0)),
+                    scan_plane.Origin + (scan_plane.XAxis * (t_width_approx / 2.0)) - (scan_plane.YAxis * (t_height_box / 2.0)),
+                    scan_plane.Origin - (scan_plane.XAxis * (t_width_approx / 2.0)) + (scan_plane.YAxis * (t_height_box / 2.0)),
+                    scan_plane.Origin + (scan_plane.XAxis * (t_width_approx / 2.0)) + (scan_plane.YAxis * (t_height_box / 2.0))
                 ]
                 
                 area_is_fully_solid = True
-                for pt in test_points:
-                    ray = rg.Line(pt, rg.Point3d(pt.X, pt.Y, base_pt.Z - 0.01)).ToNurbsCurve()
-                    intersections = rg.Intersect.Intersection.CurveBrep(ray, real_beam_geo, 0.001)
-                    
-                    point_hits_solid_wood = False
-                    if intersections and len(intersections[2]) > 0:
-                        highest_z = max(p.Z for p in intersections[2])
-                        if abs(highest_z - exact_top_z) < 0.002:
-                            point_hits_solid_wood = True
-                            
-                    if not point_hits_solid_wood:
-                        area_is_fully_solid = False
-                        break
+                if orig_geo:
+                    for pt in test_points:
+                        ray_start = pt + (scan_plane.Normal * 0.01)
+                        ray_end = pt - (scan_plane.Normal * 0.01)
+                        ray_line = rg.Line(ray_start, ray_end).ToNurbsCurve()
+                        
+                        intersections = rg.Intersect.Intersection.CurveBrep(ray_line, orig_geo, 0.001)
+                        
+                        point_hits_solid_wood = False
+                        if intersections and len(intersections[2]) > 0:
+                            highest_pt = min(intersections[2], key=lambda p: p.DistanceTo(pt))
+                            if highest_pt.DistanceTo(pt) < 0.006:
+                                point_hits_solid_wood = True
+                                
+                        if not point_hits_solid_wood:
+                            area_is_fully_solid = False
+                            break
                 
                 if area_is_fully_solid:
                     break  
                 
-                test_x -= step
+                scan_plane.Translate(scan_plane.XAxis * step)
                 current_shift += step
 
-            pt_engrave_loc = rg.Point3d(test_x, lbl_y, exact_top_z)
-            solid_text = create_3d_text_engraving(text=item["name"], position=pt_engrave_loc, text_height=t_height, engraving_depth=0.005)
+            beam_plane = rg.Plane(scan_plane)
+            
+            solid_text = create_3d_text_engraving(text=item["name"], position=rg.Point3d(0,0,0), text_height=t_height, engraving_depth=0.005)
             
             if solid_text:
-                engraving.append(solid_text)
+                plane_to_plane_xform = rg.Transform.PlaneToPlane(rg.Plane.WorldXY, beam_plane)
+                solid_text.Transform(plane_to_plane_xform)
+                solid_text.Transform(rg.Transform.Translation(-rh_zaxis * 0.005))
+                
+                blank_frame = getattr(getattr(beam_obj, "blank", None), "frame", None) or getattr(beam_obj, "frame", None)
+                if blank_frame:
+                    local_plane = compas_frame_to_rhino_plane(blank_frame)
+                    flatten_trans = rg.Transform.PlaneToPlane(local_plane, rg.Plane.WorldXY)
+                    solid_text.Transform(flatten_trans)
+                
+                rotate_90_x = rg.Transform.Rotation(math.pi / 2.0, rg.Vector3d.XAxis, rg.Point3d(0, 0, 0))
+                solid_text.Transform(rotate_90_x)
+                
+                layout_translation = rg.Transform.Translation(
+                    target_x - blank_min_x,
+                    y_pos - blank_min_y,
+                    base_pt.Z - blank_min_z
+                )
+                solid_text.Transform(layout_translation)
+                
+                if item["name"] in rotated_beam_names_set:
+                    engraving_rotated.append(solid_text)
+                else:
+                    engraving_not_rotated.append(solid_text)
+
+            test_x = lbl_x  # Ripristina test_x dal centro per la logica dei vacuum sottostante
 
             # LOGICA ADATTIVA CONFRONTO DI AREA ESATTA VACUUM
             v_width = 0.075
@@ -511,4 +677,14 @@ def run_packing(timber_model, origin, stock_length_beam_6x8, stock_length_beam_1
     total_efficiency = ((total_material_bought - total_waste_material) / total_material_bought) * 100.0 if total_material_bought > 0 else 0.0
     report = "==================================================\n        REPORT DETTAGLIATO DI SECOLO DI TAGLIO    \n==================================================\n" + "\n\n".join(report_sections) + "\n\n--- TOTAL PACKING SUMMARY ---\nTotal Stocks needed: {} pcs\nTotal Material:      {:.2f} m\nTotal Waste:         {:.2f} m\nTotal Efficiency:    {:.1f}%\nTotal Cost:          {:.2f} EUR\n-----------------------------\n==================================================".format(len(packed_bars), total_material_bought, total_waste_material, total_efficiency, total_material_bought * p_lm)
 
-    return arranged_boxes, arranged_names, max_len_boxes, stock_beams, max_len_lines, label_curves, max_len_num_txt, engraving, dimensions, report, vacuum_surfaces_out, failed_vacuums
+    # Sort rotated_beam_names by beam name (e.g., A1, A2, B1, B2)
+    def sort_key_for_name_only(name):
+        import re
+        match = re.match(r'([A-Z]+)(\d+)', name)
+        if match:
+            return (match.group(1), int(match.group(2)))
+        return (name, 0)
+    
+    rotated_beam_names.sort(key=sort_key_for_name_only)
+
+    return arranged_boxes_not_rotated, arranged_boxes_rotated, arranged_names, max_len_boxes, stock_beams, max_len_lines, label_curves, max_len_num_txt, engraving_not_rotated, engraving_rotated, dimensions, report, vacuum_surfaces_out, failed_vacuums, joint_face_summary, rotated_beam_names
