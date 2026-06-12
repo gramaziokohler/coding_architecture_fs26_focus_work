@@ -50,7 +50,7 @@ def _normalise_beams(base_beams):
 def create_base_beam_plates_from_points(
     base_beams,
     points,
-    plate_size=(0.100, 0.140, 0.015),
+    plate_size=(0.100, 0.140, 0.010),
     beam_width=None,
 ):
     """
@@ -72,7 +72,7 @@ def create_base_beam_plates_from_points(
     plate_size : tuple(float, float, float)
         (x, y, z) dimensions of the plate Box in metres.
         x = along beam centerline, y = along beam height (zaxis), z = plate thickness.
-        Default: 100 x 140 x 15 mm.
+        Default: 100 x 140 x 10 mm.
     beam_width : float or None
         Cross-section width of the base beam in metres used to offset the
         plate origin to the side face.  If None (default), beam.width is used
