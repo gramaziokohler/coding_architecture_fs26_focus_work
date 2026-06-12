@@ -44,7 +44,9 @@ def _beam_local_lap_frame(beam, origin, normal, preferred_xaxis=None):
     lap_zaxis = Vector(*normal)
     lap_zaxis.unitize()
 
-    lap_xaxis = Vector(*(preferred_xaxis if preferred_xaxis is not None else beam.frame.xaxis))
+    lap_xaxis = Vector(
+        *(preferred_xaxis if preferred_xaxis is not None else beam.frame.xaxis)
+    )
     lap_xaxis = lap_xaxis - lap_zaxis * lap_xaxis.dot(lap_zaxis)
     if lap_xaxis.length < 0.01:
         lap_xaxis = Vector(*beam.frame.xaxis)
@@ -133,9 +135,10 @@ def create_metal_plates(
     timber_model,
     use_llap_joint=False,
     arch_beam_height=0.10,
-    arch_plate=(0.046, 0.111, 0.0025),
+    arch_plate=(0.065, 0.146, 0.0025),
     base_beam_height=0.14,
-    base_plate=(0.051, 0.191, 0.0025),
+    base_plate=(0.065, 0.146, 0.0025),
+    arch_plate_width_offset=0.0075,
 ):
     """
     Return a list of plate data tuples for each metal plate at every LMiterJoint.
@@ -220,7 +223,8 @@ def create_metal_plates(
             normal.unitize()
 
         # Select plate dimensions and fallback beam width.
-        if _is_arch_joint(beam_a, beam_b):
+        is_arch_beam_joint = _is_arch_joint(beam_a, beam_b)
+        if is_arch_beam_joint:
             fallback_width = arch_beam_height
             plate_size = arch_plate
         else:
@@ -229,15 +233,12 @@ def create_metal_plates(
 
         plate_thickness = plate_size[2]
 
-        def _lap_box(beam, side):
+        def _lap_box(beam, side, ref_plate_frame=None):
             if is_base_joint:
                 # Use same world-Z direction as the visual plate so pockets land
                 # on the top/bottom surfaces, not the side faces.
                 desired_normal = normal
             else:
-                # The visual plate follows the joint bisector, but BTLx Lap
-                # parameters are more reliable when the final negative volume
-                # snaps to the closest target beam reference side.
                 desired_normal = _project_off_bisector(Vector(*beam.frame.yaxis))
                 if desired_normal.length < 0.01:
                     desired_normal = normal
@@ -247,7 +248,23 @@ def create_metal_plates(
                 beam_size = fallback_width
 
             lap_normal = local_normal * side
-            lap_origin = joint_pt + lap_normal * (beam_size / 2 - plate_thickness / 2)
+            lap_origin = joint_pt + lap_normal * (beam_size / 2 - plate_thickness / 3)
+
+            if ref_plate_frame is not None:
+                # Project the visual plate centre onto this beam's face plane so
+                # the cut matches the visual plate in position and orientation.
+                in_plane = ref_plate_frame.point - joint_pt
+                in_plane = in_plane - lap_normal * in_plane.dot(lap_normal)
+                lap_origin = lap_origin + in_plane
+                return Box(
+                    plate_size[0],
+                    plate_size[1],
+                    plate_size[2],
+                    frame=Frame(
+                        lap_origin, ref_plate_frame.xaxis, ref_plate_frame.yaxis
+                    ),
+                )
+
             lap_frame = _beam_local_lap_frame(beam, lap_origin, lap_normal, bisector)
             return Box(
                 plate_size[1],
@@ -268,13 +285,25 @@ def create_metal_plates(
                     avg_width = fallback_width
             plate_frame = Frame.from_plane(Plane(joint_pt, normal))
             plate_frame.translate(normal * side * (avg_width / 2 - plate_thickness / 2))
+            if is_arch_beam_joint and not is_base_joint and arch_plate_width_offset:
+                avg_xaxis = Vector(*beam_a.frame.xaxis) + Vector(*beam_b.frame.xaxis)
+                avg_xaxis = avg_xaxis - normal * avg_xaxis.dot(normal)
+                if avg_xaxis.length > 0.01:
+                    avg_xaxis.unitize()
+                    vis_width_dir = normal.cross(avg_xaxis)
+                    if vis_width_dir.length > 0.01:
+                        vis_width_dir.unitize()
+                        plate_frame.translate(vis_width_dir * arch_plate_width_offset)
             plate_frame.yaxis = plate_frame.zaxis.cross(bisector)
             plate_frame.xaxis = bisector
             visual_box = Box(*plate_size, frame=plate_frame)
 
             # Per-beam lap boxes — each positioned at that beam's own side face.
-            lap_box_a = _lap_box(beam_a, side)
-            lap_box_b = _lap_box(beam_b, side)
+            ref_frame = (
+                plate_frame if (is_arch_beam_joint and not is_base_joint) else None
+            )
+            lap_box_a = _lap_box(beam_a, side, ref_frame)
+            lap_box_b = _lap_box(beam_b, side, ref_frame)
 
             contact_normal = Vector(
                 -normal.x * side, -normal.y * side, -normal.z * side
