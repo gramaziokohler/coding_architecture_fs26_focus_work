@@ -522,7 +522,7 @@ def point_list(value):
         value = value.get("data", value)
         if all(key in value for key in ("x", "y", "z")):
             return [float(value["x"]), float(value["y"]), float(value["z"])]
-        if Singapore_key := all(key in value for key in ("X", "Y", "Z")):
+        if all(key in value for key in ("X", "Y", "Z")):
             return [float(value["X"]), float(value["Y"]), float(value["Z"])]
     try:
         return xyz_to_list(value)
@@ -1166,6 +1166,63 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
         old_assignment = assignment[node]
         if old_assignment in module_renaming_map:
             assignment[node] = module_renaming_map[old_assignment]
+
+    # =========================================================================
+    # POST-PROCESSING FASE 5: STRUTTURAZIONE SECONDO I NUOVI INTERVALLI E UNIONI
+    # =========================================================================
+    final_ordered_by_module = {k: [] for k in all_labels}
+
+    def get_by_indices(nodes_list, start_num, end_num):
+        extracted = []
+        for idx_one, node in enumerate(nodes_list, start=1):
+            if start_num <= idx_one <= end_num:
+                extracted.append(node)
+        return extracted
+
+    curr_A = list(ordered_by_module["A"])
+    curr_B = list(ordered_by_module["B"])
+    curr_C = list(ordered_by_module["C"])
+    curr_D = list(ordered_by_module["D"])
+    curr_E = list(ordered_by_module["E"])
+    curr_F = list(ordered_by_module["F"])
+    curr_G = list(ordered_by_module["G"])
+    curr_H = list(ordered_by_module["H"])
+
+    final_ordered_by_module["A"] = curr_A
+    final_ordered_by_module["B"] = get_by_indices(curr_E, 11, 21)
+    final_ordered_by_module["C"] = curr_C
+    final_ordered_by_module["D"] = get_by_indices(curr_E, 1, 10) + get_by_indices(curr_E, 22, 26)
+    final_ordered_by_module["E"] = curr_B
+    final_ordered_by_module["F"] = get_by_indices(curr_H, 11, 21) + curr_G
+    final_ordered_by_module["G"] = curr_D
+    final_ordered_by_module["H"] = get_by_indices(curr_H, 1, 10) + get_by_indices(curr_H, 22, 29) + curr_F
+
+    ordered_by_module = final_ordered_by_module
+
+    # =========================================================================
+    # POST-PROCESSING FASE 6: ULTIMO CAMBIAMENTO NOMENCLATURA RICHIESTO
+    # A,B,C,D,E restano uguali. F -> H, H -> G, G -> F
+    # =========================================================================
+    final_swap_map = {
+        "A": "A",
+        "B": "B",
+        "C": "C",
+        "D": "D",
+        "E": "E",
+        "F": "H",
+        "G": "F",
+        "H": "G"
+    }
+
+    swapped_ordered_by_module = {k: [] for k in all_labels}
+    for old_mod, new_mod in final_swap_map.items():
+        swapped_ordered_by_module[new_mod] = ordered_by_module[old_mod]
+
+    ordered_by_module = swapped_ordered_by_module
+
+    for k in all_labels:
+        for node in ordered_by_module[k]:
+            assignment[node] = k
 
     # =========================
     # 7. GENERAZIONE BEAM OUTPUT
