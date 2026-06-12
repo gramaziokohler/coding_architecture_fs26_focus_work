@@ -63,10 +63,10 @@ const KEY_BEAM_COLOR = 0xffd84d;
 const MODULE_PALETTE = [
     0x9ec5ff,
     0x88d887,
-    0xf37f18,
+    0x88d8d0
     0xff9fc7,
     0xf19a8e,
-    0x88d8d0,
+    0xf37f18,
     0xe86aff,
     0x0164d0,
     0x9fc9d8,
