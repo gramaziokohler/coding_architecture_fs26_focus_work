@@ -204,12 +204,8 @@ class DrillingProcessor:
                 if cat_c == "base" or cat_a == "base":
                     if cat_a == "base": cont_beam, abut_beam = abut_beam, cont_beam
                     self._apply_foundation_butt_drilling(joint, abut_beam, cont_beam)
-                # NEW: Isolate inner-inner T-Butt joints
-                elif cat_c == "inner" and cat_a == "inner":
-                    self._apply_inner_inner_butt_drilling(joint)
                 else:
                     self._apply_standard_butt_drilling(joint)
-
 
             elif isinstance(joint, (XLapJoint, TLapJoint)):
                 self._apply_lap_drilling(joint, elements[0], elements[1])
@@ -676,90 +672,6 @@ class DrillingProcessor:
         cat_a = abut_beam.attributes.get("category", "inner")
         cat_c = cont_beam.attributes.get("category", "inner")
         joint_label = "TButtJoint - arch" if cat_a == "arch" or cat_c == "arch" else "TButtJoint - inner"
-        
-        self._generate_features(
-            [hw_line_1, hw_line_2],
-            [cont_beam],
-            joint_label,
-            req_screw_length
-        )
-
-    def _apply_inner_inner_butt_drilling(self, joint):
-        elements = [joint.main_beam, joint.cross_beam]
-        line1, line2 = elements[0].centerline, elements[1].centerline
-        
-        res = intersection_line_line(line1, line2)
-        if not res or res[0] is None: return
-
-        pt_a = Point(*res[0])
-        pt_b = Point(*res[1])
-        
-        d1 = min(distance_point_point(pt_a, line1.start), distance_point_point(pt_a, line1.end))
-        d2 = min(distance_point_point(pt_b, line2.start), distance_point_point(pt_b, line2.end))
-        
-        if d1 < d2:
-            abut_beam, cont_beam = elements[0], elements[1]
-            intersection_pt = pt_a
-        else:
-            abut_beam, cont_beam = elements[1], elements[0]
-            intersection_pt = pt_b
-
-        # Define vector moving away from the joint into the abutting beam
-        dir_abut = abut_beam.centerline.direction.copy()
-        vec_to_mid = Vector.from_start_end(intersection_pt, abut_beam.centerline.midpoint)
-        if dir_abut.dot(vec_to_mid) < 0: 
-            dir_abut.scale(-1)
-        dir_abut.unitize()
-
-        # Define vector along the continuous beam
-        dir_cont = cont_beam.centerline.direction.copy()
-        dir_cont.unitize()
-
-        # 1. Find the normal of the plane shared by both beams
-        plane_normal = dir_cont.cross(dir_abut)
-        if plane_normal.length < 1e-5: 
-            plane_normal = Vector(0, 0, 1)
-        plane_normal.unitize()
-
-        # 2. Find the vector perpendicular to the continuous beam inside that plane
-        perp_vec = plane_normal.cross(dir_cont)
-        perp_vec.unitize()
-        
-        # Ensure the vector points towards the abutting beam side
-        if perp_vec.dot(dir_abut) < 0:
-            perp_vec.scale(-1)
-
-        # ---------------------------------------------------------
-        # 3. Calculate geometry limits (SHIFTED FOR PERFECT FIT)
-        # ---------------------------------------------------------
-        thickness_c = max(cont_beam.width, cont_beam.height)
-        recess_depth = 0.000 
-        
-        # Calculate where the abutting beam's centerline hits the inner face of the continuous beam
-        dot_val = dir_abut.dot(perp_vec)
-        if abs(dot_val) > 1e-5:
-            # Travel along dir_abut until the perpendicular distance is exactly half the beam thickness
-            t_interface = (thickness_c / 2.0) / dot_val
-            pt_interface = intersection_pt + (dir_abut * t_interface)
-        else:
-            # Fallback if somehow perfectly parallel
-            pt_interface = intersection_pt + (perp_vec * (thickness_c / 2.0))
-            
-        # Set start point on the *outer* face by subtracting the full continuous beam thickness
-        start_pt = pt_interface - (perp_vec * thickness_c) + (perp_vec * recess_depth)
-        
-        # Set exact length to 130mm
-        req_screw_length = 0.130 
-        end_pt = start_pt + (perp_vec * req_screw_length)
-
-        # 4. Offset for double-screw spacing
-        offset_dir = plane_normal.copy() 
-        offset_vec = offset_dir * (self.screw_spacing / 2.0)
-        
-        hw_line_1 = Line(start_pt + offset_vec, end_pt + offset_vec)
-        hw_line_2 = Line(start_pt - offset_vec, end_pt - offset_vec)
-        
-        joint_label = "TButtJoint - inner-inner (Perpendicular Shifted)"
         
         self._generate_features(
             [hw_line_1, hw_line_2],

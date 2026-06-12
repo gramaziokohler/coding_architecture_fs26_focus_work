@@ -108,6 +108,7 @@ class DrillingProcessor:
         self.processed_beam_pairs = set()
         self.debug_points = []
         self.contact_polylines = [] 
+        self.debug_text_dots = []
         
         self.hardware_screws_by_type = {}
         self.screw_lengths_by_type = {}
@@ -116,6 +117,47 @@ class DrillingProcessor:
         # Separated inventory bins
         self.inventory_counts = {100: 0, 130: 0, 150: 0}
         self.miter_inventory_counts = {"Miter Standard": 0} 
+        self.manual_foundation_inventory_counts = {"Foundation Screw Spec": 0} 
+
+    def _identify_triangle_tbutts(self):
+        """Pre-calculate which TButtJoints are part of a 3-beam triangle loop."""
+        inner_tbutts = []
+        joints = getattr(self.timber_model, 'joints', None) or getattr(self.timber_model, 'interactions', [])
+        
+        # Isolate inner-to-inner TButts
+        for joint in joints:
+            if type(joint).__name__ == "TButtJoint":
+                elements = getattr(joint, 'elements', None)
+                if not elements and hasattr(joint, 'main_beam'):
+                    elements = [joint.main_beam, getattr(joint, 'cross_beam')]
+                    
+                if elements and len(elements) >= 2:
+                    b1, b2 = elements[0], elements[1]
+                    if b1.attributes.get("category") == "inner" and b2.attributes.get("category") == "inner":
+                        inner_tbutts.append((joint, id(b1), id(b2)))
+
+        from collections import defaultdict
+        adjacency = defaultdict(list)
+        joint_map = {}
+        
+        # Build adjacency graph
+        for joint, id1, id2 in inner_tbutts:
+            adjacency[id1].append(id2)
+            adjacency[id2].append(id1)
+            joint_map[frozenset([id1, id2])] = joint
+
+        triangle_joints = set()
+        
+        # Detect 3-cycles
+        for b1 in adjacency:
+            for b2 in adjacency[b1]:
+                for b3 in adjacency[b2]:
+                    if b3 != b1 and b1 in adjacency[b3]:
+                        triangle_joints.add(joint_map[frozenset([b1, b2])])
+                        triangle_joints.add(joint_map[frozenset([b2, b3])])
+                        triangle_joints.add(joint_map[frozenset([b3, b1])])
+                        
+        return triangle_joints
 
     def process_drillings(self):
         print("--- Starting Drilling Generation ---")
@@ -137,12 +179,15 @@ class DrillingProcessor:
         # Standard timber model inventory tracking
         self.inventory_counts = {100: 0, 130: 0, 150: 0}
         
-        # NEW: Fully separate inventory mappings for custom/manual hardware specifications
+        # Fully separate inventory mappings for custom/manual hardware specifications
         self.miter_inventory_counts = {"Miter Standard": 0}
         self.manual_foundation_inventory_counts = {"Foundation Screw Spec": 0} 
         
         miter_joints_detected = {"Lmitter arch": 0, "Lmitter foundation": 0}
         llap_joints_count = 0
+
+        # Pre-calculate the triangle joints BEFORE the main loop
+        self.triangle_tbutts = self._identify_triangle_tbutts()
 
         for beam in self.timber_model.beams:
             if hasattr(beam, 'features'):
@@ -204,12 +249,13 @@ class DrillingProcessor:
                 if cat_c == "base" or cat_a == "base":
                     if cat_a == "base": cont_beam, abut_beam = abut_beam, cont_beam
                     self._apply_foundation_butt_drilling(joint, abut_beam, cont_beam)
-                # NEW: Isolate inner-inner T-Butt joints
-                elif cat_c == "inner" and cat_a == "inner":
-                    self._apply_inner_inner_butt_drilling(joint)
+                
+                # Divert the triangle joints to the perpendicular solver
+                elif joint in self.triangle_tbutts:
+                    self._apply_triangle_butt_drilling(joint, abut_beam, cont_beam)
+                
                 else:
                     self._apply_standard_butt_drilling(joint)
-
 
             elif isinstance(joint, (XLapJoint, TLapJoint)):
                 self._apply_lap_drilling(joint, elements[0], elements[1])
@@ -437,73 +483,73 @@ class DrillingProcessor:
 
         return self._generate_features(hw_lines, [abut_beam], joint_label, final_screw_length)
 
-    # def _resolve_shallow_drilling(self, abut_beam, cont_beam, intersection_pt):
-    #     dir_abut = abut_beam.centerline.direction.copy()
-    #     vec_to_mid = Vector.from_start_end(intersection_pt, abut_beam.centerline.midpoint)
-    #     if dir_abut.dot(vec_to_mid) < 0: 
-    #         dir_abut.scale(-1)
-    #     dir_abut.unitize()
-        
-    #     dir_cont = cont_beam.centerline.direction.copy()
-    #     dir_cont.unitize()
-    #     if dir_cont.dot(dir_abut) < 0:
-    #         dir_cont.scale(-1)
-            
-    #     plane_normal = dir_cont.cross(dir_abut)
-    #     if plane_normal.length < 1e-5: 
-    #         plane_normal = Vector(0, 0, 1)
-    #     plane_normal.unitize()
-        
-    #     target_angle_rad = math.radians(40.0)
-        
-    #     v_perp = plane_normal.cross(dir_cont)
-    #     v_perp.unitize()
-    #     if v_perp.dot(dir_abut) < 0: 
-    #         v_perp.scale(-1)
-            
-    #     ideal_screw_dir = dir_cont * math.cos(target_angle_rad) + v_perp * math.sin(target_angle_rad)
-    #     ideal_screw_dir.unitize()
-    #     screw_dir = ideal_screw_dir * -1
+    def _apply_triangle_butt_drilling(self, joint, abut_beam, cont_beam):
+        """Forces a strictly perpendicular screw alignment for the triangle TButts."""
+        line1, line2 = cont_beam.centerline, abut_beam.centerline
+        res = intersection_line_line(line1, line2)
+        if not res or res[0] is None: return
+        intersection_pt = Point(*res[0])
 
-    #     walk_step = 0.010 
-    #     max_steps = 60    
-    #     anchor_depth = 0.060
-    #     min_abut_length = 0.040 
+        try:
+            import Rhino.Geometry as rg
+            # Create a point and the text dot
+            pt3d = rg.Point3d(intersection_pt.x, intersection_pt.y, intersection_pt.z)
+            dot = rg.TextDot("Triangle Node", pt3d)
+            self.debug_text_dots.append(dot)
+        except ImportError:
+            pass # Fails silently if run outside of Rhino/Grasshopper
         
-    #     cat_a = abut_beam.attributes.get("category", "inner")
-    #     cat_c = cont_beam.attributes.get("category", "inner")
-    #     joint_label = "TButtJoint - arch (40° Fixed)" if cat_a == "arch" or cat_c == "arch" else "TButtJoint - inner (40° Fixed)"
+        dir_abut = abut_beam.centerline.direction.copy()
+        vec_to_mid = Vector.from_start_end(intersection_pt, abut_beam.centerline.midpoint)
+        if dir_abut.dot(vec_to_mid) < 0: 
+            dir_abut.scale(-1)
+        dir_abut.unitize()
         
-    #     for step in range(max_steps):
-    #         piece_pt = intersection_pt + (dir_cont * (step * walk_step))
-    #         exit_dist = _ray_obb_exit(piece_pt, ideal_screw_dir, abut_beam)
+        dir_cont = cont_beam.centerline.direction.copy()
+        dir_cont.unitize()
+        
+        # Define the local plane of the joint
+        plane_normal = dir_cont.cross(dir_abut)
+        if plane_normal.length < 1e-5: plane_normal = Vector(0, 0, 1)
+        plane_normal.unitize()
+        
+        # Calculate vector perpendicular to continuous beam, in the joint plane
+        v_perp = plane_normal.cross(dir_cont)
+        v_perp.unitize()
+        
+        # Ensure it points TOWARDS the abutting beam
+        if v_perp.dot(dir_abut) < 0:
+            v_perp.scale(-1)
             
-    #         if exit_dist is not None and exit_dist >= min_abut_length:
-    #             max_allowed_ray = 0.150 + 0.020
-    #             if exit_dist > max_allowed_ray:
-    #                 exit_dist = max_allowed_ray
-
-    #             start_pt = piece_pt + (ideal_screw_dir * exit_dist)
-    #             req_screw_length = math.ceil((exit_dist + anchor_depth) / 0.010) * 0.010
-    #             end_pt = start_pt + (screw_dir * req_screw_length)
-                
-    #             offset_dir = screw_dir.cross(dir_cont)
-    #             if offset_dir.length < 1e-5: offset_dir = Vector(0, 0, 1)
-    #             offset_dir.unitize()
-    #             offset_vec = offset_dir * (self.screw_spacing / 2.0)
-                
-    #             hw_line_1 = Line(start_pt + offset_vec, end_pt + offset_vec)
-    #             hw_line_2 = Line(start_pt - offset_vec, end_pt - offset_vec)
-                
-    #             self._generate_features(
-    #                 [hw_line_1, hw_line_2],
-    #                 [cont_beam],
-    #                 joint_label,
-    #                 req_screw_length
-    #             )
-    #             return True
-                
-    #     return False
+        screw_dir = v_perp * -1  # Points from outside continuous beam inward
+        ideal_screw_dir = v_perp # Points outward towards abutting beam
+        
+        # Anchor depth and thickness logic
+        thickness_c = max(cont_beam.width, cont_beam.height)
+        start_pt = intersection_pt - (ideal_screw_dir * (thickness_c / 2.0))
+        
+        anchor_depth = 0.060
+        raw_screw_length = thickness_c + anchor_depth
+        req_screw_length = math.ceil(raw_screw_length / 0.010) * 0.010
+        end_pt = start_pt + (ideal_screw_dir * req_screw_length)
+        
+        # Lateral spacing
+        offset_dir = screw_dir.cross(dir_cont)
+        if offset_dir.length < 1e-5: offset_dir = Vector(0, 0, 1) 
+        offset_dir.unitize()
+        offset_vec = offset_dir * (self.screw_spacing / 2.0)
+        
+        hw_line_1 = Line(start_pt + offset_vec, end_pt + offset_vec)
+        hw_line_2 = Line(start_pt - offset_vec, end_pt - offset_vec)
+        
+        joint_label = "TButtJoint - Triangle"
+        
+        self._generate_features(
+            [hw_line_1, hw_line_2],
+            [cont_beam],
+            joint_label,
+            req_screw_length
+        )
 
     def _resolve_shallow_drilling(self, abut_beam, cont_beam, intersection_pt):
         # 1. Establish coordinate vectors
@@ -676,90 +722,6 @@ class DrillingProcessor:
         cat_a = abut_beam.attributes.get("category", "inner")
         cat_c = cont_beam.attributes.get("category", "inner")
         joint_label = "TButtJoint - arch" if cat_a == "arch" or cat_c == "arch" else "TButtJoint - inner"
-        
-        self._generate_features(
-            [hw_line_1, hw_line_2],
-            [cont_beam],
-            joint_label,
-            req_screw_length
-        )
-
-    def _apply_inner_inner_butt_drilling(self, joint):
-        elements = [joint.main_beam, joint.cross_beam]
-        line1, line2 = elements[0].centerline, elements[1].centerline
-        
-        res = intersection_line_line(line1, line2)
-        if not res or res[0] is None: return
-
-        pt_a = Point(*res[0])
-        pt_b = Point(*res[1])
-        
-        d1 = min(distance_point_point(pt_a, line1.start), distance_point_point(pt_a, line1.end))
-        d2 = min(distance_point_point(pt_b, line2.start), distance_point_point(pt_b, line2.end))
-        
-        if d1 < d2:
-            abut_beam, cont_beam = elements[0], elements[1]
-            intersection_pt = pt_a
-        else:
-            abut_beam, cont_beam = elements[1], elements[0]
-            intersection_pt = pt_b
-
-        # Define vector moving away from the joint into the abutting beam
-        dir_abut = abut_beam.centerline.direction.copy()
-        vec_to_mid = Vector.from_start_end(intersection_pt, abut_beam.centerline.midpoint)
-        if dir_abut.dot(vec_to_mid) < 0: 
-            dir_abut.scale(-1)
-        dir_abut.unitize()
-
-        # Define vector along the continuous beam
-        dir_cont = cont_beam.centerline.direction.copy()
-        dir_cont.unitize()
-
-        # 1. Find the normal of the plane shared by both beams
-        plane_normal = dir_cont.cross(dir_abut)
-        if plane_normal.length < 1e-5: 
-            plane_normal = Vector(0, 0, 1)
-        plane_normal.unitize()
-
-        # 2. Find the vector perpendicular to the continuous beam inside that plane
-        perp_vec = plane_normal.cross(dir_cont)
-        perp_vec.unitize()
-        
-        # Ensure the vector points towards the abutting beam side
-        if perp_vec.dot(dir_abut) < 0:
-            perp_vec.scale(-1)
-
-        # ---------------------------------------------------------
-        # 3. Calculate geometry limits (SHIFTED FOR PERFECT FIT)
-        # ---------------------------------------------------------
-        thickness_c = max(cont_beam.width, cont_beam.height)
-        recess_depth = 0.000 
-        
-        # Calculate where the abutting beam's centerline hits the inner face of the continuous beam
-        dot_val = dir_abut.dot(perp_vec)
-        if abs(dot_val) > 1e-5:
-            # Travel along dir_abut until the perpendicular distance is exactly half the beam thickness
-            t_interface = (thickness_c / 2.0) / dot_val
-            pt_interface = intersection_pt + (dir_abut * t_interface)
-        else:
-            # Fallback if somehow perfectly parallel
-            pt_interface = intersection_pt + (perp_vec * (thickness_c / 2.0))
-            
-        # Set start point on the *outer* face by subtracting the full continuous beam thickness
-        start_pt = pt_interface - (perp_vec * thickness_c) + (perp_vec * recess_depth)
-        
-        # Set exact length to 130mm
-        req_screw_length = 0.130 
-        end_pt = start_pt + (perp_vec * req_screw_length)
-
-        # 4. Offset for double-screw spacing
-        offset_dir = plane_normal.copy() 
-        offset_vec = offset_dir * (self.screw_spacing / 2.0)
-        
-        hw_line_1 = Line(start_pt + offset_vec, end_pt + offset_vec)
-        hw_line_2 = Line(start_pt - offset_vec, end_pt - offset_vec)
-        
-        joint_label = "TButtJoint - inner-inner (Perpendicular Shifted)"
         
         self._generate_features(
             [hw_line_1, hw_line_2],
