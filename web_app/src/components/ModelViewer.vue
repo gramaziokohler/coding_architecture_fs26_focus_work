@@ -69,7 +69,7 @@ const MODULE_PALETTE = [
     0xf37f18,
     0xe86aff,
     0x0164d0,
-    0x9fc9d8,
+    0x93edff,
 ];
 const FALLBACK_DENSITY_KG_M3 = 500;
 
