@@ -16,7 +16,7 @@ class CutItem:
         self.center_pt = None
 
 
-def create_geometry_text(text, position, text_height=0.03):
+def create_geometry_text(text, position, text_height=0.03, rotation=0.0):
     """Create editable 2D Rhino text, not exploded curves or hatches."""
     te = rg.TextEntity()
     te.Text = text
@@ -33,6 +33,9 @@ def create_geometry_text(text, position, text_height=0.03):
         center_y = (bbox.Max.Y + bbox.Min.Y) / 2.0
         move_to_center = rg.Transform.Translation(position.X - center_x, position.Y - center_y, 0)
         te.Transform(move_to_center)
+
+    if rotation != 0.0:
+        te.Transform(rg.Transform.Rotation(rotation, rg.Vector3d.ZAxis, position))
 
     return [te]
 
@@ -423,6 +426,8 @@ def run_packing(timber_model, origin, stock_length_beam_6x8, stock_length_beam_1
     report_sections = []
     vacuum_surfaces_out = [] 
     failed_vacuums = [] 
+    vacuum_free_lines = []
+    vacuum_free_measures = []
     rotated_beam_names_set = set(rotated_beam_names)
     
     total_waste_material, total_material_bought = 0.0, 0.0
@@ -606,6 +611,7 @@ def run_packing(timber_model, origin, stock_length_beam_6x8, stock_length_beam_1
             half_w = v_width / 2.0
             vacuums_placed_count = 0
             first_vacuum_x = None  
+            placed_vacuum_xs = []
             
             min_v_x = new_bbox.Min.X + half_l
             max_v_x = new_bbox.Max.X - half_l
@@ -654,9 +660,35 @@ def run_packing(timber_model, origin, stock_length_beam_6x8, stock_length_beam_1
                     vacuum_surf = rg.PlaneSurface(vacuum_plane, rg.Interval(-half_l, half_l), rg.Interval(-half_w, half_w))
                     vacuum_surfaces_out.append(vacuum_surf)
                     vacuums_placed_count += 1
+                    placed_vacuum_xs.append(current_v_x)
 
             if vacuums_placed_count < 2:
                 failed_vacuums.append(item["name"])
+
+            seg_points = [target_x]
+            for v_x in placed_vacuum_xs:
+                seg_points.append(v_x - half_l)
+                seg_points.append(v_x + half_l)
+            seg_points.append(target_x + item["blank_length"])
+            
+            lbl_y_over = lbl_y_center + (sec_w / 2.0) + l_off
+            
+            for i in range(0, len(seg_points), 2):
+                x1 = seg_points[i]
+                x2 = seg_points[i+1]
+                if x2 - x1 > 0.001:
+                    l_val = rg.Line(rg.Point3d(x1, lbl_y_over, exact_top_z), rg.Point3d(x2, lbl_y_over, exact_top_z))
+                    vacuum_free_lines.append(l_val)
+                    
+                    local_x1_cm = (x1 - target_x) * 100.0
+                    local_x2_cm = (x2 - target_x) * 100.0
+                    
+                    if i > 0:
+                        txt1 = create_geometry_text("{:.1f}cm".format(local_x1_cm), rg.Point3d(x1, lbl_y_over + 0.04, exact_top_z), text_height=0.02, rotation=math.pi/2.0)
+                        vacuum_free_measures.extend(txt1)
+                    if i < len(seg_points) - 2:
+                        txt2 = create_geometry_text("{:.1f}cm".format(local_x2_cm), rg.Point3d(x2, lbl_y_over + 0.04, exact_top_z), text_height=0.02, rotation=math.pi/2.0)
+                        vacuum_free_measures.extend(txt2)
 
             cut_length_txt = "{:.3f}m".format(item["cut_length"]) if item["cut_length"] is not None else "n/a"
             native_blank_txt = "{:.3f}m".format(item["blank_length_native"]) if item["blank_length_native"] is not None else "n/a"
@@ -687,4 +719,4 @@ def run_packing(timber_model, origin, stock_length_beam_6x8, stock_length_beam_1
     
     rotated_beam_names.sort(key=sort_key_for_name_only)
 
-    return arranged_boxes_not_rotated, arranged_boxes_rotated, arranged_names, max_len_boxes, stock_beams, max_len_lines, label_curves, max_len_num_txt, engraving_not_rotated, engraving_rotated, dimensions, report, vacuum_surfaces_out, failed_vacuums, joint_face_summary, rotated_beam_names
+    return arranged_boxes_not_rotated, arranged_boxes_rotated, arranged_names, max_len_boxes, stock_beams, max_len_lines, label_curves, max_len_num_txt, engraving_not_rotated, engraving_rotated, dimensions, report, vacuum_surfaces_out, failed_vacuums, joint_face_summary, rotated_beam_names, vacuum_free_lines, vacuum_free_measures
