@@ -20,7 +20,7 @@ NAME_KEYS = ("beam_id", "beam ID", "beam_name", "name", "label", "mark")
 MODULE_KEYS = ("module", "module_id", "module_name", "fabrication_module", "assembly_module", "group")
 NUMBER_KEYS = ("beam_number", "number", "sequence", "fabrication_number", "element_number", "index")
 
-# Key Beams aggiornati secondo l'ultima richiesta
+# Key Beams aggiornati basati sulla nomenclatura finale
 KEY_BEAMS_LIST = ["B10", "B11", "C10", "C19", "C20", "C23", "E36", "G18"]
 
 # Beams estratti per modulo G (nomi pre-spostamento)
@@ -155,7 +155,7 @@ def vector_normalize(v):
 def xyz_to_list(value):
     if all(hasattr(value, attr) for attr in ("x", "y", "z")):
         return [float(value.x), float(value.y), float(value.z)]
-    if all(hasattr(value, attr) for attr in ("X", "Y", "Z")):
+    if fastener_key := all(hasattr(value, attr) for attr in ("X", "Y", "Z")):
         return [float(value.X), float(value.Y), float(value.Z)]
     return [float(value[0]), float(value[1]), float(value[2])]
 
@@ -190,8 +190,8 @@ def frame_from_data(frame_data):
         "z_axis": vector_normalize([float(v) for v in z_axis]),
     }
 
-def blank_frame_from_beam_data(beam_data):
-    blank = beam_data.get("blank") or {}
+def blank_frame_from_beam_data(blank_data):
+    blank = blank_data.get("blank") or {}
     if isinstance(blank, dict):
         blank_data = blank.get("data", blank)
         frame = blank_data.get("frame")
@@ -349,8 +349,7 @@ def triangulate_face(face):
 
 def write_mesh_ascii_stl(path, name, vertices, faces):
     with open(path, "w") as fp:
-        fp.solid = "solid {}\n".format(name)
-        fp.write(fp.solid)
+        fp.write("solid {}\n".format(name))
         for face in faces:
             for tri in triangulate_face(face):
                 a, b, c = ([float(coord) for coord in vertices[i]] for i in tri)
@@ -1238,8 +1237,9 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
             beam = timber_model.get_element(node)
             set_beam_partitioning_attributes(beam, k, i + 1, beam_id=name.lower(), display_name=name)
 
-            orig_name = node_initial_name.get(node, "")
-            is_key_beam_by_guid[node] = (orig_name in KEY_BEAMS_LIST)
+            # CORREZIONE CRUCIALE: Il controllo del Key Beam viene eseguito basandosi 
+            # sul nome dell'apparizione finale generata a schermo (es. B10, B11, C10, ecc.)
+            is_key_beam_by_guid[node] = (name in KEY_BEAMS_LIST)
 
             rhino_geom = beam.geometry
             if hasattr(beam.geometry, "native_brep") and beam.geometry.native_brep:
