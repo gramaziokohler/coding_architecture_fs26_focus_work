@@ -65,7 +65,7 @@ const MODULE_PALETTE = [
     0x88d887,
     0xf37f18,
     0xff9fc7,
-    0xff646a,
+    0xf19a8e,
     0x88d8d0,
     0xe86aff,
     0x0164d0,
