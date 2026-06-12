@@ -2,74 +2,79 @@
   "beam ID": "c19",
   "name": "C19",
   "module": "C",
-  "is_key_beam": false,
-  "width (m)": 0.08,
-  "height (m)": 0.1,
-  "length (m)": 1.37,
-  "blank_length (m)": 1.38,
-  "volume (cm\u00b3)": 10929.13,
-  "weight (kg)": 5.46,
+  "is_key_beam": true,
+  "width (m)": 0.06,
+  "height (m)": 0.08,
+  "length (m)": 1.27,
+  "blank_length (m)": 1.28,
+  "volume (cm\u00b3)": 6081.63,
+  "weight (kg)": 3.04,
   "local_frame": {
     "origin": [
-      0.1986,
-      3.2083,
-      1.3722
+      2.9968,
+      -0.0985,
+      2.11
     ],
     "x_axis": [
-      0.7751,
-      0.1743,
-      0.6074
+      0.4569,
+      0.8547,
+      -0.2464
     ],
     "y_axis": [
-      0.1307,
-      0.8962,
-      -0.424
+      0.8649,
+      -0.4916,
+      -0.1015
     ],
     "z_axis": [
-      -0.6182,
-      0.408,
-      0.6718
+      -0.2079,
+      -0.1667,
+      -0.9638
     ]
   },
   "connected_beams": [
-    "c17",
-    "c26",
-    "d15"
+    "c18",
+    "c20",
+    "c21",
+    "h3"
   ],
   "global_position": {
     "centerline_start": [
-      -0.3321,
-      3.0889,
-      0.9563
+      2.7097,
+      -0.6357,
+      2.2648
     ],
     "centerline_end": [
-      0.7267,
-      3.3271,
-      1.786
+      3.2885,
+      0.4472,
+      1.9527
     ],
     "midpoint": [
-      0.1973,
-      3.208,
-      1.3711
+      2.9991,
+      -0.0943,
+      2.1087
     ],
     "midpoint_normalized": [
-      0.1863,
-      0.9717,
-      0.4971
+      0.5874,
+      0.3622,
+      0.7644
     ]
   },
   "joints": {
     "all": [
-      "262",
-      "268",
-      "59"
+      "140",
+      "149",
+      "150",
+      "165"
     ],
-    "xlap": [],
-    "tbutt": [],
-    "lmiter": [
-      "262",
-      "59"
-    ]
+    "xlap": [
+      "140",
+      "150"
+    ],
+    "tbutt": [
+      "149",
+      "165"
+    ],
+    "lmiter": []
   },
   "features": [
     {
@@ -77,38 +82,38 @@
       "type": "Screw",
       "data": {
         "type": "Screw",
-        "joint_type": "TButtJoint - inner",
+        "joint_type": "XLapJoint",
         "start": [
-          -0.2414322656940244,
-          3.14943880479551,
-          1.0825106547788395
+          2.8727972446839525,
+          -0.35823484622017526,
+          2.139142444065477
         ],
         "end": [
-          -0.1399723602618032,
-          3.0306757945132534,
-          1.1171694917238577
+          2.8838356228665543,
+          -0.33899075503725334,
+          2.2263652573750767
         ],
         "diameter_m": 0.0064,
-        "length_m": 0.16,
-        "length_mm": 160.0,
-        "assigned_length_mm": 150
+        "length_m": 0.09,
+        "length_mm": 90.0,
+        "assigned_length_mm": 100
       },
       "start": [
-        -0.2414,
-        3.1494,
-        1.0825
+        2.8728,
+        -0.3582,
+        2.1391
       ],
       "end": [
-        -0.14,
-        3.0307,
-        1.1172
+        2.8838,
+        -0.339,
+        2.2264
       ],
-      "line_length_m": 0.16,
+      "line_length_m": 0.09,
       "diameter_m": 0.0064,
-      "length_m": 0.16,
-      "length_mm": 160.0,
-      "assigned_length_mm": 150,
-      "joint_type": "TButtJoint - inner",
+      "length_m": 0.09,
+      "length_mm": 90.0,
+      "assigned_length_mm": 100,
+      "joint_type": "XLapJoint",
       "has_stl_geometry": true
     },
     {
@@ -116,38 +121,194 @@
       "type": "Screw",
       "data": {
         "type": "Screw",
-        "joint_type": "TButtJoint - inner",
+        "joint_type": "XLapJoint",
         "start": [
-          -0.22457766018134148,
-          3.1569332968589343,
-          1.0588515157048344
+          2.84302468451623,
+          -0.35720879122149046,
+          2.1426838946438456
         ],
         "end": [
-          -0.1231177547491203,
-          3.0381702865766775,
-          1.0935103526498526
+          2.854063062698832,
+          -0.33796470003856854,
+          2.2299067079534454
         ],
         "diameter_m": 0.0064,
-        "length_m": 0.16,
-        "length_mm": 160.0,
+        "length_m": 0.09,
+        "length_mm": 90.0,
+        "assigned_length_mm": 100
+      },
+      "start": [
+        2.843,
+        -0.3572,
+        2.1427
+      ],
+      "end": [
+        2.8541,
+        -0.338,
+        2.2299
+      ],
+      "line_length_m": 0.09,
+      "diameter_m": 0.0064,
+      "length_m": 0.09,
+      "length_mm": 90.0,
+      "assigned_length_mm": 100,
+      "joint_type": "XLapJoint",
+      "has_stl_geometry": true
+    },
+    {
+      "id": "web-3",
+      "type": "Screw",
+      "data": {
+        "type": "Screw",
+        "joint_type": "TButtJoint - inner",
+        "start": [
+          2.990848969449271,
+          -0.04247596815727569,
+          2.1162138753385222
+        ],
+        "end": [
+          3.0595470567489076,
+          -0.1753166271875231,
+          2.127786779458969
+        ],
+        "diameter_m": 0.0064,
+        "length_m": 0.15,
+        "length_mm": 150.0,
         "assigned_length_mm": 150
       },
       "start": [
-        -0.2246,
-        3.1569,
-        1.0589
+        2.9908,
+        -0.0425,
+        2.1162
       ],
       "end": [
-        -0.1231,
-        3.0382,
-        1.0935
+        3.0595,
+        -0.1753,
+        2.1278
       ],
-      "line_length_m": 0.16,
+      "line_length_m": 0.15,
       "diameter_m": 0.0064,
-      "length_m": 0.16,
-      "length_mm": 160.0,
+      "length_m": 0.15,
+      "length_mm": 150.0,
       "assigned_length_mm": 150,
       "joint_type": "TButtJoint - inner",
+      "has_stl_geometry": true
+    },
+    {
+      "id": "web-4",
+      "type": "Screw",
+      "data": {
+        "type": "Screw",
+        "joint_type": "TButtJoint - inner",
+        "start": [
+          2.985304679573999,
+          -0.047868392425996005,
+          2.0872279716906266
+        ],
+        "end": [
+          3.054002766873636,
+          -0.18070905145624344,
+          2.098800875811073
+        ],
+        "diameter_m": 0.0064,
+        "length_m": 0.15,
+        "length_mm": 150.0,
+        "assigned_length_mm": 150
+      },
+      "start": [
+        2.9853,
+        -0.0479,
+        2.0872
+      ],
+      "end": [
+        3.054,
+        -0.1807,
+        2.0988
+      ],
+      "line_length_m": 0.15,
+      "diameter_m": 0.0064,
+      "length_m": 0.15,
+      "length_mm": 150.0,
+      "assigned_length_mm": 150,
+      "joint_type": "TButtJoint - inner",
+      "has_stl_geometry": true
+    },
+    {
+      "id": "web-5",
+      "type": "Screw",
+      "data": {
+        "type": "Screw",
+        "joint_type": "XLapJoint",
+        "start": [
+          3.058885553513514,
+          0.032830401155674566,
+          2.027601492620572
+        ],
+        "end": [
+          3.059140148312446,
+          0.06871433650319834,
+          2.1525505957204465
+        ],
+        "diameter_m": 0.0064,
+        "length_m": 0.13,
+        "length_mm": 130.0,
+        "assigned_length_mm": 130
+      },
+      "start": [
+        3.0589,
+        0.0328,
+        2.0276
+      ],
+      "end": [
+        3.0591,
+        0.0687,
+        2.1526
+      ],
+      "line_length_m": 0.13,
+      "diameter_m": 0.0064,
+      "length_m": 0.13,
+      "length_mm": 130.0,
+      "assigned_length_mm": 130,
+      "joint_type": "XLapJoint",
+      "has_stl_geometry": true
+    },
+    {
+      "id": "web-6",
+      "type": "Screw",
+      "data": {
+        "type": "Screw",
+        "joint_type": "XLapJoint",
+        "start": [
+          3.074443805615225,
+          0.008168198809417396,
+          2.034652490207572
+        ],
+        "end": [
+          3.0746984004141567,
+          0.044052134156941175,
+          2.1596015933074466
+        ],
+        "diameter_m": 0.0064,
+        "length_m": 0.13,
+        "length_mm": 130.0,
+        "assigned_length_mm": 130
+      },
+      "start": [
+        3.0744,
+        0.0082,
+        2.0347
+      ],
+      "end": [
+        3.0747,
+        0.0441,
+        2.1596
+      ],
+      "line_length_m": 0.13,
+      "diameter_m": 0.0064,
+      "length_m": 0.13,
+      "length_mm": 130.0,
+      "assigned_length_mm": 130,
+      "joint_type": "XLapJoint",
       "has_stl_geometry": true
     }
   ],
@@ -157,38 +318,38 @@
       "type": "Screw",
       "data": {
         "type": "Screw",
-        "joint_type": "TButtJoint - inner",
+        "joint_type": "XLapJoint",
         "start": [
-          -0.2414322656940244,
-          3.14943880479551,
-          1.0825106547788395
+          2.8727972446839525,
+          -0.35823484622017526,
+          2.139142444065477
         ],
         "end": [
-          -0.1399723602618032,
-          3.0306757945132534,
-          1.1171694917238577
+          2.8838356228665543,
+          -0.33899075503725334,
+          2.2263652573750767
         ],
         "diameter_m": 0.0064,
-        "length_m": 0.16,
-        "length_mm": 160.0,
-        "assigned_length_mm": 150
+        "length_m": 0.09,
+        "length_mm": 90.0,
+        "assigned_length_mm": 100
       },
       "start": [
-        -0.2414,
-        3.1494,
-        1.0825
+        2.8728,
+        -0.3582,
+        2.1391
       ],
       "end": [
-        -0.14,
-        3.0307,
-        1.1172
+        2.8838,
+        -0.339,
+        2.2264
       ],
-      "line_length_m": 0.16,
+      "line_length_m": 0.09,
       "diameter_m": 0.0064,
-      "length_m": 0.16,
-      "length_mm": 160.0,
-      "assigned_length_mm": 150,
-      "joint_type": "TButtJoint - inner",
+      "length_m": 0.09,
+      "length_mm": 90.0,
+      "assigned_length_mm": 100,
+      "joint_type": "XLapJoint",
       "has_stl_geometry": true
     },
     {
@@ -196,38 +357,194 @@
       "type": "Screw",
       "data": {
         "type": "Screw",
-        "joint_type": "TButtJoint - inner",
+        "joint_type": "XLapJoint",
         "start": [
-          -0.22457766018134148,
-          3.1569332968589343,
-          1.0588515157048344
+          2.84302468451623,
+          -0.35720879122149046,
+          2.1426838946438456
         ],
         "end": [
-          -0.1231177547491203,
-          3.0381702865766775,
-          1.0935103526498526
+          2.854063062698832,
+          -0.33796470003856854,
+          2.2299067079534454
         ],
         "diameter_m": 0.0064,
-        "length_m": 0.16,
-        "length_mm": 160.0,
+        "length_m": 0.09,
+        "length_mm": 90.0,
+        "assigned_length_mm": 100
+      },
+      "start": [
+        2.843,
+        -0.3572,
+        2.1427
+      ],
+      "end": [
+        2.8541,
+        -0.338,
+        2.2299
+      ],
+      "line_length_m": 0.09,
+      "diameter_m": 0.0064,
+      "length_m": 0.09,
+      "length_mm": 90.0,
+      "assigned_length_mm": 100,
+      "joint_type": "XLapJoint",
+      "has_stl_geometry": true
+    },
+    {
+      "id": "web-3",
+      "type": "Screw",
+      "data": {
+        "type": "Screw",
+        "joint_type": "TButtJoint - inner",
+        "start": [
+          2.990848969449271,
+          -0.04247596815727569,
+          2.1162138753385222
+        ],
+        "end": [
+          3.0595470567489076,
+          -0.1753166271875231,
+          2.127786779458969
+        ],
+        "diameter_m": 0.0064,
+        "length_m": 0.15,
+        "length_mm": 150.0,
         "assigned_length_mm": 150
       },
       "start": [
-        -0.2246,
-        3.1569,
-        1.0589
+        2.9908,
+        -0.0425,
+        2.1162
       ],
       "end": [
-        -0.1231,
-        3.0382,
-        1.0935
+        3.0595,
+        -0.1753,
+        2.1278
       ],
-      "line_length_m": 0.16,
+      "line_length_m": 0.15,
       "diameter_m": 0.0064,
-      "length_m": 0.16,
-      "length_mm": 160.0,
+      "length_m": 0.15,
+      "length_mm": 150.0,
       "assigned_length_mm": 150,
       "joint_type": "TButtJoint - inner",
+      "has_stl_geometry": true
+    },
+    {
+      "id": "web-4",
+      "type": "Screw",
+      "data": {
+        "type": "Screw",
+        "joint_type": "TButtJoint - inner",
+        "start": [
+          2.985304679573999,
+          -0.047868392425996005,
+          2.0872279716906266
+        ],
+        "end": [
+          3.054002766873636,
+          -0.18070905145624344,
+          2.098800875811073
+        ],
+        "diameter_m": 0.0064,
+        "length_m": 0.15,
+        "length_mm": 150.0,
+        "assigned_length_mm": 150
+      },
+      "start": [
+        2.9853,
+        -0.0479,
+        2.0872
+      ],
+      "end": [
+        3.054,
+        -0.1807,
+        2.0988
+      ],
+      "line_length_m": 0.15,
+      "diameter_m": 0.0064,
+      "length_m": 0.15,
+      "length_mm": 150.0,
+      "assigned_length_mm": 150,
+      "joint_type": "TButtJoint - inner",
+      "has_stl_geometry": true
+    },
+    {
+      "id": "web-5",
+      "type": "Screw",
+      "data": {
+        "type": "Screw",
+        "joint_type": "XLapJoint",
+        "start": [
+          3.058885553513514,
+          0.032830401155674566,
+          2.027601492620572
+        ],
+        "end": [
+          3.059140148312446,
+          0.06871433650319834,
+          2.1525505957204465
+        ],
+        "diameter_m": 0.0064,
+        "length_m": 0.13,
+        "length_mm": 130.0,
+        "assigned_length_mm": 130
+      },
+      "start": [
+        3.0589,
+        0.0328,
+        2.0276
+      ],
+      "end": [
+        3.0591,
+        0.0687,
+        2.1526
+      ],
+      "line_length_m": 0.13,
+      "diameter_m": 0.0064,
+      "length_m": 0.13,
+      "length_mm": 130.0,
+      "assigned_length_mm": 130,
+      "joint_type": "XLapJoint",
+      "has_stl_geometry": true
+    },
+    {
+      "id": "web-6",
+      "type": "Screw",
+      "data": {
+        "type": "Screw",
+        "joint_type": "XLapJoint",
+        "start": [
+          3.074443805615225,
+          0.008168198809417396,
+          2.034652490207572
+        ],
+        "end": [
+          3.0746984004141567,
+          0.044052134156941175,
+          2.1596015933074466
+        ],
+        "diameter_m": 0.0064,
+        "length_m": 0.13,
+        "length_mm": 130.0,
+        "assigned_length_mm": 130
+      },
+      "start": [
+        3.0744,
+        0.0082,
+        2.0347
+      ],
+      "end": [
+        3.0747,
+        0.0441,
+        2.1596
+      ],
+      "line_length_m": 0.13,
+      "diameter_m": 0.0064,
+      "length_m": 0.13,
+      "length_mm": 130.0,
+      "assigned_length_mm": 130,
+      "joint_type": "XLapJoint",
       "has_stl_geometry": true
     }
   ],
