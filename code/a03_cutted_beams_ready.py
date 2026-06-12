@@ -3,7 +3,7 @@
 import Rhino.Geometry as rg
 import math
 from importlib import reload
-from compas.geometry import Rotation
+from compas.geometry import Rotation, Vector
 
 class CutItem:
     def __init__(self, beam_id, beam_name, original_beam, width, length, height):
@@ -229,9 +229,8 @@ def run_packing(timber_model, origin, stock_length_beam_6x8, stock_length_beam_1
         if not correct_name:
             correct_name = "B{:02d}".format(idx + 1)
 
-        # NEW: Count joints on upper and bottom faces
-        u_count = 0
-        b_count = 0
+        # Count joints to avoid rotating if the number of joints is the same
+        u_count, b_count = 0, 0
         for joint in timber_model.get_joints_for_element(beam):
             r_idx = None
             j_name = type(joint).__name__
@@ -242,17 +241,31 @@ def run_packing(timber_model, origin, stock_length_beam_6x8, stock_length_beam_1
                     r_idx = getattr(joint, "ref_side_index_a", None)
                 elif getattr(joint, "beam_b", None) == beam:
                     r_idx = getattr(joint, "ref_side_index_b", None)
-            
             if r_idx is not None:
                 try:
                     norm = beam.ref_sides[int(r_idx)].normal
                     if norm.z > 0.7: u_count += 1
                     elif norm.z < -0.7: b_count += 1
-                except:
-                    pass
+                except: pass
+
+        # NEW: Geometric check to ensure all beams "face up" in the layout.
+        # This logic determines the "true up" for a slanted beam and checks if its
+        # local Y-axis (which becomes the top in the CNC layout) is aligned with it.
+        beam_x = beam.frame.xaxis.unitized()
+        global_z = Vector(0, 0, 1)
         
-        # Identify beams to rotate
-        if b_count > u_count:
+        # If beam is vertical, this cross product is zero. Handle this case.
+        if abs(beam_x.dot(global_z)) > 0.999:
+            # For vertical beams, we can define 'up' based on the global Y axis.
+            true_up = Vector(0, 1, 0)
+        else:
+            horizontal_ref = beam_x.cross(global_z)
+            true_up = horizontal_ref.cross(beam_x)
+            true_up.unitize()
+
+        # Check if the beam's local Y-axis is pointing "down" relative to the true up.
+        # AND do not turn 180 degrees if the number of joints is the same
+        if beam.frame.yaxis.dot(true_up) < 0 and u_count != b_count:
             beams_to_rotate_info.append((beam, correct_name))
             
     # Second Pass: Apply rotations to identified beams
