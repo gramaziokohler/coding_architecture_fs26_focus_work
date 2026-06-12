@@ -62,14 +62,14 @@ const MODULE_COLOR = 0x8fcf9c;
 const KEY_BEAM_COLOR = 0xffd84d;
 const MODULE_PALETTE = [
     0x9ec5ff,
-    0xd6a4e8,
+    0x88d887,
     0x88d8d0,
-    0xf19a8e,
-    0xc3a57d,
     0xff9fc7,
-    0xaeb7ff,
-    0xd0a1c9,
-    0x9fc9d8,
+    0xf19a8e,
+    0xf37f18,
+    0xe86aff,
+    0x0164d0,
+    0x93edff,
 ];
 const FALLBACK_DENSITY_KG_M3 = 500;
 

@@ -17,11 +17,22 @@ from compas_timber.connections import JointTopology
 from compas_timber.connections import LLapJoint
 from compas_timber.connections import TLapJoint
 from compas_timber.connections import XLapJoint
+from compas_timber.fabrication import Drilling
 from compas_timber.elements import Beam
 from compas_timber.elements import Plate
 from compas_timber.model import TimberModel
 from timber_design.workflow import JointRuleSolver
 from timber_design.workflow import TopologyRule
+
+
+class StencilPlate(Plate):
+    @property
+    def features(self):
+        return self._features
+
+    @features.setter
+    def features(self, features):
+        self._features = features
 
 
 # =============================================================================
@@ -55,10 +66,34 @@ def rectangle_outline(rectangle):
     return Polyline(corners)
 
 
+def project_point_to_rectangle_plane(rectangle, point):
+    plane = rectangle.Plane
+    normal = rg.Vector3d(plane.ZAxis)
+    normal.Unitize()
+
+    vec = point - plane.Origin
+    distance = rg.Vector3d.Multiply(vec, normal)
+
+    return rg.Point3d(
+        point.X - normal.X * distance,
+        point.Y - normal.Y * distance,
+        point.Z - normal.Z * distance,
+    )
+
+
 def point_in_rectangle(rectangle, point):
     if point is None:
         return False
+    point = project_point_to_rectangle_plane(rectangle, point)
     return rectangle.Contains(point) != 0
+
+
+def points_in_rectangle(rectangle, points):
+    return [
+        point
+        for point in points or []
+        if point_in_rectangle(rectangle, point)
+    ]
 
 
 # =============================================================================
@@ -86,10 +121,31 @@ def hole_openings(rectangle, points, hole_radius=0.015, hole_segments=24):
         if not point_in_rectangle(rectangle, point):
             continue
 
-        center = point_to_compas(point)
+        center = point_to_compas(project_point_to_rectangle_plane(rectangle, point))
         openings.append(circle_polyline(frame, center, hole_radius, hole_segments))
 
     return openings
+
+
+def hole_drilling_lines(rectangle, points, plate_thickness=0.010):
+    frame = rectangle_frame(rectangle)
+    normal = frame.zaxis.unitized()
+    line_extension = max(plate_thickness * 2.0, 0.001)
+    drilling_lines = []
+
+    for point in points or []:
+        if not point_in_rectangle(rectangle, point):
+            continue
+
+        center = point_to_compas(project_point_to_rectangle_plane(rectangle, point))
+        drilling_lines.append(
+            Line(
+                center + normal * line_extension,
+                center - normal * line_extension,
+            )
+        )
+
+    return drilling_lines
 
 
 def make_plate(rectangle, points, plate_thickness=0.010, hole_radius=0.015, hole_segments=24):
@@ -108,6 +164,30 @@ def make_beam(line, beam_width=0.060, beam_height=0.080):
         height=beam_height,
         z_vector=Vector(0, 0, 1),
     )
+
+
+def add_drilling_features(plate, drilling_lines, diameter, errors=None):
+    drillings = []
+    errors = errors if errors is not None else []
+
+    for line in drilling_lines or []:
+        try:
+            drilling = Drilling.from_line_and_element(line, plate, diameter)
+            if hasattr(plate, "add_feature"):
+                plate.add_feature(drilling)
+            else:
+                plate.features.append(drilling)
+            drillings.append(drilling)
+        except Exception as error:
+            errors.append("Plate drilling: {!r}".format(error))
+
+    return drillings
+
+
+def clear_cached_geometry(elements):
+    for element in elements or []:
+        if hasattr(element, "_geometry"):
+            element._geometry = None
 
 
 def make_standalone_holes(points, rectangles, hole_radius=0.015, hole_segments=24):
@@ -438,12 +518,23 @@ def create_stencil(
     include_x_lap=True,
     process_joinery=False,
     compute_plate_geometry=False,
+    hole_processing="free_contour",
 ):
     """Create plates, beams, lap joints, physical hole volumes, and preview geometry."""
     rectangles = rectangles or []
     points = points or []
     frame_beam_lines = frame_beam_lines or []
     plate_beam_lines = plate_beam_lines or []
+    hole_processing = (hole_processing or "free_contour").lower()
+    if hole_processing in ("freecontour", "contour", "openings"):
+        hole_processing = "free_contour"
+    if hole_processing not in ("free_contour", "drilling", "none"):
+        hole_processing = "free_contour"
+
+    points_by_plate = [
+        points_in_rectangle(rectangle, points)
+        for rectangle in rectangles
+    ]
 
     # -------------------------------------------------------------------------
     # 1. COMPAS plates with encoded openings
@@ -452,22 +543,37 @@ def create_stencil(
     plate_openings_by_plate = [
         hole_openings(
             rectangle,
-            points,
+            plate_points,
             hole_radius=hole_radius,
             hole_segments=hole_segments,
         )
-        for rectangle in rectangles
+        for rectangle, plate_points in zip(rectangles, points_by_plate)
     ]
+    model_openings_by_plate = (
+        plate_openings_by_plate
+        if hole_processing == "free_contour"
+        else [[] for _ in rectangles]
+    )
 
+    plate_cls = StencilPlate if hole_processing == "drilling" else Plate
     plates = [
-        Plate.from_outline_thickness(
+        plate_cls.from_outline_thickness(
             rectangle_outline(rectangle),
             plate_thickness,
             vector=rectangle_frame(rectangle).zaxis,
             openings=openings,
         )
-        for rectangle, openings in zip(rectangles, plate_openings_by_plate)
+        for rectangle, openings in zip(rectangles, model_openings_by_plate)
     ]
+    plate_drilling_lines_by_plate = [
+        hole_drilling_lines(
+            rectangle,
+            plate_points,
+            plate_thickness=plate_thickness,
+        )
+        for rectangle, plate_points in zip(rectangles, points_by_plate)
+    ]
+    plate_drillings_by_plate = [[] for _ in plates]
 
     # -------------------------------------------------------------------------
     # 2. Beams
@@ -499,6 +605,19 @@ def create_stencil(
 
     timber_model = TimberModel()
 
+    geometry_errors = []
+
+    if hole_processing == "drilling":
+        plate_drillings_by_plate = [
+            add_drilling_features(
+                plate,
+                drilling_lines,
+                diameter=hole_radius * 2.0,
+                errors=geometry_errors,
+            )
+            for plate, drilling_lines in zip(plates, plate_drilling_lines_by_plate)
+        ]
+
     for plate in plates:
         timber_model.add_element(plate)
 
@@ -519,8 +638,6 @@ def create_stencil(
     # -------------------------------------------------------------------------
     # 4. COMPAS geometry output
     # -------------------------------------------------------------------------
-
-    geometry_errors = []
 
     plates_out = [
         element_geometry(
@@ -560,9 +677,11 @@ def create_stencil(
     # 5. Flatten COMPAS openings / curves
     # -------------------------------------------------------------------------
 
+    plate_holes_by_plate = []
     plate_holes_out = []
 
     for openings in plate_openings_by_plate:
+        plate_holes_by_plate.append(list(openings))
         plate_holes_out.extend(openings)
 
     plate_holes_rhino = [
@@ -577,13 +696,13 @@ def create_stencil(
     hole_volumes_by_plate = [
         make_hole_volume_breps(
             rectangle=rectangle,
-            points=points,
+            points=plate_points,
             hole_radius=hole_radius,
             plate_thickness=plate_thickness,
             start_offset=0.0,
             depth=plate_thickness,
         )
-        for rectangle in rectangles
+        for rectangle, plate_points in zip(rectangles, points_by_plate)
     ]
 
     hole_volumes_out = []
@@ -598,18 +717,21 @@ def create_stencil(
     plates_brep_by_plate = [
         make_plate_brep_with_holes(
             rectangle=rectangle,
-            points=points,
+            points=plate_points,
             plate_thickness=plate_thickness,
             hole_radius=hole_radius,
             errors=geometry_errors,
         )
-        for rectangle in rectangles
+        for rectangle, plate_points in zip(rectangles, points_by_plate)
     ]
 
     plates_brep_out = []
 
     for plate_breps in plates_brep_by_plate:
         plates_brep_out.extend(plate_breps)
+
+    if hole_processing == "drilling":
+        clear_cached_geometry(plates)
 
     # -------------------------------------------------------------------------
     # 8. Joint stats
@@ -653,8 +775,14 @@ def create_stencil(
         "plate_holes_out": plate_holes_out,
         "plate_holes_rhino": plate_holes_rhino,
 
-        "plate_openings": plate_holes_out,
-        "plate_openings_by_plate": plate_openings_by_plate,
+        "plate_holes_by_plate": plate_holes_by_plate,
+        "plate_openings": model_openings_by_plate,
+        "plate_openings_by_plate": model_openings_by_plate,
+        "plate_preview_holes_by_plate": plate_openings_by_plate,
+        "points_by_plate": points_by_plate,
+        "hole_processing": hole_processing,
+        "plate_drilling_lines_by_plate": plate_drilling_lines_by_plate,
+        "plate_drillings_by_plate": plate_drillings_by_plate,
 
         "hole_volumes_out": hole_volumes_out,
         "hole_volumes_by_plate": hole_volumes_by_plate,
