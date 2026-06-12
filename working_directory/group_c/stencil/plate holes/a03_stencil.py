@@ -34,6 +34,10 @@ class StencilPlate(Plate):
     def features(self, features):
         self._features = features
 
+    @property
+    def __dtype__(self):
+        return "compas_timber.elements/Plate"
+
 
 # =============================================================================
 # BASIC CONVERSIONS
