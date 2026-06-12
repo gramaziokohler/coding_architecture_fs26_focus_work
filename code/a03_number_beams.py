@@ -20,8 +20,8 @@ NAME_KEYS = ("beam_id", "beam ID", "beam_name", "name", "label", "mark")
 MODULE_KEYS = ("module", "module_id", "module_name", "fabrication_module", "assembly_module", "group")
 NUMBER_KEYS = ("beam_number", "number", "sequence", "fabrication_number", "element_number", "index")
 
-# Key Beams aggiornati
-KEY_BEAMS_LIST = ["A20", "A21", "B20", "C14", "C15", "C34", "E35"]
+# Key Beams aggiornati basati sulla nomenclatura finale
+KEY_BEAMS_LIST = ["B10", "B11", "C10", "C19", "C20", "C23", "E36", "G18"]
 
 # Beams estratti per modulo G (nomi pre-spostamento)
 KEY_BEAMS_MODULE_G = ["A10", "C27", "C28", "C29", "D17", "D18"]
@@ -155,7 +155,7 @@ def vector_normalize(v):
 def xyz_to_list(value):
     if all(hasattr(value, attr) for attr in ("x", "y", "z")):
         return [float(value.x), float(value.y), float(value.z)]
-    if all(hasattr(value, attr) for attr in ("X", "Y", "Z")):
+    if fastener_key := all(hasattr(value, attr) for attr in ("X", "Y", "Z")):
         return [float(value.X), float(value.Y), float(value.Z)]
     return [float(value[0]), float(value[1]), float(value[2])]
 
@@ -190,8 +190,8 @@ def frame_from_data(frame_data):
         "z_axis": vector_normalize([float(v) for v in z_axis]),
     }
 
-def blank_frame_from_beam_data(beam_data):
-    blank = beam_data.get("blank") or {}
+def blank_frame_from_beam_data(blank_data):
+    blank = blank_data.get("blank") or {}
     if isinstance(blank, dict):
         blank_data = blank.get("data", blank)
         frame = blank_data.get("frame")
@@ -522,7 +522,7 @@ def point_list(value):
         value = value.get("data", value)
         if all(key in value for key in ("x", "y", "z")):
             return [float(value["x"]), float(value["y"]), float(value["z"])]
-        if Singapore_key := all(key in value for key in ("X", "Y", "Z")):
+        if all(key in value for key in ("X", "Y", "Z")):
             return [float(value["X"]), float(value["Y"]), float(value["Z"])]
     try:
         return xyz_to_list(value)
@@ -1167,6 +1167,63 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
         if old_assignment in module_renaming_map:
             assignment[node] = module_renaming_map[old_assignment]
 
+    # =========================================================================
+    # POST-PROCESSING FASE 5: STRUTTURAZIONE SECONDO I NUOVI INTERVALLI E UNIONI
+    # =========================================================================
+    final_ordered_by_module = {k: [] for k in all_labels}
+
+    def get_by_indices(nodes_list, start_num, end_num):
+        extracted = []
+        for idx_one, node in enumerate(nodes_list, start=1):
+            if start_num <= idx_one <= end_num:
+                extracted.append(node)
+        return extracted
+
+    curr_A = list(ordered_by_module["A"])
+    curr_B = list(ordered_by_module["B"])
+    curr_C = list(ordered_by_module["C"])
+    curr_D = list(ordered_by_module["D"])
+    curr_E = list(ordered_by_module["E"])
+    curr_F = list(ordered_by_module["F"])
+    curr_G = list(ordered_by_module["G"])
+    curr_H = list(ordered_by_module["H"])
+
+    final_ordered_by_module["A"] = curr_A
+    final_ordered_by_module["B"] = get_by_indices(curr_E, 11, 21)
+    final_ordered_by_module["C"] = curr_C
+    final_ordered_by_module["D"] = get_by_indices(curr_E, 1, 10) + get_by_indices(curr_E, 22, 26)
+    final_ordered_by_module["E"] = curr_B
+    final_ordered_by_module["F"] = get_by_indices(curr_H, 11, 21) + curr_G
+    final_ordered_by_module["G"] = curr_D
+    final_ordered_by_module["H"] = get_by_indices(curr_H, 1, 10) + get_by_indices(curr_H, 22, 29) + curr_F
+
+    ordered_by_module = final_ordered_by_module
+
+    # =========================================================================
+    # POST-PROCESSING FASE 6: ULTIMO CAMBIAMENTO NOMENCLATURA RICHIESTO
+    # A,B,C,D,E restano uguali. F -> H, H -> G, G -> F
+    # =========================================================================
+    final_swap_map = {
+        "A": "A",
+        "B": "B",
+        "C": "C",
+        "D": "D",
+        "E": "E",
+        "F": "H",
+        "G": "F",
+        "H": "G"
+    }
+
+    swapped_ordered_by_module = {k: [] for k in all_labels}
+    for old_mod, new_mod in final_swap_map.items():
+        swapped_ordered_by_module[new_mod] = ordered_by_module[old_mod]
+
+    ordered_by_module = swapped_ordered_by_module
+
+    for k in all_labels:
+        for node in ordered_by_module[k]:
+            assignment[node] = k
+
     # =========================
     # 7. GENERAZIONE BEAM OUTPUT
     # =========================
@@ -1180,8 +1237,9 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
             beam = timber_model.get_element(node)
             set_beam_partitioning_attributes(beam, k, i + 1, beam_id=name.lower(), display_name=name)
 
-            orig_name = node_initial_name.get(node, "")
-            is_key_beam_by_guid[node] = (orig_name in KEY_BEAMS_LIST)
+            # CORREZIONE CRUCIALE: Il controllo del Key Beam viene eseguito basandosi 
+            # sul nome dell'apparizione finale generata a schermo (es. B10, B11, C10, ecc.)
+            is_key_beam_by_guid[node] = (name in KEY_BEAMS_LIST)
 
             rhino_geom = beam.geometry
             if hasattr(beam.geometry, "native_brep") and beam.geometry.native_brep:
