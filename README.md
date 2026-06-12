@@ -111,3 +111,5 @@ The codebase provided here is based on the winning design from the semester. Gro
 3. **Interactive Line Editing (C# Component):** They merged the beams (`a03_line_cleaner.py`), extracted the pure centerlines, and passed them into a custom C# Grasshopper component. This script creates an interactive GUI in Rhino (with custom Snaps and a mini-Gumball) that allows developers to manually drag and adjust specific beam endpoints visually.
 4. **The Hybrid System (`a03_rf_system_hybrid.py`):** Because moving independent lines manually breaks the original continuous mesh topology, they wrote a script that intelligently pieces the edited loose lines back together into a valid, combined `RFSystemHybrid` mesh graph.
 5. **Custom Foundation Rules:** By subclassing the default timber model creator, we have started to implemented specific rules to automatically identify foundation beams (beams lying horizontally near `z=0`), assign them a stronger 110x120 cross-section, and apply specific structural joints.
+
+### Test
