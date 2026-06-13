@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hardleaf — Coding Chronicles</title>
+<style>
+  :root {
+    --bg: #c5dde8;           /* ice-blue sky (banner left panel) */
+    --ink: #2a2030;          /* deep violet — text on light ground */
+    --dim: #6e6378;          /* muted violet-grey */
+    --accent: #5a6f9e;       /* deeper periwinkle-blue — signal on light bg */
+    --accent2: #7a5c7e;      /* dusty violet — secondary */
+    --accent3: #8f9fc4;      /* periwinkle bridge */
+    --hair: rgba(42,32,48,0.12);
+    --panel: rgba(255,255,255,0.66);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow: hidden; background: var(--bg); }
+  body {
+    font-family: "SF Mono", ui-monospace, "Cascadia Code", Menlo, monospace;
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+  }
+  #scene { position: fixed; inset: 0; display: block; }
+
+  /* ---- Title block ---- */
+  .titlecard {
+    position: fixed; top: 28px; left: 32px; z-index: 5;
+    pointer-events: none;
+  }
+  .titlecard .eyebrow {
+    font-size: 11px; letter-spacing: 0.42em; text-transform: uppercase;
+    color: var(--accent); margin-bottom: 10px; font-weight: 600;
+  }
+  .titlecard h1 {
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: clamp(30px, 5vw, 58px); font-weight: 400; line-height: 0.95;
+    letter-spacing: -0.02em; font-style: italic;
+  }
+  .titlecard h1 b { font-style: normal; font-weight: 700; }
+  .titlecard .sub {
+    margin-top: 12px; font-size: 12px; color: var(--dim); letter-spacing: 0.04em;
+    max-width: 340px; line-height: 1.5;
+  }
+
+  /* ---- Narrative ticker (commit messages) ---- */
+  .ticker {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 5;
+    height: 96px; pointer-events: none;
+    background: linear-gradient(to top, var(--bg) 8%, rgba(197,221,232,0.55) 60%, transparent);
+    display: flex; align-items: flex-end; padding: 0 32px 18px;
+  }
+  .ticker-inner { width: 100%; }
+  .ticker .now {
+    font-size: 11px; letter-spacing: 0.3em; text-transform: uppercase;
+    color: var(--accent3); margin-bottom: 6px;
+  }
+  .ticker .msg {
+    font-size: clamp(14px, 2.2vw, 22px); line-height: 1.25;
+    transition: opacity 0.5s; min-height: 1.3em;
+  }
+  .ticker .meta { font-size: 11px; color: var(--dim); margin-top: 6px; letter-spacing: 0.05em; }
+  .ticker .meta .add { color: var(--accent2); }
+  .ticker .meta .del { color: var(--accent); }
+
+  /* ---- HUD stats ---- */
+  .hud {
+    position: fixed; top: 28px; right: 32px; z-index: 5; text-align: right;
+    pointer-events: none;
+  }
+  .hud .row { margin-bottom: 14px; }
+  .hud .num {
+    font-size: clamp(22px, 3vw, 34px); font-weight: 700; letter-spacing: -0.01em;
+    font-variant-numeric: tabular-nums; line-height: 1;
+  }
+  .hud .lbl {
+    font-size: 10px; letter-spacing: 0.28em; text-transform: uppercase;
+    color: var(--dim); margin-top: 4px;
+  }
+  .hud .num.c1 { color: var(--accent); }
+  .hud .num.c2 { color: var(--accent3); }
+  .hud .num.c3 { color: var(--ink); }
+
+  /* ---- Controls ---- */
+  .controls {
+    position: fixed; bottom: 110px; left: 50%; transform: translateX(-50%);
+    z-index: 6; display: flex; gap: 8px; align-items: center;
+    background: var(--panel); backdrop-filter: blur(12px);
+    border: 1px solid var(--hair); border-radius: 100px; padding: 8px 10px;
+  }
+  .controls button {
+    font-family: inherit; font-size: 12px; color: var(--ink);
+    background: transparent; border: none; cursor: pointer;
+    padding: 8px 14px; border-radius: 100px; letter-spacing: 0.05em;
+    transition: background 0.2s, color 0.2s;
+  }
+  .controls button:hover { background: rgba(255,255,255,0.07); }
+  .controls button.primary { background: var(--accent); color: #04130f; font-weight: 700; }
+  .controls button.primary:hover { background: #74f3d4; }
+  .controls .sep { width: 1px; height: 22px; background: var(--hair); }
+  .controls .scrub { width: 180px; accent-color: var(--accent); cursor: pointer; }
+  .controls .date {
+    font-size: 11px; color: var(--dim); min-width: 90px; text-align: center;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---- Data drawer ---- */
+  .drawer-toggle {
+    position: fixed; bottom: 110px; right: 32px; z-index: 6;
+    font-family: inherit; font-size: 12px; color: var(--ink);
+    background: var(--panel); backdrop-filter: blur(12px);
+    border: 1px solid var(--hair); border-radius: 100px; padding: 11px 18px;
+    cursor: pointer; letter-spacing: 0.05em;
+  }
+  .drawer-toggle:hover { border-color: var(--accent); }
+  .drawer {
+    position: fixed; inset: 0; z-index: 20; display: none;
+    background: rgba(140,160,175,0.55); backdrop-filter: blur(8px);
+    align-items: center; justify-content: center; padding: 24px;
+  }
+  .drawer.open { display: flex; }
+  .drawer-card {
+    width: min(720px, 100%); max-height: 86vh; overflow: auto;
+    background: #f4f7fa; border: 1px solid var(--hair); border-radius: 16px;
+    padding: 28px; color: var(--ink);
+  }
+  .drawer-card h2 {
+    font-family: Georgia, serif; font-style: italic; font-weight: 400;
+    font-size: 24px; margin-bottom: 6px;
+  }
+  .drawer-card p { font-size: 13px; color: var(--dim); line-height: 1.6; margin-bottom: 16px; }
+  .drawer-card code {
+    color: var(--accent); background: rgba(90,111,158,0.12);
+    padding: 2px 6px; border-radius: 4px; font-size: 12px; word-break: break-all;
+  }
+  .drawer-card textarea {
+    width: 100%; height: 220px; background: #ffffff; color: var(--ink);
+    border: 1px solid var(--hair); border-radius: 10px; padding: 14px;
+    font-family: inherit; font-size: 12px; line-height: 1.5; resize: vertical;
+  }
+  .drawer-actions { display: flex; gap: 10px; margin-top: 16px; justify-content: flex-end; }
+  .drawer-actions button {
+    font-family: inherit; font-size: 13px; padding: 10px 20px; border-radius: 100px;
+    border: 1px solid var(--hair); background: transparent; color: var(--ink); cursor: pointer;
+  }
+  .drawer-actions button.go { background: var(--accent); color: #04130f; font-weight: 700; border-color: var(--accent); }
+  .hint { font-size: 11px; color: var(--dim); margin-top: 10px; }
+  .err { color: var(--accent2); font-size: 12px; margin-top: 10px; min-height: 1em; }
+
+  @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto; } }
+  @media (max-width: 640px) {
+    .titlecard { top: 18px; left: 18px; }
+    .hud { top: 18px; right: 18px; }
+    .controls { bottom: 96px; }
+    .drawer-toggle { bottom: 96px; right: 18px; padding: 9px 13px; }
+  }
+</style>
+</head>
+<body>
+<canvas id="scene"></canvas>
+
+<div class="titlecard">
+  <div class="eyebrow">Materializing the Hardleaf pavilion</div>
+  <h1><span id="repoName">Hardleaf</span><br><b>coding chronicles</b></h1>
+  <div class="sub">Each tower is a commit, lining the avenue of time. Height is lines changed; warmth is the add/delete balance. The story reads itself below.</div>
+</div>
+
+<div class="hud">
+  <div class="row"><div class="num c1" id="hCommits">0</div><div class="lbl">Commits</div></div>
+  <div class="row"><div class="num c2" id="hLines">0</div><div class="lbl">Lines changed</div></div>
+  <div class="row"><div class="num c3" id="hAuthors">0</div><div class="lbl">Authors</div></div>
+</div>
+
+<div class="controls">
+  <button id="btnPlay" class="primary">❚❚ Pause</button>
+  <div class="sep"></div>
+  <input type="range" class="scrub" id="scrub" min="0" max="1000" value="0">
+  <div class="date" id="dateLbl">—</div>
+  <div class="sep"></div>
+  <button id="btnReplay">↻ Replay</button>
+</div>
+
+<button class="drawer-toggle" id="drawerToggle">⌥ Load your repo</button>
+
+<div class="ticker">
+  <div class="ticker-inner">
+    <div class="now" id="tickerNow">Latest commit</div>
+    <div class="msg" id="tickerMsg">Loading the stream…</div>
+    <div class="meta" id="tickerMeta"></div>
+  </div>
+</div>
+
+<div class="drawer" id="drawer">
+  <div class="drawer-card">
+    <h2>Feed it your repository</h2>
+    <p>In your repo, run this and paste the output below. The format gives one line per commit with stats:</p>
+    <p><code>git log --since="30 days ago" --pretty=format:"%H|%an|%at|%s" --shortstat --reverse</code></p>
+    <textarea id="logInput" placeholder="Paste git log output here…"></textarea>
+    <div class="err" id="parseErr"></div>
+    <div class="hint">Tip: leave it blank and hit “Use demo data” to see it run on a synthetic month.</div>
+    <div class="drawer-actions">
+      <button id="btnDemo">Use demo data</button>
+      <button class="go" id="btnLoad">Visualize</button>
+    </div>
+  </div>
+</div>
+
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.js"
+}}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+
+/* ============================================================
+   DATA LAYER — parse `git log ... --shortstat` or build demo
+   ============================================================ */
+
+// Parse the paired-line format:
+//   HASH|AUTHOR|UNIXTS|SUBJECT
+//    N files changed, A insertions(+), D deletions(-)
+function parseGitLog(text) {
+  const lines = text.split('\n');
+  const commits = [];
+  let pending = null;
+  for (let raw of lines) {
+    const line = raw.trim();
+    if (!line) continue;
+    if (line.includes('|') && line.split('|').length >= 4) {
+      if (pending) commits.push(pending);
+      const [hash, author, ts, ...rest] = line.split('|');
+      pending = {
+        hash: hash.slice(0, 7),
+        author: author.trim(),
+        time: parseInt(ts, 10) * 1000,
+        subject: rest.join('|').trim(),
+        files: 0, add: 0, del: 0
+      };
+    } else if (pending && /changed/.test(line)) {
+      const f = line.match(/(\d+) files? changed/);
+      const a = line.match(/(\d+) insertions?\(\+\)/);
+      const d = line.match(/(\d+) deletions?\(-\)/);
+      if (f) pending.files = +f[1];
+      if (a) pending.add = +a[1];
+      if (d) pending.del = +d[1];
+    }
+  }
+  if (pending) commits.push(pending);
+  commits.sort((x, y) => x.time - y.time);
+  return commits;
+}
+
+function buildDemoData() {
+  const authors = ['gonzalo', 'antigoni', 'beverin', 'chenfu', 'romana'];
+  const verbs = ['Add','Fix','Refactor','Wire up','Remove','Tidy','Optimize','Document','Rework','Cache','Guard','Stream'];
+  const nouns = ['MQTT transport','DAG scheduler','protobuf schema','artifact store','mDNS discovery','session skill loader',
+    'Grasshopper bridge','BRep exporter','timber joint solver','blueprint parser','websocket pool','MinIO adapter',
+    'commit galaxy shader','retry backoff','manifest GUID map','Rhino wheel build','heatmap renderer','auth guard'];
+  const tails = ['for the orchestrator','under Rosetta','to cut churn','behind a flag','for FOC workshop','in compas_eve',
+    'across workers','for DEV Day demo','with zero-copy refs','on the M3 path','to fix F821','end to end'];
+
+  const out = [];
+  const now = Date.now();
+  const start = now - 30 * 864e5;
+  let t = start;
+  const N = 220;
+  for (let i = 0; i < N; i++) {
+    // commits cluster during "work days" — uneven density makes it feel real
+    const burst = Math.random() < 0.18 ? (3 + Math.floor(Math.random() * 6)) : 1;
+    for (let b = 0; b < burst; b++) {
+      t += Math.random() * 9e6 + 6e5;
+      if (t > now) { t = now; }
+      const big = Math.random() < 0.12;
+      const add = big ? 120 + Math.floor(Math.random() * 900) : 3 + Math.floor(Math.random() * 90);
+      const del = Math.random() < 0.5 ? Math.floor(add * Math.random() * 0.8) : Math.floor(Math.random() * 30);
+      const subject = `${verbs[(Math.random()*verbs.length)|0]} ${nouns[(Math.random()*nouns.length)|0]} ${Math.random()<0.6?tails[(Math.random()*tails.length)|0]:''}`.trim();
+      out.push({
+        hash: Math.random().toString(16).slice(2, 9),
+        author: authors[(Math.random() * authors.length) | 0],
+        time: t,
+        subject,
+        files: 1 + Math.floor(Math.random() * (big ? 14 : 4)),
+        add, del
+      });
+      if (t >= now) break;
+    }
+    if (t >= now) break;
+  }
+  out.sort((a, b) => a.time - b.time);
+  return out;
+}
+
+/* ============================================================
+   COLOR — map add/delete balance to a warm/cool hue
+   ============================================================ */
+const C_ADD = new THREE.Color('#5b6fa8');   // periwinkle-blue — additions
+const C_DEL = new THREE.Color('#9a6f9c');   // plum-violet — deletions
+const C_MIX = new THREE.Color('#7a7fae');   // muted indigo bridge — mixed
+function commitColor(c) {
+  const total = c.add + c.del || 1;
+  const ratio = c.add / total;            // 1 = pure additions, 0 = pure deletions
+  const col = new THREE.Color();
+  if (ratio > 0.5) col.copy(C_MIX).lerp(C_ADD, (ratio - 0.5) * 2);
+  else col.copy(C_MIX).lerp(C_DEL, (0.5 - ratio) * 2);
+  return col;
+}
+
+/* ============================================================
+   SCENE
+   ============================================================ */
+const canvas = document.getElementById('scene');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+renderer.setSize(window.innerWidth, window.innerHeight);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color('#c5dde8');
+scene.fog = new THREE.FogExp2('#c5dde8', 0.011);
+
+const camera = new THREE.PerspectiveCamera(62, window.innerWidth / window.innerHeight, 0.1, 600);
+camera.position.set(0, 4, 26);
+
+// daylight: hemisphere fill (sky above, pale ground bounce below) + a directional sun
+scene.add(new THREE.HemisphereLight(0xdcecf4, 0xb9c2cc, 1.15));
+const sun = new THREE.DirectionalLight(0xfff4e2, 2.0);
+sun.position.set(-18, 30, 14);
+scene.add(sun);
+const fill = new THREE.DirectionalLight(0xbcd2e6, 0.7);
+fill.position.set(16, 10, 24);
+scene.add(fill);
+
+// ground plane — the city sits on a dark reflective-ish street
+(function ground() {
+  const g = new THREE.PlaneGeometry(160, 560);
+  const m = new THREE.MeshStandardMaterial({
+    color: 0xdde7ec, roughness: 0.85, metalness: 0.05
+  });
+  const mesh = new THREE.Mesh(g, m);
+  mesh.rotation.x = -Math.PI / 2;
+  mesh.position.set(0, 0, -240);
+  scene.add(mesh);
+
+  // grid lines running down the avenue (gives speed + scale)
+  const grid = new THREE.GridHelper(560, 80, 0x9fb1bd, 0xc2cfd8);
+  grid.position.set(0, 0.01, -240);
+  scene.add(grid);
+})();
+
+// the central avenue glow strip — a faint runway between the two rows
+(function avenue() {
+  const g = new THREE.PlaneGeometry(2.2, 560);
+  const m = new THREE.MeshBasicMaterial({ color: 0x8fa6c4, transparent: true, opacity: 0.35 });
+  const mesh = new THREE.Mesh(g, m);
+  mesh.rotation.x = -Math.PI / 2;
+  mesh.position.set(0, 0.02, -240);
+  scene.add(mesh);
+})();
+
+// distant ambient dust for atmosphere / depth haze sparkle
+(function dust() {
+  const g = new THREE.BufferGeometry();
+  const n = 700, pos = new Float32Array(n * 3);
+  for (let i = 0; i < n; i++) {
+    pos[i*3] = (Math.random() - 0.5) * 200;
+    pos[i*3+1] = Math.random() * 60;
+    pos[i*3+2] = -Math.random() * 460;
+  }
+  g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  const m = new THREE.PointsMaterial({ color: 0xeaf2f7, size: 0.4, transparent: true, opacity: 0.5 });
+  scene.add(new THREE.Points(g, m));
+})();
+
+/* ============================================================
+   COMMIT OBJECTS
+   ============================================================ */
+let commits = [];
+let spheres = [];
+let timeStart = 0, timeEnd = 1, span = 1;
+const DEPTH = 460;        // how far back in Z the oldest commit sits
+const SPREAD = 12;        // distance of building rows from the avenue
+
+// unit box anchored so its base sits on y=0 (pivot at bottom)
+const buildingGeo = new THREE.BoxGeometry(1, 1, 1);
+buildingGeo.translate(0, 0.5, 0);   // move pivot to base
+
+// a procedural facade texture for daylight: light wall, slightly darker window panes.
+// Used as a color `map`, so lighter = facade, darker = recessed glass.
+function makeWindowTexture() {
+  const c = document.createElement('canvas');
+  c.width = 32; c.height = 64;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, 32, 64);   // bright facade
+  for (let y = 3; y < 64; y += 6) {
+    for (let x = 3; x < 32; x += 7) {
+      // most panes are gently darker glass; a few catch the sky and stay bright
+      ctx.fillStyle = Math.random() < 0.7 ? '#9bb0c2' : '#e8f1f7';
+      ctx.fillRect(x, y, 4, 3);
+    }
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  return tex;
+}
+const winTex = makeWindowTexture();
+
+function clearScene() {
+  for (const s of spheres) {
+    scene.remove(s.mesh); scene.remove(s.halo);
+    s.mesh.material.dispose(); s.halo.material.dispose();
+  }
+  spheres = [];
+}
+
+function layout(data) {
+  clearScene();
+  commits = data;
+  if (!commits.length) return;
+  timeStart = commits[0].time;
+  timeEnd = commits[commits.length - 1].time;
+  span = Math.max(1, timeEnd - timeStart);
+
+  commits.forEach((c, i) => {
+    const tNorm = (c.time - timeStart) / span;     // 0 old → 1 new
+    const z = -DEPTH * (1 - tNorm);                // old = far, new = near
+
+    const churn = c.add + c.del;
+    // alternate sides of the avenue like buildings lining a street
+    const side = (i % 2 === 0) ? 1 : -1;
+    // slight stagger in depth between the two sides + small jitter so rows aren't rigid
+    const lateral = SPREAD + (Math.random() * 4);
+    const x = side * lateral;
+
+    // HEIGHT from lines changed — the Skyline mapping. log-scaled so a 900-line
+    // commit is tall but doesn't dwarf everything; min height keeps tiny commits visible
+    const height = 1.2 + Math.log10(1 + churn) * 5.2;
+    // footprint grows gently with files touched, so wide commits read as broad towers
+    const footprint = 1.4 + Math.min(2.2, Math.sqrt(c.files) * 0.5);
+
+    const col = commitColor(c);
+
+    const mat = new THREE.MeshStandardMaterial({
+      color: col.clone().multiplyScalar(1.05),
+      map: winTex,                       // windows read as surface detail in daylight
+      emissive: col, emissiveIntensity: 0.04,
+      roughness: 0.7, metalness: 0.05, transparent: true, opacity: 0
+    });
+    // tile the window texture vertically by height so windows stay square-ish
+    mat.map.repeat.set(1, Math.max(1, Math.round(height / 1.5)));
+
+    const mesh = new THREE.Mesh(buildingGeo, mat);
+    mesh.position.set(x, 0, z);
+    mesh.scale.set(footprint, 0.001, footprint);   // start flat, grow up on reveal
+    mesh.rotation.y = (Math.random() - 0.5) * 0.25;
+    scene.add(mesh);
+
+    // a solid rooftop cap in the commit color so tall commits still draw the eye
+    const beaconMat = new THREE.MeshStandardMaterial({
+      color: col.clone().multiplyScalar(1.15),
+      roughness: 0.5, metalness: 0.1, transparent: true, opacity: 0
+    });
+    const beacon = new THREE.Mesh(buildingGeo, beaconMat);
+    beacon.position.set(x, 0, z);
+    beacon.scale.set(footprint * 0.3, 0.001, footprint * 0.3);
+    scene.add(beacon);
+
+    spheres.push({ mesh, halo: beacon, c, born: tNorm,
+      height, footprint, baseColor: col, seed: Math.random() * 6.28 });
+  });
+
+  // HUD totals
+  const totalLines = commits.reduce((s, c) => s + c.add + c.del, 0);
+  const authors = new Set(commits.map(c => c.author)).size;
+  animateNumber(elCommits, commits.length);
+  animateNumber(elLines, totalLines);
+  animateNumber(elAuthors, authors);
+  document.getElementById('repoName').textContent = guessRepoName();
+}
+
+function guessRepoName() {
+  // purely cosmetic; demo keeps a nice name
+  return window.__repoName || 'your-repo';
+}
+
+/* ============================================================
+   PLAYBACK
+   ============================================================ */
+let playing = true;
+let progress = 0;          // 0..1 across the whole timeline
+const DURATION = 26000;    // ms for a full play-through
+let last = performance.now();
+let lastTickerIdx = -1;
+
+const scrub = document.getElementById('scrub');
+const dateLbl = document.getElementById('dateLbl');
+const btnPlay = document.getElementById('btnPlay');
+const tickerMsg = document.getElementById('tickerMsg');
+const tickerMeta = document.getElementById('tickerMeta');
+const tickerNow = document.getElementById('tickerNow');
+
+btnPlay.onclick = () => { playing = !playing; btnPlay.textContent = playing ? '❚❚ Pause' : '▶ Play'; };
+document.getElementById('btnReplay').onclick = () => { progress = 0; playing = true; btnPlay.textContent = '❚❚ Pause'; };
+scrub.oninput = () => { progress = scrub.value / 1000; playing = false; btnPlay.textContent = '▶ Play'; };
+
+function fmtDate(ms) {
+  return new Date(ms).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
+
+function updateTicker(idx) {
+  if (idx === lastTickerIdx || idx < 0 || idx >= commits.length) return;
+  lastTickerIdx = idx;
+  const c = commits[idx];
+  tickerMsg.style.opacity = 0;
+  setTimeout(() => {
+    tickerMsg.textContent = c.subject || '(no message)';
+    tickerMeta.innerHTML =
+      `${c.hash} · ${c.author} · ${c.files} file${c.files===1?'':'s'} · ` +
+      `<span class="add">+${c.add}</span> <span class="del">−${c.del}</span>`;
+    tickerNow.textContent = fmtDate(c.time);
+    tickerMsg.style.opacity = 1;
+  }, 180);
+}
+
+/* ============================================================
+   ANIMATION LOOP
+   ============================================================ */
+function tick(now) {
+  const dt = Math.min(64, now - last); last = now;
+  if (playing && commits.length) {
+    progress += dt / DURATION;
+    if (progress >= 1) { progress = 1; playing = false; btnPlay.textContent = '▶ Play'; }
+    scrub.value = Math.round(progress * 1000);
+  }
+
+  // camera glides down the avenue at street level
+  const headZ = -DEPTH * (1 - progress);
+  camera.position.z = headZ + 30;
+  camera.position.x = Math.sin(now * 0.0002) * 3.5;
+  camera.position.y = 9 + Math.cos(now * 0.00017) * 1.5;
+  camera.lookAt(0, 5, headZ - 18);
+
+  const currentTime = timeStart + span * progress;
+  if (commits.length) dateLbl.textContent = fmtDate(currentTime);
+
+  // reveal commits as the playhead passes them
+  let activeIdx = -1;
+  for (let i = 0; i < spheres.length; i++) {
+    const s = spheres[i];
+    const appeared = s.born <= progress + 0.001;
+    const target = appeared ? 1 : 0;
+    const mat = s.mesh.material;
+    mat.opacity += (target - mat.opacity) * 0.08;
+    if (!appeared) s.halo.material.opacity += (0 - s.halo.material.opacity) * 0.08;
+
+    if (appeared) {
+      // grow the tower up from the ground when the playhead passes it
+      const age = progress - s.born;
+      const grow = Math.min(1, age * 30);                 // ease-in over a short window
+      const eased = 1 - Math.pow(1 - grow, 3);
+      const h = s.height * eased;
+      s.mesh.scale.set(s.footprint, Math.max(0.001, h), s.footprint);
+
+      // rooftop cap rides on top
+      s.halo.scale.set(s.footprint * 0.3, Math.max(0.001, h * 0.04), s.footprint * 0.3);
+      s.halo.position.y = h;
+      s.halo.material.opacity += ((appeared ? 1 : 0) - s.halo.material.opacity) * 0.08;
+
+      // a freshly-built tower gets a brief sunlit bloom, then settles to a flat daylit surface
+      mat.emissiveIntensity = 0.04 + Math.max(0, 0.9 - age * 40) * 0.9;
+      activeIdx = i;
+    } else {
+      s.mesh.scale.set(s.footprint, 0.001, s.footprint);
+    }
+  }
+  updateTicker(activeIdx);
+
+  renderer.render(scene, camera);
+  requestAnimationFrame(tick);
+}
+
+/* ============================================================
+   HUD number animation
+   ============================================================ */
+const elCommits = document.getElementById('hCommits');
+const elLines = document.getElementById('hLines');
+const elAuthors = document.getElementById('hAuthors');
+function animateNumber(el, to) {
+  const from = 0, dur = 1100, t0 = performance.now();
+  function step(t) {
+    const k = Math.min(1, (t - t0) / dur);
+    const e = 1 - Math.pow(1 - k, 3);
+    el.textContent = Math.round(from + (to - from) * e).toLocaleString();
+    if (k < 1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
+/* ============================================================
+   DRAWER / DATA LOADING
+   ============================================================ */
+const drawer = document.getElementById('drawer');
+document.getElementById('drawerToggle').onclick = () => drawer.classList.add('open');
+drawer.onclick = (e) => { if (e.target === drawer) drawer.classList.remove('open'); };
+
+document.getElementById('btnDemo').onclick = () => {
+  window.__repoName = 'Hardleaf';
+  layout(buildDemoData());
+  progress = 0; playing = true; lastTickerIdx = -1; btnPlay.textContent = '❚❚ Pause';
+  drawer.classList.remove('open');
+};
+
+document.getElementById('btnLoad').onclick = () => {
+  const txt = document.getElementById('logInput').value.trim();
+  const err = document.getElementById('parseErr');
+  if (!txt) { err.textContent = 'Paste some git log output, or use demo data.'; return; }
+  const data = parseGitLog(txt);
+  if (!data.length) {
+    err.textContent = 'Could not parse any commits. Check the --pretty format matches the one shown above.';
+    return;
+  }
+  err.textContent = '';
+  layout(data);
+  progress = 0; playing = true; lastTickerIdx = -1; btnPlay.textContent = '❚❚ Pause';
+  drawer.classList.remove('open');
+};
+
+/* ============================================================
+   RESIZE + BOOT
+   ============================================================ */
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+// Load Hardleaf's real history from commits.json (published next to this page by
+// the GitHub Action). Falls back to demo data when the file is absent — e.g. when
+// the page is opened locally as a file:// or before the Action has run.
+async function loadHardleaf() {
+  try {
+    const res = await fetch('./commits.json', { cache: 'no-store' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const raw = await res.json();
+    if (!Array.isArray(raw) || !raw.length) throw new Error('empty');
+    const data = raw.map(c => ({
+      hash: String(c.hash || '').slice(0, 7),
+      author: c.author || 'unknown',
+      time: typeof c.time === 'number' ? c.time : Date.parse(c.time),
+      subject: c.subject || '',
+      files: +c.files || 0,
+      add: +c.add || 0,
+      del: +c.del || 0
+    })).filter(c => !isNaN(c.time)).sort((a, b) => a.time - b.time);
+    if (!data.length) throw new Error('no valid commits');
+    layout(data);
+  } catch (e) {
+    // graceful fallback — keeps the page alive offline / pre-Action
+    layout(buildDemoData());
+  }
+  progress = 0; playing = true; lastTickerIdx = -1; btnPlay.textContent = '❚❚ Pause';
+}
+
+window.__repoName = 'Hardleaf';
+loadHardleaf();
+requestAnimationFrame(tick);
+</script>
+</body>
+</html>
