@@ -181,6 +181,12 @@ def read_rows(ws):
 def cmd_setup(args):
     sh, ws = get_worksheet(args, create=True)
 
+    # Start from a clean, correctly-sized grid: drop any previous content
+    # (including off-to-the-right junk rows/columns from earlier runs) so the
+    # checkbox validation and the first push land in the right place.
+    ws.clear()
+    ws.resize(rows=VALIDATION_ROWS, cols=len(HEADERS))
+
     ws.update(values=[HEADERS], range_name="A1", value_input_option="RAW")
 
     checkbox_cols = [
@@ -280,7 +286,19 @@ def cmd_push(args):
     if updates:
         ws.batch_update(updates, value_input_option="RAW")
     if appends:
-        ws.append_rows(appends, value_input_option="RAW")
+        # Write to an explicit range anchored at column A instead of
+        # ws.append_rows(): the Sheets "append" table-detection can guess the
+        # wrong start column and drop the new rows far to the right.
+        start_row = len(ws.get_all_values()) + 1
+        end_row = start_row + len(appends) - 1
+        if ws.row_count < end_row:  # ws.update() does not auto-grow the grid
+            ws.add_rows(end_row - ws.row_count)
+        last_col = column_letter(len(HEADERS))
+        ws.update(
+            values=appends,
+            range_name="A{0}:{1}{2}".format(start_row, last_col, end_row),
+            value_input_option="RAW",
+        )
     print(
         "push: {} rows updated, {} beams added, {} total in model.".format(
             len(updates), len(appends), len(beams)
