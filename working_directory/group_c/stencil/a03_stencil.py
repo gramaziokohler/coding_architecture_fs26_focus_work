@@ -1,6 +1,6 @@
 """
 Stencil helpers for plates with circular openings and mixed timber beams.
-Inklusive BTLx-konformem LongitudinalCut-Processing für CNC-Zuschnitte.
+Includes BTLx JackRafterCut processings for CNC plate separation.
 """
 
 import math
@@ -20,7 +20,7 @@ from compas_timber.connections import LLapJoint
 from compas_timber.connections import TLapJoint
 from compas_timber.connections import XLapJoint
 from compas_timber.fabrication import Drilling
-from compas_timber.fabrication import LongitudinalCut  # Für den BTLx Längsschnitt
+from compas_timber.fabrication import JackRafterCut
 from compas_timber.elements import Beam
 from compas_timber.elements import Plate
 from compas_timber.model import TimberModel
@@ -55,7 +55,37 @@ def vector_to_compas(vector):
 
 
 def line_to_compas(line):
-    return Line(point_to_compas(line.From), point_to_compas(line.To))
+    if hasattr(line, "From") and hasattr(line, "To"):
+        start = line.From
+        end = line.To
+    elif hasattr(line, "PointAtStart") and hasattr(line, "PointAtEnd"):
+        start = line.PointAtStart
+        end = line.PointAtEnd
+    else:
+        raise TypeError("Expected a Rhino Line or linear Curve, got {!r}".format(type(line)))
+
+    return Line(point_to_compas(start), point_to_compas(end))
+
+
+def line_to_rhino_curve(line):
+    if isinstance(line, rg.Curve):
+        return line
+    if isinstance(line, rg.Line):
+        return rg.LineCurve(line)
+    raise TypeError("Expected a Rhino Line or Curve, got {!r}".format(type(line)))
+
+
+def project_line_to_rectangle_plane(rectangle, line, tolerance):
+    curve = line_to_rhino_curve(line)
+    if not curve.IsLinear(tolerance):
+        raise ValueError("BTLx JackRafterCut requires a straight line")
+
+    start = project_point_to_rectangle_plane(rectangle, curve.PointAtStart)
+    end = project_point_to_rectangle_plane(rectangle, curve.PointAtEnd)
+    projected_line = rg.Line(start, end)
+    if not projected_line.IsValid or projected_line.Length <= tolerance:
+        raise ValueError("Projected cut line has no usable length")
+    return projected_line
 
 
 def rectangle_frame(rectangle):
@@ -101,6 +131,67 @@ def points_in_rectangle(rectangle, points):
         for point in points or []
         if point_in_rectangle(rectangle, point)
     ]
+
+
+def line_intersects_rectangle(rectangle, projected_line, tolerance):
+    curve = rg.LineCurve(projected_line)
+    start = projected_line.From
+    end = projected_line.To
+    midpoint = rg.Point3d(
+        (start.X + end.X) * 0.5,
+        (start.Y + end.Y) * 0.5,
+        (start.Z + end.Z) * 0.5,
+    )
+
+    if any(
+        point_in_rectangle(rectangle, point)
+        for point in (start, midpoint, end)
+    ):
+        return True
+
+    rectangle_curve = rectangle_rhino_curve(rectangle)
+    intersections = Rhino.Geometry.Intersect.Intersection.CurveCurve(
+        rectangle_curve,
+        curve,
+        tolerance,
+        tolerance,
+    )
+    return intersections.Count > 0
+
+
+def add_jack_rafter_cut_features(plate, rectangle, cut_lines, errors=None):
+    cuts = []
+    errors = errors if errors is not None else []
+    tolerance = rhino_tolerance()
+    plate_normal = rectangle_frame(rectangle).zaxis.unitized()
+
+    for index, rhino_line in enumerate(cut_lines or []):
+        try:
+            projected_line = project_line_to_rectangle_plane(
+                rectangle,
+                rhino_line,
+                tolerance,
+            )
+            if not line_intersects_rectangle(rectangle, projected_line, tolerance):
+                continue
+
+            compas_line = line_to_compas(projected_line)
+            line_vector = compas_line.direction.unitized()
+            cut_normal = line_vector.cross(plate_normal).unitized()
+            cut_plane = Plane(compas_line.start, cut_normal)
+            cut = JackRafterCut.from_plane_and_beam(
+                cut_plane,
+                plate,
+                ref_side_index=0,
+            )
+            plate.add_feature(cut)
+            cuts.append(cut)
+        except Exception as error:
+            errors.append(
+                "Plate JackRafterCut {}: {!r}".format(index, error)
+            )
+
+    return cuts
 
 
 # =============================================================================
@@ -571,39 +662,16 @@ def create_stencil(
     # 3. Timber model & Features
     timber_model = TimberModel()
     geometry_errors = []
-    tol = rhino_tolerance()
 
-    # Weise Cuts nur Platten zu, die tatsächlich von der Linie geschnitten werden
-    for plate, rectangle in zip(plates, rectangles):
-        plate_frame = rectangle_frame(rectangle)
-        plate_normal = plate_frame.zaxis
-        rhino_rect_crv = rectangle_rhino_curve(rectangle)
-
-        for rhino_line in cut_lines:
-            try:
-                # Schnitt-Test im Rhino-Raum
-                intersect_events = Rhino.Geometry.Intersect.Intersection.CurveCurve(
-                    rhino_rect_crv, rhino_line, tol, tol
-                )
-                
-                # Wenn kein Schnittpunkt da ist, überspringen wir dieses Feature für DIESE Platte
-                if intersect_events.Count == 0:
-                    continue
-
-                compas_line = line_to_compas(rhino_line)
-                line_vector = compas_line.direction
-                cut_normal = line_vector.cross(plate_normal).unitized()
-                cut_plane = Plane(compas_line.start, cut_normal)
-                
-                # Generiere den BTLx-konformen Längsschnitt
-                cut_feature = LongitudinalCut(plane=cut_plane)
-                
-                if hasattr(plate, "add_feature"):
-                    plate.add_feature(cut_feature)
-                else:
-                    plate.features.append(cut_feature)
-            except Exception as e:
-                geometry_errors.append("LongitudinalCut Feature Error: {!r}".format(e))
+    plate_jack_rafter_cuts_by_plate = [
+        add_jack_rafter_cut_features(
+            plate,
+            rectangle,
+            cut_lines,
+            geometry_errors,
+        )
+        for plate, rectangle in zip(plates, rectangles)
+    ]
 
     if hole_processing == "drilling":
         plate_drillings_by_plate = [
@@ -694,6 +762,7 @@ def create_stencil(
         "hole_processing": hole_processing,
         "plate_drilling_lines_by_plate": plate_drilling_lines_by_plate,
         "plate_drillings_by_plate": plate_drillings_by_plate,
+        "plate_jack_rafter_cuts_by_plate": plate_jack_rafter_cuts_by_plate,
         "hole_volumes_out": hole_volumes_out,
         "hole_volumes_by_plate": hole_volumes_by_plate,
         "plates_rhino": plates_rhino,
