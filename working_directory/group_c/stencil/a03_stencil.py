@@ -1,5 +1,6 @@
 """
 Stencil helpers for plates with circular openings and mixed timber beams.
+Inklusive BTLx-konformem LongitudinalCut-Processing für CNC-Zuschnitte.
 """
 
 import math
@@ -12,12 +13,14 @@ from compas.geometry import Line
 from compas.geometry import Point
 from compas.geometry import Polyline
 from compas.geometry import Vector
+from compas.geometry import Plane  # NEU für die Schnittebenen
 from compas.scene import SceneObject
 from compas_timber.connections import JointTopology
 from compas_timber.connections import LLapJoint
 from compas_timber.connections import TLapJoint
 from compas_timber.connections import XLapJoint
 from compas_timber.fabrication import Drilling
+from compas_timber.fabrication import LongitudinalCut  # NEU für den BTLx Längsschnitt
 from compas_timber.elements import Beam
 from compas_timber.elements import Plate
 from compas_timber.model import TimberModel
@@ -204,12 +207,12 @@ def make_standalone_holes(points, rectangles, hole_radius=0.015, hole_segments=2
     else:
         frame = Frame.world_xy()
 
-    hole_curves = []
+    node_curves = []
     for point in points:
         center = point_to_compas(point)
-        hole_curves.append(circle_polyline(frame, center, hole_radius, hole_segments))
+        node_curves.append(circle_polyline(frame, center, hole_radius, hole_segments))
 
-    return hole_curves
+    return node_curves
 
 
 # =============================================================================
@@ -301,7 +304,6 @@ def make_hole_volume_breps(
 ):
     """
     Creates Rhino Brep cylinders for the hole volumes.
-    These are the physical volumes of the material missing from the plate.
     """
     tolerance = tolerance or rhino_tolerance()
 
@@ -344,12 +346,6 @@ def make_plate_brep_with_holes(
 ):
     """
     Creates a Rhino Brep plate volume with real physical holes.
-
-    Important:
-    This version does NOT use BooleanDifference.
-    It creates a planar Brep from:
-        outer rectangle + inner circular holes
-    and then offsets/extrudes that face into a solid.
     """
     tolerance = tolerance or rhino_tolerance()
     errors = errors if errors is not None else []
@@ -377,8 +373,6 @@ def make_plate_brep_with_holes(
 
         return [fallback] if fallback else []
 
-    # Pick the largest planar region.
-    # This avoids accidentally taking one of the circular hole disks.
     largest_brep = None
     largest_area = -1.0
 
@@ -506,6 +500,7 @@ def rhino_geometry(geometry, errors):
 def create_stencil(
     rectangles,
     points,
+    cut_lines=None,            # NEU: Schnittlinien als Input
     frame_beam_lines=None,
     plate_beam_lines=None,
     plate_thickness=0.010,
@@ -527,6 +522,7 @@ def create_stencil(
     """Create plates, beams, lap joints, physical hole volumes, and preview geometry."""
     rectangles = rectangles or []
     points = points or []
+    cut_lines = cut_lines or [] # Sicherstellen, dass es eine Liste ist
     frame_beam_lines = frame_beam_lines or []
     plate_beam_lines = plate_beam_lines or []
     hole_processing = (hole_processing or "free_contour").lower()
@@ -569,6 +565,7 @@ def create_stencil(
         )
         for rectangle, openings in zip(rectangles, model_openings_by_plate)
     ]
+    
     plate_drilling_lines_by_plate = [
         hole_drilling_lines(
             rectangle,
@@ -604,13 +601,41 @@ def create_stencil(
     beams = frame_beams + plate_beams
 
     # -------------------------------------------------------------------------
-    # 3. Timber model
+    # 3. Timber model & Processing (Neu: LongitudinalCuts hinzufügen)
     # -------------------------------------------------------------------------
 
     timber_model = TimberModel()
-
     geometry_errors = []
 
+    # BTLx-Features auf den Platten anwenden:
+    for plate, rectangle in zip(plates, rectangles):
+        plate_frame = rectangle_frame(rectangle)
+        plate_normal = plate_frame.zaxis
+
+        # Iteriere durch alle Schnittlinien und füge sie als Schnittebene hinzu
+        for rhino_line in cut_lines:
+            try:
+                compas_line = line_to_compas(rhino_line)
+                
+                # Vektor entlang der Schnittlinie berechnen
+                line_vector = compas_line.direction
+                # Schnittnormale definieren (steht rechtwinklig auf Plattennormale und Schnittlinie)
+                cut_normal = line_vector.cross(plate_normal).unitized()
+                
+                # Definiere die unendliche Schnittebene im Raum
+                cut_plane = Plane(compas_line.start, cut_normal)
+                
+                # BTLx LongitudinalCut-Feature erzeugen
+                cut_feature = LongitudinalCut(plane=cut_plane)
+                
+                if hasattr(plate, "add_feature"):
+                    plate.add_feature(cut_feature)
+                else:
+                    plate.features.append(cut_feature)
+            except Exception as e:
+                geometry_errors.append("LongitudinalCut Feature Error: {!r}".format(e))
+
+    # Bohrungs-Features (falls ausgewählt)
     if hole_processing == "drilling":
         plate_drillings_by_plate = [
             add_drilling_features(
@@ -622,6 +647,7 @@ def create_stencil(
             for plate, drilling_lines in zip(plates, plate_drilling_lines_by_plate)
         ]
 
+    # Elemente dem Modell hinzufügen
     for plate in plates:
         timber_model.add_element(plate)
 
@@ -710,7 +736,6 @@ def create_stencil(
     ]
 
     hole_volumes_out = []
-
     for volumes in hole_volumes_by_plate:
         hole_volumes_out.extend(volumes)
 
@@ -721,16 +746,15 @@ def create_stencil(
     plates_brep_by_plate = [
         make_plate_brep_with_holes(
             rectangle=rectangle,
-            points=plate_points,
+            points=points_by_plate[i],
             plate_thickness=plate_thickness,
             hole_radius=hole_radius,
             errors=geometry_errors,
         )
-        for rectangle, plate_points in zip(rectangles, points_by_plate)
+        for i, rectangle in enumerate(rectangles)
     ]
 
     plates_brep_out = []
-
     for plate_breps in plates_brep_by_plate:
         plates_brep_out.extend(plate_breps)
 
@@ -748,7 +772,6 @@ def create_stencil(
     )
 
     joint_count = len(joints)
-
     joint_types = {}
 
     for joint in joints:
