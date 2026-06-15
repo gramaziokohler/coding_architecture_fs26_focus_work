@@ -76,15 +76,21 @@ def get_beam_family(beam, tol=0.001):
         if fam:
             return fam
 
-    # 2. Fallback: riconoscimento da dimensioni
-    w = round(float(beam.width), 3)
-    h = round(float(beam.height), 3)
-    dims = tuple(sorted([w, h]))
+    # 2. Fallback: riconoscimento da dimensioni SENZA sorted()
+    try:
+        w = round(float(beam.width), 3)
+        h = round(float(beam.height), 3)
+    except Exception:
+        return "OTHER"
 
-    if abs(dims[0] - 0.060) <= tol and abs(dims[1] - 0.080) <= tol:
+    # SF = frame beams: 8 x 6 cm
+    # width/spessore = 0.080, height/altezza = 0.060
+    if abs(w - 0.080) <= tol and abs(h - 0.060) <= tol:
         return "SF"
 
-    if abs(dims[0] - 0.080) <= tol and abs(dims[1] - 0.060) <= tol:
+    # SP = plate beams: 6 x 8 cm
+    # width/spessore = 0.060, height/altezza = 0.080
+    if abs(w - 0.060) <= tol and abs(h - 0.080) <= tol:
         return "SP"
 
     return "OTHER"
