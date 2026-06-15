@@ -1,0 +1,99 @@
+;MAKROTYP=0
+;INSTVERSION=
+;EXEVERSION=8.9.20.5[Hops.exe]
+;BILD=BEAM_37.WMF
+;INFO=Beam_37
+;WZGV=7235C_219
+;WZGVCONFIG=
+;MASCHINE=HH7
+;NCNAME=
+;KOMMENTAR=
+;DX=0
+;DY=0
+;DZ=0
+;DIALOGDLL=Dialoge.Dll
+;DIALOGPROC=StandardFormAnzeigen
+;DIALOGKIND=0
+;AUTOSCRIPTSTART=1
+;BUTTONBILD=
+;DIMENSION_UNIT=0
+VARS
+   DX := 2907.0;*VAR*Piece Length
+   DY := 1000.0;*VAR*Piece Height
+   DZ := 30.0;*VAR*Piece Thickness
+   RSI := 2;*VAR*ReferenceSideIndex (0-5)
+START
+FERTIGTEIL(DX,DY,DZ,0,0,0.000,0.000,0.000,'',0,0,0)
+CALL Park_V7 ( VAL MODE:=5,POSX:=0,POSY:=0)
+; ---------------------------------
+; Drilling_Pocketing
+; ---------------------------------
+WZF(403,_VE,_V,_VA,_SD,_ANF,'1')
+EBENE0()
+CALL _Kreistasche_V5_1 ( VAL X_MITTE:=2761.962,Y_MITTE:=826.060,RADIUS:=38,TIEFE:=-32,ZUSTELLUNG:=32,AB:=0,ABF:=_ANF,INTERPOL:=1,UMKEHREN:=1,UW:=45,ESXY:=1,ESMD:=0,LASER:=0)
+; ---------------------------------
+; Drilling_Pocketing
+; ---------------------------------
+WZF(403,_VE,_V,_VA,_SD,_ANF,'1')
+EBENE0()
+CALL _Kreistasche_V5_1 ( VAL X_MITTE:=2462.063,Y_MITTE:=783.652,RADIUS:=38,TIEFE:=-32,ZUSTELLUNG:=32,AB:=0,ABF:=_ANF,INTERPOL:=1,UMKEHREN:=1,UW:=45,ESXY:=1,ESMD:=0,LASER:=0)
+; ---------------------------------
+; Drilling_Pocketing
+; ---------------------------------
+WZF(403,_VE,_V,_VA,_SD,_ANF,'1')
+EBENE0()
+CALL _Kreistasche_V5_1 ( VAL X_MITTE:=405.527,Y_MITTE:=787.401,RADIUS:=38,TIEFE:=-32,ZUSTELLUNG:=32,AB:=0,ABF:=_ANF,INTERPOL:=1,UMKEHREN:=1,UW:=45,ESXY:=1,ESMD:=0,LASER:=0)
+; ---------------------------------
+; Drilling_Pocketing
+; ---------------------------------
+WZF(403,_VE,_V,_VA,_SD,_ANF,'1')
+EBENE0()
+CALL _Kreistasche_V5_1 ( VAL X_MITTE:=145.435,Y_MITTE:=819.420,RADIUS:=38,TIEFE:=-32,ZUSTELLUNG:=32,AB:=0,ABF:=_ANF,INTERPOL:=1,UMKEHREN:=1,UW:=45,ESXY:=1,ESMD:=0,LASER:=0)
+; ---------------------------------
+; Drilling_Pocketing
+; ---------------------------------
+WZF(403,_VE,_V,_VA,_SD,_ANF,'1')
+EBENE0()
+CALL _Kreistasche_V5_1 ( VAL X_MITTE:=1590.302,Y_MITTE:=704.922,RADIUS:=38,TIEFE:=-32,ZUSTELLUNG:=32,AB:=0,ABF:=_ANF,INTERPOL:=1,UMKEHREN:=1,UW:=45,ESXY:=1,ESMD:=0,LASER:=0)
+; ---------------------------------
+; Drilling_Pocketing
+; ---------------------------------
+WZF(403,_VE,_V,_VA,_SD,_ANF,'1')
+EBENE0()
+CALL _Kreistasche_V5_1 ( VAL X_MITTE:=1029.509,Y_MITTE:=719.983,RADIUS:=38,TIEFE:=-32,ZUSTELLUNG:=32,AB:=0,ABF:=_ANF,INTERPOL:=1,UMKEHREN:=1,UW:=45,ESXY:=1,ESMD:=0,LASER:=0)
+; ---------------------------------
+; Drilling_Pocketing
+; ---------------------------------
+WZF(403,_VE,_V,_VA,_SD,_ANF,'1')
+EBENE0()
+CALL _Kreistasche_V5_1 ( VAL X_MITTE:=2174.343,Y_MITTE:=742.967,RADIUS:=38,TIEFE:=-32,ZUSTELLUNG:=32,AB:=0,ABF:=_ANF,INTERPOL:=1,UMKEHREN:=1,UW:=45,ESXY:=1,ESMD:=0,LASER:=0)
+; ---------------------------------
+; Drilling_Pocketing
+; ---------------------------------
+WZF(403,_VE,_V,_VA,_SD,_ANF,'1')
+EBENE0()
+CALL _Kreistasche_V5_1 ( VAL X_MITTE:=1830.816,Y_MITTE:=716.385,RADIUS:=38,TIEFE:=-32,ZUSTELLUNG:=32,AB:=0,ABF:=_ANF,INTERPOL:=1,UMKEHREN:=1,UW:=45,ESXY:=1,ESMD:=0,LASER:=0)
+; ---------------------------------
+; Drilling_Pocketing
+; ---------------------------------
+WZF(403,_VE,_V,_VA,_SD,_ANF,'1')
+EBENE0()
+CALL _Kreistasche_V5_1 ( VAL X_MITTE:=1257.161,Y_MITTE:=710.788,RADIUS:=38,TIEFE:=-32,ZUSTELLUNG:=32,AB:=0,ABF:=_ANF,INTERPOL:=1,UMKEHREN:=1,UW:=45,ESXY:=1,ESMD:=0,LASER:=0)
+; ---------------------------------
+; Drilling_Pocketing
+; ---------------------------------
+WZF(403,_VE,_V,_VA,_SD,_ANF,'1')
+EBENE0()
+CALL _Kreistasche_V5_1 ( VAL X_MITTE:=644.158,Y_MITTE:=758.023,RADIUS:=38,TIEFE:=-32,ZUSTELLUNG:=32,AB:=0,ABF:=_ANF,INTERPOL:=1,UMKEHREN:=1,UW:=45,ESXY:=1,ESMD:=0,LASER:=0)
+; ---------------------------------
+;JackRafterCut_Sawing
+; ---------------------------------
+WZS(201,_VE,_V,_VA,_SD,_ANF,'1')
+EBENE0()
+CALL _saege_lae_wi_V7 ( VAL SX:=933.336,SY:=0,SZ:=0,LAENGE:=1000,SCHNITTWINKEL:=90.000,EZ:=-30,BL:=2,EINPASSEN:=0,EL:=_ANF,AL:=_ANF,PARALLEL:=0,K:=0,KW:=0,BH:=2,RITZVERSATZ:=0,ESZ:=2,ESXY1:=1)
+; ---------------------------------
+;JackRafterCut_Sawing
+; ---------------------------------
+WZS(201,_VE,_V,_VA,_SD,_ANF,'1')
+EBENE0()
+CALL _saege_lae_wi_V7 ( VAL SX:=2300,SY:=0,SZ:=0,LAENGE:=1000,SCHNITTWINKEL:=90.000,EZ:=-30,BL:=2,EINPASSEN:=0,EL:=_ANF,AL:=_ANF,PARALLEL:=0,K:=0,KW:=0,BH:=2,RITZVERSATZ:=0,ESZ:=2,ESXY1:=1)
