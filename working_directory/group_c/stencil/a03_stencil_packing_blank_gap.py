@@ -20,20 +20,52 @@ STOCK_EDGE_GAP = 0.01
 
 
 # =============================================================================
-# HELPERS
+# HELPERS: NAME / FAMILY
 # =============================================================================
 
+def is_valid_custom_name(value):
+    if value is None:
+        return False
+
+    txt = str(value).strip()
+
+    if not txt:
+        return False
+
+    generic_names = [
+        "beam",
+        "beams",
+        "element",
+        "none",
+        "null",
+    ]
+
+    if txt.lower() in generic_names:
+        return False
+
+    return True
+
+
 def get_beam_name(beam, fallback=None):
+    # 1. Prima prova: attributes["name"], ma solo se non è generico
     if hasattr(beam, "attributes") and isinstance(beam.attributes, dict):
-        if beam.attributes.get("name"):
-            return beam.attributes["name"]
+        name = beam.attributes.get("name")
+        if is_valid_custom_name(name):
+            return str(name)
 
-    if hasattr(beam, "name") and beam.name:
-        return beam.name
+    # 2. Poi beam.name, ma ignora "Beam"
+    if hasattr(beam, "name"):
+        name = beam.name
+        if is_valid_custom_name(name):
+            return str(name)
 
-    if hasattr(beam, "user_name") and beam.user_name:
-        return beam.user_name
+    # 3. Poi user_name, se esiste
+    if hasattr(beam, "user_name"):
+        name = beam.user_name
+        if is_valid_custom_name(name):
+            return str(name)
 
+    # 4. Altrimenti usa il fallback generato
     return fallback or "BEAM"
 
 
@@ -57,6 +89,23 @@ def get_beam_family(beam, tol=0.001):
 
     return "OTHER"
 
+
+def group_beams_by_family(timber_model):
+    groups = {"SF": [], "SP": [], "OTHER": []}
+
+    for beam in timber_model.beams:
+        family = get_beam_family(beam)
+        if family not in groups:
+            groups[family] = []
+
+        groups[family].append(beam)
+
+    return groups
+
+
+# =============================================================================
+# HELPERS: BLANK / LENGTH
+# =============================================================================
 
 def get_beam_blank_geometry(beam):
     """Returns beam.blank / beam.blanket if available."""
@@ -115,19 +164,9 @@ def get_beam_packing_length(beam):
         return 0.0, "no length found"
 
 
-def create_blank_layout_box(item, start_x, y_pos, z_pos, beam_offset=0.0):
-    """Creates an aligned visual box representing the packed beam.blank envelope."""
-    beam = item["beam"]
-    length = item["length"]
-
-    y_dim, z_dim = get_layout_yz_dimensions_for_beam(beam)
-
-    center_x = start_x + length / 2.0
-    center_pt = Point(center_x, y_pos + beam_offset, z_pos)
-    box_frame = Frame(center_pt, Vector(1, 0, 0), Vector(0, 1, 0))
-
-    return Box(length, y_dim, z_dim, frame=box_frame)
-
+# =============================================================================
+# HELPERS: FACE ORIENTATION
+# =============================================================================
 
 def get_original_top_face_key(beam):
     """Determina quale faccia locale del beam era rivolta verso l'alto nello stencil.
@@ -169,10 +208,9 @@ def get_layout_yz_dimensions_for_beam(beam):
 
 
 def create_target_frame_preserving_top_face(beam, target_pt):
-    """Crea un target frame per lo stats and arrange mantenendo sopra la stessa faccia
-    che era sopra nello stencil originale.
+    """Crea un target frame mantenendo sopra la stessa faccia che era sopra nello stencil.
 
-    L'asse locale X del beam rimane sempre lungo lo stock, quindi lungo World X.
+    L'asse locale X del beam rimane lungo lo stock, quindi lungo World X.
     Cambia solo la rotazione della sezione.
     """
     top_face = get_original_top_face_key(beam)
@@ -195,6 +233,25 @@ def create_target_frame_preserving_top_face(beam, target_pt):
         y_axis = Vector(0, 1, 0)
 
     return Frame(target_pt, x_axis, y_axis)
+
+
+# =============================================================================
+# HELPERS: GEOMETRY / TEXT
+# =============================================================================
+
+def create_blank_layout_box(item, start_x, y_pos, z_pos, beam_offset=0.0):
+    """Creates an aligned visual box representing the packed beam.blank envelope."""
+    beam = item["beam"]
+    length = item["length"]
+
+    y_dim, z_dim = get_layout_yz_dimensions_for_beam(beam)
+
+    center_x = start_x + length / 2.0
+    center_pt = Point(center_x, y_pos + beam_offset, z_pos)
+    box_frame = Frame(center_pt, Vector(1, 0, 0), Vector(0, 1, 0))
+
+    return Box(length, y_dim, z_dim, frame=box_frame)
+
 
 def create_centered_text(text, position, text_height=0.04):
     """Creates a centered Rhino TextEntity at the given COMPAS Point."""
@@ -305,7 +362,6 @@ def create_stencil_beam_name_onplace(grouped_stocks, text_height=0.06, z_offset=
                 if beam is None or name is None:
                     continue
 
-                # Evita duplicati
                 key = id(beam)
                 if key in seen:
                     continue
@@ -324,19 +380,6 @@ def create_stencil_beam_name_onplace(grouped_stocks, text_height=0.06, z_offset=
                     print("ONPLACE TEXT ERROR for {}: {}".format(name, e))
 
     return texts
-
-
-def group_beams_by_family(timber_model):
-    groups = {"SF": [], "SP": [], "OTHER": []}
-
-    for i, beam in enumerate(timber_model.beams, 1):
-        family = get_beam_family(beam)
-        if family not in groups:
-            groups[family] = []
-
-        groups[family].append(beam)
-
-    return groups
 
 
 # =============================================================================
@@ -415,6 +458,7 @@ def solve_bin_packing_for_beams(
 
     for i, beam in enumerate(beams):
         packing_length, length_source = get_beam_packing_length(beam)
+        family = get_beam_family(beam)
 
         beam_data.append(
             {
@@ -422,7 +466,10 @@ def solve_bin_packing_for_beams(
                 "original_index": i,
                 "length": packing_length,
                 "needed_len": packing_length + effective_gap,
-                "name": get_beam_name(beam, "B{}".format(i + 1)),
+                "name": get_beam_name(
+                    beam,
+                    "{}{}".format(family, i + 1)
+                ),
                 "length_source": length_source,
             }
         )
