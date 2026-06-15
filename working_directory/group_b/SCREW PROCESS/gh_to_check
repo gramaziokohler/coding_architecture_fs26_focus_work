@@ -1,0 +1,81 @@
+import System
+import Rhino.Geometry as rg
+import rhinoscriptsyntax as rs
+
+# --- SAFETY CHECKS ---
+# Force empty lists if inputs are disconnected to prevent 'NoneType' errors
+if screw_trajectories is None: screw_trajectories = []
+if cont_beam_geometries is None: cont_beam_geometries = []
+if obstacles is None: obstacles = []
+
+# Initialize output lists
+clearance_lines, collision_pts, distances, status, clash_labels = [], [], [], [], []
+
+# Default clearance: 400mm
+min_c = 0.400 if min_clearance is None else min_clearance
+
+for line, cont_beam_geom in zip(screw_trajectories, cont_beam_geometries):
+    if line is None: continue
+    
+    # 1. CONVERT ID TO GEOMETRY
+    # Use rhinoscriptsyntax to safely turn IDs into actual Rhino geometry
+    line_geom = rs.coercecurve(line) if isinstance(line, System.Guid) else line
+    
+    if not line_geom: continue
+    
+    # Extract start/end points
+    pt_entry = line_geom.PointAtStart if hasattr(line_geom, "PointAtStart") else line_geom.From
+    pt_tip = line_geom.PointAtEnd if hasattr(line_geom, "PointAtEnd") else line_geom.To
+    
+    # Calculate vector pointing outward
+    drill_vec = pt_entry - pt_tip
+    if drill_vec.Length < 1e-6: continue
+    drill_vec.Unitize()
+    
+    # Ray starts 1mm from surface to avoid immediate self-collision
+    ray = rg.Ray3d(pt_entry + (drill_vec * 0.001), drill_vec)
+    
+    closest_hit = None
+    min_dist = float('inf')
+    
+    # 2. CHECK OBSTACLES
+    for geom in obstacles:
+        # Convert obstacle to Brep for intersection
+        g = rs.coercebrep(geom)
+        if not g: g = rs.coercemesh(geom)
+        if not g: continue 
+        
+        # EXCLUSION LOGIC: Skip the continuous beam
+        # Handles both Guid IDs and raw Geometry IDs
+        cont_id = cont_beam_geom.Id if hasattr(cont_beam_geom, "Id") else str(cont_beam_geom)
+        if hasattr(g, "Id") and str(g.Id) == str(cont_id):
+            continue
+            
+        # Perform Intersection
+        if isinstance(g, rg.Brep):
+            hits = rg.Intersect.Intersection.RayShoot(ray, [g], 1)
+            if hits:
+                d = pt_entry.DistanceTo(hits[0])
+                if d < min_dist:
+                    min_dist, closest_hit = d, hits[0]
+        elif isinstance(g, rg.Mesh):
+            h = rg.Intersect.Intersection.MeshRay(g, ray)
+            if h >= 0.0 and h < min_dist:
+                min_dist, closest_hit = h, ray.PointAt(h)
+    
+    # 3. VISUALIZATION
+    if closest_hit:
+        clearance_lines.append(rg.Line(pt_entry, closest_hit))
+        distances.append(min_dist)
+        if min_dist < min_c:
+            status.append("CLASH")
+            label_text = "LIMIT: {:.0f}mm".format(min_dist * 1000.0)
+            clash_labels.append(rg.TextDot(label_text, closest_hit))
+        else:
+            status.append("OK")
+    else:
+        # No hit (inf) - visualization fallback
+        safe_pt = pt_entry + (drill_vec * min_c)
+        clearance_lines.append(rg.Line(pt_entry, safe_pt))
+        distances.append(min_c)
+        status.append("CLEAR")
