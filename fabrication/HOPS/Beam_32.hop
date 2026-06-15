@@ -1,0 +1,49 @@
+;MAKROTYP=0
+;INSTVERSION=
+;EXEVERSION=8.9.20.5[Hops.exe]
+;BILD=BEAM_32.WMF
+;INFO=Beam_32
+;WZGV=7235C_219
+;WZGVCONFIG=
+;MASCHINE=HH7
+;NCNAME=
+;KOMMENTAR=
+;DX=0
+;DY=0
+;DZ=0
+;DIALOGDLL=Dialoge.Dll
+;DIALOGPROC=StandardFormAnzeigen
+;DIALOGKIND=0
+;AUTOSCRIPTSTART=1
+;BUTTONBILD=
+;DIMENSION_UNIT=0
+VARS
+   DX := 1416.792;*VAR*Piece Length
+   DY := 80.0;*VAR*Piece Height
+   DZ := 60.0;*VAR*Piece Thickness
+   RSI := 3;*VAR*ReferenceSideIndex (0-5)
+START
+FERTIGTEIL(DX,DY,DZ,0,0,0.000,0.000,0.000,'',0,0,0)
+CALL Park_V7 ( VAL MODE:=5,POSX:=0,POSY:=0)
+; ---------------------------------
+;Lap_Pocketing
+; ---------------------------------
+WZF(503,_VE,_V,_VA,_SD,_ANF,'1')
+EBENE1()
+SP(254.988,0.0,-40.0,2,1,_ANF,0.0,0.0,0.0,1,0,1,0,0.0,0.0,0,0,1,0.0,0.0,0,0.0,0.0)
+CALL _WGerade_V5 ( VAL LAENGE:=84.853,WINKEL:=135,Z:=0,R:=0,ESD:=2)
+EP(1,_ANF,0)
+SP(281.838,0.0,-40.0,2,1,_ANF,0.0,0.0,0.0,1,0,1,0,0.0,0.0,0,0,1,0.0,0.0,0,0.0,0.0)
+CALL _WGerade_V5 ( VAL LAENGE:=84.853,WINKEL:=135,Z:=0,R:=0,ESD:=2)
+EP(1,_ANF,0)
+; ---------------------------------
+;Lap_Pocketing
+; ---------------------------------
+WZF(503,_VE,_V,_VA,_SD,_ANF,'1')
+EBENE1()
+SP(934.988,0.0,-40.0,2,1,_ANF,0.0,0.0,0.0,1,0,0,0,0.0,0.0,0,0,1,0.0,0.0,0,0.0,0.0)
+CALL _WGerade_V5 ( VAL LAENGE:=84.853,WINKEL:=45,Z:=0,R:=0,ESD:=2)
+EP(1,_ANF,0)
+SP(961.8380000000001,0.0,-40.0,2,1,_ANF,0.0,0.0,0.0,1,0,0,0,0.0,0.0,0,0,1,0.0,0.0,0,0.0,0.0)
+CALL _WGerade_V5 ( VAL LAENGE:=84.853,WINKEL:=45,Z:=0,R:=0,ESD:=2)
+EP(1,_ANF,0)

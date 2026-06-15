@@ -1,0 +1,47 @@
+VARS
+   DX := 1280.868;*VAR* Piece Length
+   DY := 80.0;*VAR* Piece Height
+   DZ := 60.0;*VAR* Piece Thickness
+   RSI := 0;*VAR* ReferenceSideIndex (0-5)
+START
+
+FERTIGTEIL(DX,DY,DZ,0,0,0.000,0.000,0.000,'',0,0,0)
+
+CALL Park_V7 ( VAL MODE:=5,POSX:=0,POSY:=0)
+
+; ---------------------------------
+;Lap_Pocketing
+; ---------------------------------
+WZF(503,_VE,_V,_VA,_SD,_ANF,'1')
+EBENE0()
+SP(1106.016,0.0,-20.0,2,1,_ANF*2,0.0,0.0,0.0,1,0,1,0,0.0,0.0,0,0,1,0.0,0.0,0,0.0,0.0)
+CALL _WGerade_V5 ( VAL LAENGE:=113.137,WINKEL:=45,Z:=0,R:=0,ESD:=2)
+EP(1,_ANF*2,0)
+
+CALL MachineStop_V7 ( VAL MODE:=0,PARKMODE:=5,PARKPOSX:=0.000,PARKPOSY:=0.0,TYP:=0,R6:=0, STR:='flip beam 180deg',R7:=0)
+
+; ---------------------------------
+;Lap_Pocketing
+; ---------------------------------
+WZF(503,_VE,_V,_VA,_SD,_ANF,'1')
+EBENE0()
+SP(10.0,-0.0,-30.0,2,1,_ANF*2,0.0,0.0,0.0,1,0,1,0,0.0,0.0,0,0,1,0.0,0.0,0,0.0,0.0)
+CALL _WGerade_V5 ( VAL LAENGE:=113.137,WINKEL:=45,Z:=0,R:=0,ESD:=2)
+EP(1,_ANF*2,0)
+SP(36.85,-0.0,-30.0,2,1,_ANF*2,0.0,0.0,0.0,1,0,1,0,0.0,0.0,0,0,1,0.0,0.0,0,0.0,0.0)
+CALL _WGerade_V5 ( VAL LAENGE:=113.137,WINKEL:=45,Z:=0,R:=0,ESD:=2)
+EP(1,_ANF*2,0)
+
+; ---------------------------------
+;JackRafterCut_Sawing
+; ---------------------------------
+WZS(201,_VE,_V,_VA,_SD,_ANF,'1')
+EBENE0()
+CALL _saege_lae_wi_V7 ( VAL SX:=1270.868,SY:=0,SZ:=0,LAENGE:=113.137,SCHNITTWINKEL:=135,EZ:=-60,BL:=2,EINPASSEN:=0,EL:=_ANF,AL:=_ANF,PARALLEL:=0,K:=0,KW:=0,BH:=2,RITZVERSATZ:=0,ESZ:=2,ESXY1:=1)
+
+; ---------------------------------
+;JackRafterCut_Sawing
+; ---------------------------------
+WZS(201,_VE,_V,_VA,_SD,_ANF,'1')
+EBENE0()
+CALL _saege_lae_wi_V7 ( VAL SX:=90.000,SY:=0,SZ:=0,LAENGE:=-113.137,SCHNITTWINKEL:=45,EZ:=-60,BL:=2,EINPASSEN:=0,EL:=_ANF,AL:=_ANF,PARALLEL:=0,K:=0,KW:=0,BH:=2,RITZVERSATZ:=0,ESZ:=2,ESXY1:=7)
