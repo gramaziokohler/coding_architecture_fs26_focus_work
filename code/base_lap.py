@@ -47,6 +47,35 @@ def _normalise_beams(base_beams):
     return list(base_beams)
 
 
+def _volume_centroid_xyz(brep):
+    """Return the volume centroid, with a vertex-average fallback."""
+    try:
+        centroid = brep.centroid
+        return _coords(centroid)
+    except Exception:
+        vertices = [vertex.point for vertex in brep.vertices]
+        if not vertices:
+            raise ValueError("Cannot determine the lap volume centroid.")
+        count = float(len(vertices))
+        return (
+            sum(point.x for point in vertices) / count,
+            sum(point.y for point in vertices) / count,
+            sum(point.z for point in vertices) / count,
+        )
+
+
+def _ref_side_index_for_volume(beam, brep):
+    """Return the longitudinal reference face nearest the lap volume."""
+    cx, cy, cz = _volume_centroid_xyz(brep)
+    bx, by, bz = _coords(beam.frame.point)
+    offset = Vector(cx - bx, cy - by, cz - bz)
+
+    return max(
+        range(4),
+        key=lambda index: beam.ref_sides[index].normal.dot(offset),
+    )
+
+
 def create_base_beam_plates_from_points(
     base_beams,
     points,
@@ -161,10 +190,15 @@ def apply_laps_single_beam(compas_breps, beams):
 
     for brep, beam in zip(compas_breps, beams):
         try:
-            lap = LapProxy.from_volume_and_beam(brep, beam)
+            ref_side_index = _ref_side_index_for_volume(beam, brep)
+            lap = LapProxy.from_volume_and_beam(
+                brep,
+                beam,
+                ref_side_index=ref_side_index,
+            )
             beam.add_feature(lap)
             lap_beam_pairs.append((lap, beam))
-            print("  Lap added")
+            print("  Lap added on reference side {}".format(ref_side_index))
         except Exception as e:
             print(f"  Warning lap: {e}")
 
