@@ -1,6 +1,6 @@
 from compas.geometry import Box, Frame, Vector, Plane
 from compas_timber.connections import LMiterJoint
-from compas_timber.fabrication import LapProxy
+from compas_timber.fabrication import Pocket
 
 _ARCH_INCLINATION_THRESHOLD = 0.15
 _METAL_PLATE_LAP_TAG = "metal_plate_lap"
@@ -44,7 +44,9 @@ def _beam_local_lap_frame(beam, origin, normal, preferred_xaxis=None):
     lap_zaxis = Vector(*normal)
     lap_zaxis.unitize()
 
-    lap_xaxis = Vector(*(preferred_xaxis if preferred_xaxis is not None else beam.frame.xaxis))
+    lap_xaxis = Vector(
+        *(preferred_xaxis if preferred_xaxis is not None else beam.frame.xaxis)
+    )
     lap_xaxis = lap_xaxis - lap_zaxis * lap_xaxis.dot(lap_zaxis)
     if lap_xaxis.length < 0.01:
         lap_xaxis = Vector(*beam.frame.xaxis)
@@ -133,9 +135,10 @@ def create_metal_plates(
     timber_model,
     use_llap_joint=False,
     arch_beam_height=0.10,
-    arch_plate=(0.046, 0.111, 0.0025),
+    arch_plate=(0.065, 0.146, 0.005),
     base_beam_height=0.14,
-    base_plate=(0.051, 0.191, 0.0025),
+    base_plate=(0.065, 0.146, 0.005),
+    arch_plate_width_offset=0.0075,
 ):
     """
     Return a list of plate data tuples for each metal plate at every LMiterJoint.
@@ -220,7 +223,8 @@ def create_metal_plates(
             normal.unitize()
 
         # Select plate dimensions and fallback beam width.
-        if _is_arch_joint(beam_a, beam_b):
+        is_arch_joint = _is_arch_joint(beam_a, beam_b)
+        if is_arch_joint:
             fallback_width = arch_beam_height
             plate_size = arch_plate
         else:
@@ -229,7 +233,23 @@ def create_metal_plates(
 
         plate_thickness = plate_size[2]
 
-        def _lap_box(beam, side):
+        # Shared in-plane shift ("push the plate away from the face edge"). Both
+        # beams' pockets move by the SAME vector so they stay coherent as a single
+        # flat plate. Applying each beam's own zaxis (as before) diverges for
+        # inclined arch beams whose zaxes differ by the joint angle, which warps
+        # the pocket at larger offsets. We average the two beam height axes and
+        # project the result into the shared face plane so the shift never changes
+        # the pocket depth.
+        if is_arch_joint and not is_base_joint:
+            avg_z = Vector(*beam_a.frame.zaxis) + Vector(*beam_b.frame.zaxis)
+            avg_z = avg_z - normal * avg_z.dot(normal)
+            if avg_z.length:
+                avg_z.unitize()
+            width_shift = avg_z * (-arch_plate_width_offset)
+        else:
+            width_shift = Vector(0.0, 0.0, 0.0)
+
+        def _lap_box(beam, side, is_arch_joint):
             if is_base_joint:
                 # Use same world-Z direction as the visual plate so pockets land
                 # on the top/bottom surfaces, not the side faces.
@@ -248,6 +268,8 @@ def create_metal_plates(
 
             lap_normal = local_normal * side
             lap_origin = joint_pt + lap_normal * (beam_size / 2 - plate_thickness / 2)
+            lap_origin = lap_origin + width_shift
+
             lap_frame = _beam_local_lap_frame(beam, lap_origin, lap_normal, bisector)
             return Box(
                 plate_size[1],
@@ -273,8 +295,8 @@ def create_metal_plates(
             visual_box = Box(*plate_size, frame=plate_frame)
 
             # Per-beam lap boxes — each positioned at that beam's own side face.
-            lap_box_a = _lap_box(beam_a, side)
-            lap_box_b = _lap_box(beam_b, side)
+            lap_box_a = _lap_box(beam_a, side, is_arch_joint)
+            lap_box_b = _lap_box(beam_b, side, is_arch_joint)
 
             contact_normal = Vector(
                 -normal.x * side, -normal.y * side, -normal.z * side
@@ -287,9 +309,71 @@ def create_metal_plates(
     return results
 
 
+def _volume_centroid_xyz(brep):
+    """Return the (x, y, z) centroid of a lap volume, with a vertex-average fallback."""
+
+    try:
+        c = brep.centroid
+        return c.x, c.y, c.z
+    except Exception:
+        verts = [v.point for v in brep.vertices]
+        count = len(verts) or 1
+        return (
+            sum(p.x for p in verts) / count,
+            sum(p.y for p in verts) / count,
+            sum(p.z for p in verts) / count,
+        )
+
+
+def _ref_side_index_for_volume(beam, brep):
+    """Pick the longitudinal beam face the pocket sits against.
+
+    The metal-plate pocket is a thin volume lying flush on one beam side face.
+    The correct BTLx reference side is the longitudinal face (index 0-3; 4 and 5
+    are the beam ends) whose outward normal points from the beam axis toward the
+    volume centroid. Choosing it explicitly avoids compas_timber's default
+    ``_get_optimal_ref_side_index`` heuristic, which counts edge/plane
+    intersections and flips to the wrong face once the plate's in-plane size
+    grows past a threshold (turning a shallow surface pocket into a deep slot
+    that cuts through the beam).
+
+    Reference-side normals are radial (perpendicular to the beam axis), so the
+    axial component of ``centroid - axis_point`` cancels in every dot product;
+    any point on the centerline works as the origin.
+    """
+
+    cx, cy, cz = _volume_centroid_xyz(brep)
+    origin = beam.frame.point
+    ox, oy, oz = cx - origin.x, cy - origin.y, cz - origin.z
+
+    best_index = 0
+    best_dot = None
+    for index in range(4):
+        normal = beam.ref_sides[index].normal
+        dot = normal.x * ox + normal.y * oy + normal.z * oz
+        if best_dot is None or dot > best_dot:
+            best_dot = dot
+            best_index = index
+
+    return best_index
+
+
+class _LapResult(object):
+    """Holder exposing ``.volume`` so the existing GH viz code keeps working.
+
+    ``Pocket`` returns a bare processing (no ``.volume``); the component reads
+    ``lap.volume`` to emit ``metal_lap_volumes``. This wraps the processing
+    together with its reconstructed machining volume.
+    """
+
+    def __init__(self, processing, volume):
+        self.processing = processing
+        self.volume = volume
+
+
 def apply_laps(brep_beam_pairs, clear_existing=True):
     """
-    Apply a LapProxy feature to each (brep, beam) pair.
+    Apply a Pocket feature to each (brep, beam) pair.
 
     Parameters
     ----------
@@ -310,12 +394,18 @@ def apply_laps(brep_beam_pairs, clear_existing=True):
 
     for brep, beam in pairs:
         try:
-            lap = LapProxy.from_volume_and_beam(brep, beam)
-            _mark_metal_plate_lap(lap)
-            beam.add_feature(lap)
-            lap_beam_pairs.append((lap, beam))
-            print("  Lap added")
+            ref_side_index = _ref_side_index_for_volume(beam, brep)
+            pocket = Pocket.from_volume_and_element(
+                brep, beam, ref_side_index=ref_side_index
+            )
+            _mark_metal_plate_lap(pocket)
+            beam.add_feature(pocket)
+            # Expose the input volume (a Brep) for the GH viz, matching how
+            # LapProxy.volume behaved — the reconstructed Pocket volume is a
+            # Polyhedron, which the viz path can't convert.
+            lap_beam_pairs.append((_LapResult(pocket, brep), beam))
+            print("  Pocket added")
         except Exception as e:
-            print(f"  Warning lap: {e}")
+            print(f"  Warning pocket: {e}")
 
     return lap_beam_pairs
