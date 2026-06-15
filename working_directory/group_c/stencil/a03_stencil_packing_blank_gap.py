@@ -84,7 +84,7 @@ def get_beam_family(beam, tol=0.001):
     if abs(dims[0] - 0.060) <= tol and abs(dims[1] - 0.080) <= tol:
         return "SF"
 
-    if abs(dims[0] - 0.090) <= tol and abs(dims[1] - 0.090) <= tol:
+    if abs(dims[0] - 0.080) <= tol and abs(dims[1] - 0.060) <= tol:
         return "SP"
 
     return "OTHER"
