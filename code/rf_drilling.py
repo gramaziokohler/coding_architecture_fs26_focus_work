@@ -261,12 +261,14 @@ class DrillingProcessor:
         for j_type, count in self.hardware_screws_by_type.items():
             if count == 0: continue
             
-            # Group TButtJoints into three distinct buckets
+            # Group TButtJoints into distinct buckets
             if "TButtJoint" in j_type:
                 if "foundation" in j_type.lower():
                     group_key = "TButtJoint - Foundation"
                 elif "arch" in j_type.lower():
                     group_key = "TButtJoint - Arch"
+                elif "inner-inner" in j_type.lower():
+                    group_key = "TButtJoint - Inner-Inner"
                 else:
                     group_key = "TButtJoint - Inner"
             else:
@@ -692,21 +694,31 @@ class DrillingProcessor:
             start_1, start_2, curr_screw_dir = best_config
             hw_line_1 = Line(start_1, start_1 + curr_screw_dir * final_screw_length)
             hw_line_2 = Line(start_2, start_2 + curr_screw_dir * final_screw_length)
+            joint_label = "TButtJoint - inner-inner (Offset)"
             
-            joint_label = "TButtJoint - inner-inner"
-            self._generate_features(
-                [hw_line_1, hw_line_2],
-                [cont_beam],
-                joint_label,
-                final_screw_length
-            )
         else:
-            start_pt = pt_interface - (perp_vec * thickness_c)
-            hw_line = Line(start_pt, start_pt + perp_vec * 0.150)
-            self.failed_screw_info.append({
-                "line": hw_line,
-                "type": "FAILED: No Space Even at 130mm"
-            })
+            # FALLBACK: No space for offset 130mm/150mm screws.
+            # Route TWO screws parallel to the centerline of the abutting beam.
+            center_start_pt = intersection_pt - (dir_abut * (thickness_c / 2.0))
+            
+            offset_dir = plane_normal.copy()
+            offset_vec = offset_dir * (self.screw_spacing / 2.0)
+            
+            start_1 = center_start_pt + offset_vec
+            start_2 = center_start_pt - offset_vec
+            
+            final_screw_length = 0.130  
+            
+            hw_line_1 = Line(start_1, start_1 + (dir_abut * final_screw_length))
+            hw_line_2 = Line(start_2, start_2 + (dir_abut * final_screw_length))
+            joint_label = "TButtJoint - inner-inner (Parallel Fallback)"
+            
+        self._generate_features(
+            [hw_line_1, hw_line_2],
+            [cont_beam],
+            joint_label,
+            final_screw_length
+        )
 
     def _apply_lap_drilling(self, joint, beam_a, beam_b):
         joint_label = type(joint).__name__
