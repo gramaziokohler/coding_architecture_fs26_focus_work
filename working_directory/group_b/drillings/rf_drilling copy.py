@@ -289,7 +289,7 @@ class DrillingProcessor:
                 if not res or res[0] is None:
                     continue
                 mid_pt = Point(*res[0])
-
+                
                 # Check which beam's endpoint is closest to the intersection
                 d1 = min(
                     distance_point_point(mid_pt, line1.start),
@@ -299,7 +299,7 @@ class DrillingProcessor:
                     distance_point_point(mid_pt, line2.start),
                     distance_point_point(mid_pt, line2.end),
                 )
-
+                
                 if d1 < d2:
                     abut_beam, cont_beam = elements[0], elements[1]
                 else:
@@ -426,7 +426,7 @@ class DrillingProcessor:
         return self.timber_model
 
     # ---------------------------------------------------------------------------
-    # Foundation T-Butt Methods
+    # Foundation T-Butt Methods (Kept from Script 2)
     # ---------------------------------------------------------------------------
     def _surface_entry(self, pos, screw_dir, beam):
         if not hasattr(beam, "frame"):
@@ -598,223 +598,211 @@ class DrillingProcessor:
             hw_lines, [abut_beam], joint_label, final_screw_length
         )
 
-    # ---------------------------------------------------------------------------
-    # Arch T-Butt Logic
-    # ---------------------------------------------------------------------------
-    def _apply_arch_tbutt_drilling(self, joint, abut_beam, cont_beam):
-        """
-        Arch T-Butt: screws travel along (or near) the abutting beam centerline,
-        entering through the face of the continuous beam.
+def _apply_arch_tbutt_drilling(self, joint, abut_beam, cont_beam):
+    """
+    Arch T-Butt: screws travel along (or near) the abutting beam centerline,
+    entering through the face of the continuous beam.
 
-        Rules:
-          - Natural drill direction = abutting-beam centerline (into the abutting beam).
-          - The drilling angle is measured between the screw direction and the entry
-            face surface of the continuous beam (i.e. 90deg - angle_to_face_normal).
-          - If that angle < 40deg, clamp to exactly 40deg by rotating in the plane
-            spanned by (axis, face_normal).
-          - Try 150 mm first; fall back to 190 mm if tip cannot reach 10 mm inside
-            the abutting beam.  If 190 mm also fails, place the screw anyway with
-            the tip as deep as possible (guaranteed generation).
-          - Two screws, offset +/- screw_spacing/2 along the continuous beam direction.
-          - Each screw independently picks 150 mm or 190 mm; stored correctly in inventory.
-        """
-        if abut_beam is None or cont_beam is None:
-            return
+    Rules:
+      - Natural drill direction = abutting-beam centerline (into the abutting beam).
+      - The drilling angle is measured between the screw direction and the entry
+        face of the continuous beam (i.e. 90° - angle_to_face_normal).
+      - If that angle < 40°, clamp to exactly 40° by rotating in the plane
+        spanned by (axis, face_normal).
+      - Screw length fixed at 150 mm.
+      - Tip must be ≥ 10 mm inside the abutting beam.
+      - Entry point is slid along the continuous-beam face to bring the tip as
+        close as possible to the abutting-beam centerline while satisfying the
+        10 mm tip-margin constraint.
+      - Two screws, offset ± screw_spacing/2 along the continuous beam direction.
+    """
+    if abut_beam is None or cont_beam is None:
+        return
 
-        ARCH_LENGTHS = (0.150, 0.190)
-        TIP_MARGIN   = 0.010
-        MIN_ANGLE    = 40.0
-        joint_label  = "TButtJoint - arch"
+    SCREW_LENGTH = 0.150
+    TIP_MARGIN   = 0.010
+    MIN_ANGLE    = 40.0        # degrees between screw and entry-face surface
+    joint_label  = "TButtJoint - arch"
 
-        # ------------------------------------------------------------------ #
-        # 1. Joint point & natural screw axis (= abutting-beam centerline)   #
-        # ------------------------------------------------------------------ #
-        res = intersection_line_line(abut_beam.centerline, cont_beam.centerline)
-        if not res or res[0] is None:
-            return
-        joint_pt = Point(*res[0])
+    # ------------------------------------------------------------------ #
+    # 1. Joint point & natural screw axis (= abutting-beam centerline)   #
+    # ------------------------------------------------------------------ #
+    res = intersection_line_line(abut_beam.centerline, cont_beam.centerline)
+    if not res or res[0] is None:
+        return
+    joint_pt = Point(*res[0])
 
-        axis = abut_beam.centerline.direction.copy()
-        if axis.dot(Vector.from_start_end(joint_pt, abut_beam.centerline.midpoint)) < 0:
-            axis.scale(-1)
-        axis.unitize()
+    axis = abut_beam.centerline.direction.copy()
+    # Make sure axis points INTO the abutting beam body from the joint point
+    if axis.dot(Vector.from_start_end(joint_pt, abut_beam.centerline.midpoint)) < 0:
+        axis.scale(-1)
+    axis.unitize()
 
-        # ------------------------------------------------------------------ #
-        # 2. Entry face: face of cont_beam whose outward normal most opposes  #
-        #    axis (the face the screw punches through going into abut_beam).  #
-        # ------------------------------------------------------------------ #
-        entry_face = None
-        best_dot = 2.0
-        for face in cont_beam.ref_sides[:4]:
-            d = face.normal.unitized().dot(axis)
-            if d < best_dot:
-                best_dot = d
-                entry_face = face
+    # ------------------------------------------------------------------ #
+    # 2. Entry face on the continuous beam                                #
+    # ------------------------------------------------------------------ #
+    # The screw enters through the face whose outward normal most opposes
+    # 'axis' (i.e. the face the screw comes out of on the cont_beam side).
+    entry_face = None
+    best_dot = 2.0
+    for face in cont_beam.ref_sides[:4]:
+        d = face.normal.unitized().dot(axis)
+        if d < best_dot:
+            best_dot = d
+            entry_face = face
 
-        if entry_face is None:
-            return
+    if entry_face is None:
+        return
 
-        face_normal = entry_face.normal.unitized()
-        face_pt     = entry_face.point
+    face_normal = entry_face.normal.unitized()   # points OUTWARD from cont_beam
+    face_pt     = entry_face.point               # a point on the face plane
 
-        # Two local axes that lie IN the face plane, used for grid search.
-        # face_u: along cont_beam long axis (projected onto face plane)
-        # face_v: the remaining in-plane axis
-        face_u_raw = cont_beam.centerline.direction.copy()
-        face_u_raw = face_u_raw - face_normal * face_u_raw.dot(face_normal)
-        if face_u_raw.length < 1e-6:
-            face_u_raw = cont_beam.frame.yaxis.copy()
-        face_u_raw.unitize()
-        face_v_raw = face_normal.cross(face_u_raw)
-        face_v_raw.unitize()
+    # ------------------------------------------------------------------ #
+    # 3. Angle between screw direction and face surface (not face normal) #
+    # angle_to_surface = 90° - angle_to_normal                           #
+    # ------------------------------------------------------------------ #
+    # dot(axis, -face_normal) gives cos(angle between axis and inward normal)
+    # that equals sin(angle between axis and face surface)
+    sin_val = abs(axis.dot(face_normal))          # sin(drilling_angle)
+    sin_val = min(sin_val, 1.0)
+    drilling_angle_deg = math.degrees(math.asin(sin_val))
 
-        # Half-extents of the face rectangle so we know valid search bounds.
-        # face_u corresponds to the beam long direction -> half = length/2
-        # face_v corresponds to the cross-section width or height
-        half_u = cont_beam.centerline.length / 2.0
-        # Which cross-section dimension does face_v span?
-        dot_y = abs(face_v_raw.dot(cont_beam.frame.yaxis.unitized()))
-        dot_z = abs(face_v_raw.dot(cont_beam.frame.zaxis.unitized()))
-        half_v = (cont_beam.width / 2.0) if dot_y > dot_z else (cont_beam.height / 2.0)
-
-        def head_on_face(pt):
-            """Return True if pt lies within the finite face rectangle."""
-            v = Vector.from_start_end(face_pt, pt)
-            return abs(v.dot(face_u_raw)) <= half_u and abs(v.dot(face_v_raw)) <= half_v
-
-        # ------------------------------------------------------------------ #
-        # 3. Drilling angle & clamping to MIN_ANGLE                          #
-        # ------------------------------------------------------------------ #
-        sin_val = min(abs(axis.dot(face_normal)), 1.0)
-        drilling_angle_deg = math.degrees(math.asin(sin_val))
-
-        if drilling_angle_deg < MIN_ANGLE:
-            tangent = axis - face_normal * axis.dot(face_normal)
-            if tangent.length < 1e-9:
-                screw_dir = axis.copy()
-            else:
-                tangent.unitize()
-                theta = math.radians(MIN_ANGLE)
-                screw_dir = tangent * math.cos(theta) + face_normal * (-math.sin(theta))
-                screw_dir.unitize()
-        else:
+    # ------------------------------------------------------------------ #
+    # 4. If drilling angle < 40°, rotate axis to exactly 40°             #
+    # Rotation is in the plane of (axis, face_normal).                   #
+    # We want: axis' = cos(θ)*tangent + sin(θ)*(-face_normal)            #
+    # where θ = MIN_ANGLE and tangent is axis projected onto the face.   #
+    # ------------------------------------------------------------------ #
+    if drilling_angle_deg < MIN_ANGLE:
+        # Tangent component of axis on the face plane
+        tangent = axis - face_normal * axis.dot(face_normal)
+        if tangent.length < 1e-9:
+            # axis is perfectly normal to face; nothing to rotate
             screw_dir = axis.copy()
+        else:
+            tangent.unitize()
+            theta = math.radians(MIN_ANGLE)
+            # New direction: mostly along tangent (parallel to face),
+            # with sin(40°) component INTO the face
+            screw_dir = tangent * math.cos(theta) + face_normal * (-math.sin(theta))
             screw_dir.unitize()
+    else:
+        screw_dir = axis.copy()
+        screw_dir.unitize()
 
-        # ------------------------------------------------------------------ #
-        # 4. Offset direction for the two side-by-side screws                #
-        # ------------------------------------------------------------------ #
-        cont_dir = cont_beam.centerline.direction.copy()
-        cont_dir = cont_dir - screw_dir * cont_dir.dot(screw_dir)
-        if cont_dir.length < 1e-6:
-            cont_dir = face_u_raw.copy()
-        cont_dir.unitize()
-        offset_vec = cont_dir * (self.screw_spacing / 2.0)
+    # ------------------------------------------------------------------ #
+    # 5. Offset direction: along the continuous beam, perpendicular to    #
+    #    screw_dir, for the two side-by-side screws                       #
+    # ------------------------------------------------------------------ #
+    cont_dir = cont_beam.centerline.direction.copy()
+    # Remove screw_dir component so offset is truly lateral on the face
+    cont_dir = cont_dir - screw_dir * cont_dir.dot(screw_dir)
+    if cont_dir.length < 1e-6:
+        cont_dir = cont_beam.frame.yaxis.copy()
+    cont_dir.unitize()
+    offset_vec = cont_dir * (self.screw_spacing / 2.0)
 
-        # ------------------------------------------------------------------ #
-        # 5. Helper: distance from point to abutting-beam centerline         #
-        # ------------------------------------------------------------------ #
-        abut_cl_pt  = abut_beam.centerline.midpoint
-        abut_cl_dir = abut_beam.centerline.direction.unitized()
+    # ------------------------------------------------------------------ #
+    # 6. For each of the two screw positions, find the best entry point   #
+    # ------------------------------------------------------------------ #
+    # The abut_beam centerline in 3-D (for tip-proximity scoring)
+    abut_cl_pt  = abut_beam.centerline.midpoint
+    abut_cl_dir = abut_beam.centerline.direction.unitized()
 
-        def dist_to_abut_centerline(pt):
-            v = Vector.from_start_end(abut_cl_pt, pt)
-            proj = v.dot(abut_cl_dir)
-            closest = abut_cl_pt + abut_cl_dir * proj
-            return distance_point_point(pt, closest)
+    def dist_to_abut_centerline(pt):
+        """Perpendicular distance from pt to abutting-beam centerline."""
+        v = Vector.from_start_end(abut_cl_pt, pt)
+        proj = v.dot(abut_cl_dir)
+        closest = abut_cl_pt + abut_cl_dir * proj
+        return distance_point_point(pt, closest)
 
-        # ------------------------------------------------------------------ #
-        # 6. Core search: given a starting face position, try both lengths   #
-        #    with a grid search; return (head, length) for the best hit, or  #
-        #    (best_head, best_length) for the least-bad option (guaranteed). #
-        # ------------------------------------------------------------------ #
-        def find_best_entry(base_pt):
-            # Project base onto the infinite face plane
-            res_face = intersection_line_plane(
-                Line(base_pt, base_pt + screw_dir),
-                (face_pt, face_normal),
-            )
-            if res_face is None:
-                # screw_dir is parallel to face — shift base along -face_normal
-                base_pt = base_pt - face_normal * 0.5
-                res_face = intersection_line_plane(
-                    Line(base_pt, base_pt + screw_dir),
-                    (face_pt, face_normal),
-                )
-            if res_face is None:
-                return None, None
-            head0 = Point(*res_face)
+    def find_best_entry(base_pt):
+        """
+        Project base_pt onto the entry face along screw_dir, then slide
+        within the face to maximise tip penetration into abut_beam
+        (≥ TIP_MARGIN), staying as close to its centreline as possible.
 
-            # Clamp head0 to the face rectangle if it fell outside
-            v0 = Vector.from_start_end(face_pt, head0)
-            u0 = v0.dot(face_u_raw)
-            w0 = v0.dot(face_v_raw)
-            u0 = max(-half_u + 0.005, min(half_u - 0.005, u0))
-            w0 = max(-half_v + 0.005, min(half_v - 0.005, w0))
-            head0 = face_pt + face_u_raw * u0 + face_v_raw * w0
+        Returns (head_pt, tip_pt) or (None, None) on failure.
+        """
+        # --- project base_pt onto face plane ---
+        res = intersection_line_plane(
+            Line(base_pt, base_pt + screw_dir),
+            (face_pt, face_normal)
+        )
+        if res is None:
+            return None, None
+        head0 = Point(*res)
 
-            # Grid covering the whole face
-            steps = 25
-            candidates = []  # (score, margin_ok, head, length)
+        # --- check tip at this position first (no slide needed?) ---
+        tip0 = head0 + screw_dir * SCREW_LENGTH
+        if self._point_in_beam(tip0, abut_beam, TIP_MARGIN):
+            return head0, tip0
 
-            for cand_len in ARCH_LENGTHS:
-                for iu in range(-steps, steps + 1):
-                    for iv in range(-steps, steps + 1):
-                        du = (iu / steps) * (half_u - 0.005)
-                        dv = (iv / steps) * (half_v - 0.005)
-                        cand_head = face_pt + face_u_raw * du + face_v_raw * dv
+        # --- slide along the face in a grid to find a valid position ---
+        # Axes on the face plane
+        face_u = cont_dir                                    # already on face
+        face_v = face_normal.cross(face_u).unitized()        # other face axis
 
-                        tip = cand_head + screw_dir * cand_len
-                        in_abut = self._point_in_beam(tip, abut_beam, 0.0)
-                        margin_ok = self._point_in_beam(tip, abut_beam, TIP_MARGIN)
+        # Search range: ± half the beam cross-section dimensions
+        max_u = max(cont_beam.width, cont_beam.height)
+        max_v = max(cont_beam.width, cont_beam.height)
+        steps = 20
+        best_head = None
+        best_dist = 1e18
 
-                        if not in_abut:
-                            continue
+        for iu in range(-steps, steps + 1):
+            for iv in range(-steps, steps + 1):
+                du = (iu / steps) * max_u
+                dv = (iv / steps) * max_v
+                cand_head = head0 + face_u * du + face_v * dv
 
-                        score = dist_to_abut_centerline(tip)
-                        candidates.append((score, not margin_ok, cand_head, cand_len))
+                # Must still be on the continuous beam face (inside cont_beam)
+                if not self._point_in_beam(cand_head, cont_beam, 0.0):
+                    continue
 
-            if not candidates:
-                return None, None
+                tip = cand_head + screw_dir * SCREW_LENGTH
+                if not self._point_in_beam(tip, abut_beam, TIP_MARGIN):
+                    continue
 
-            # Sort: margin_ok first (False < True), then by centerline distance
-            candidates.sort(key=lambda x: (x[1], x[0]))
-            _, _, best_head, best_len = candidates[0]
-            return best_head, best_len
+                # Score: prefer tip close to abutting centerline
+                score = dist_to_abut_centerline(tip)
+                if score < best_dist:
+                    best_dist = score
+                    best_head = cand_head
 
-        # ------------------------------------------------------------------ #
-        # 7. Build the two screw lines                                       #
-        # ------------------------------------------------------------------ #
-        hw_lines  = []
-        hw_lengths = []
-        for sign in (1.0, -1.0):
-            base = joint_pt + offset_vec * sign
-            head, chosen_len = find_best_entry(base)
-            if head is None:
-                self.failed_screw_info.append({
-                    "line": None,
-                    "type": f"{joint_label}: geometry resolution failed entirely",
-                })
-                continue
-            hw_lines.append(Line(head, head + screw_dir * chosen_len))
-            hw_lengths.append(chosen_len)
+        if best_head is None:
+            return None, None
+        return best_head, best_head + screw_dir * SCREW_LENGTH
 
-        if not hw_lines:
-            return
+    # ------------------------------------------------------------------ #
+    # 7. Build the two screw lines                                        #
+    # ------------------------------------------------------------------ #
+    hw_lines = []
+    for sign in (1.0, -1.0):
+        base = joint_pt + offset_vec * sign
+        head, tip = find_best_entry(base)
+        if head is None:
+            continue
+        hw_lines.append(Line(head, tip))
 
-        for hw_line, screw_len in zip(hw_lines, hw_lengths):
-            self._generate_features(
-                [hw_line], [cont_beam, abut_beam], joint_label, screw_len
-            )
+    if len(hw_lines) < 1:
+        self.failed_screw_info.append({
+            "line": None,
+            "type": f"{joint_label}: no valid entry found"
+        })
+        return
 
+    self._generate_features(hw_lines, [cont_beam, abut_beam], joint_label, SCREW_LENGTH)
+                    
     # ---------------------------------------------------------------------------
-    # Generalized Inner T-Butt Logic (UNTOUCHED)
+    # Generalized Inner T-Butt Logic (COMPLETELY UNTOUCHED)
     # ---------------------------------------------------------------------------
     def _apply_tbutt_drilling(self, joint, abut_beam, cont_beam):
         """Two screws per T-Butt along the abutting beam, kept clear of other beams."""
         if abut_beam is None or cont_beam is None:
             return
 
+        # Changed to simply target inner, as arches are routed differently now
         joint_label = "TButtJoint - inner"
 
         res = intersection_line_line(abut_beam.centerline, cont_beam.centerline)
@@ -823,11 +811,13 @@ class DrillingProcessor:
         pa, pb = Point(*res[0]), Point(*res[1])
         joint_pt = Point((pa.x + pb.x) / 2.0, (pa.y + pb.y) / 2.0, (pa.z + pb.z) / 2.0)
 
+        # Screw axis = abutting beam centerline, pointing into the abutting beam body.
         axis = abut_beam.centerline.direction.copy()
         if axis.dot(Vector.from_start_end(joint_pt, abut_beam.centerline.midpoint)) < 0:
             axis.scale(-1)
         axis.unitize()
 
+        # Two screws side by side along the through beam
         offset_dir = cont_beam.centerline.direction.copy()
         offset_dir = offset_dir - axis * offset_dir.dot(axis)
         if offset_dir.length < 1e-6:
@@ -835,6 +825,7 @@ class DrillingProcessor:
         offset_dir.unitize()
         offset_vec = offset_dir * (self.screw_spacing / 2.0)
 
+        # Out-of-plane direction (normal to the local frame plane): the tilt / edge axis.
         n = axis.cross(cont_beam.centerline.direction)
         if n.length < 1e-6:
             n = abut_beam.frame.zaxis.copy()
@@ -857,7 +848,7 @@ class DrillingProcessor:
             for d in ((0.0,) if deg == 0 else (1.0, -1.0)):
                 screw_dir = axis * math.cos(theta) + n * (d * math.sin(theta))
                 screw_dir.unitize()
-
+                
                 slide = -d * edge_slide
                 heads = [
                     self._face_entry_point(
@@ -869,13 +860,13 @@ class DrillingProcessor:
                     continue
                 if not all(self._point_in_beam(h, cont_beam, -0.003) for h in heads):
                     continue
-
+                
                 tool_dir = screw_dir * -1.0
                 if not all(
                     self._probe_clear(h, tool_dir, others, self.clearance) for h in heads
                 ):
                     continue
-
+                
                 length = None
                 for cand in self.STANDARD_LENGTHS:
                     if all(
@@ -1033,6 +1024,7 @@ class DrillingProcessor:
         if req_screw_length < 0.040:
             req_screw_length = 0.040
 
+        # PHYSICAL CAP
         if req_screw_length > 0.150:
             req_screw_length = 0.150
 
@@ -1094,7 +1086,8 @@ class DrillingProcessor:
             self.screw_lengths_by_type[joint_label] = []
 
         req_mm = req_screw_length * 1000.0
-
+        
+        # CORRECTED CAP THRESHOLDS TO PROPERLY MAP TO 190 mm
         if req_mm <= 100:
             assigned_len = 100
         elif req_mm <= 130:
@@ -1103,17 +1096,18 @@ class DrillingProcessor:
             assigned_len = 150
         elif req_mm <= 190:
             assigned_len = 190
-        else:
-            assigned_len = 190
+        else:            
+            assigned_len = 190 
 
         def store_web_feature(beam, line):
+            # 1. Define hex colors corresponding to your procurement summary
             web_color_map = {
                 100: "#00FF00",  # GREEN
                 130: "#0000FF",  # BLUE
                 150: "#FFA500",  # ORANGE
-                190: "#FF0000",  # RED
+                190: "#FF0000"   # RED
             }
-
+            
             attributes = getattr(beam, "attributes", None)
             if attributes is None:
                 attributes = {}
@@ -1133,7 +1127,8 @@ class DrillingProcessor:
                     "length_m": float(req_screw_length),
                     "length_mm": round(float(req_screw_length) * 1000.0, 1),
                     "assigned_length_mm": assigned_len,
-                    "color": web_color_map.get(assigned_len, "#FF0000"),
+                    # 2. Append the color parameter here
+                    "color": web_color_map.get(assigned_len, "#FF0000"), 
                     "place_first": place_first,
                 }
             )
