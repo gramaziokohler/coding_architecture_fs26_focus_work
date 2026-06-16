@@ -20,8 +20,8 @@ NAME_KEYS = ("beam_id", "beam ID", "beam_name", "name", "label", "mark")
 MODULE_KEYS = ("module", "module_id", "module_name", "fabrication_module", "assembly_module", "group")
 NUMBER_KEYS = ("beam_number", "number", "sequence", "fabrication_number", "element_number", "index")
 
-# Key Beams aggiornati basati sulla nomenclatura finale
-KEY_BEAMS_LIST = ["B10", "B11", "C10", "C19", "C20", "C23", "E36", "G18"]
+# Key Beams aggiornati basati sulla nomenclatura finale dell'apparizione
+KEY_BEAMS_LIST = ["B10", "B11", "C10", "C19", "C20", "C23", "E36", "G18", "A21", "C13"]
 
 # Beams estratti per modulo G (nomi pre-spostamento)
 KEY_BEAMS_MODULE_G = ["A10", "C27", "C28", "C29", "D17", "D18"]
