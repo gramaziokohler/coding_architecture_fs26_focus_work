@@ -206,6 +206,7 @@ class DrillingProcessor:
         self.debug_points = []
         self.contact_polylines = []
         self.clearance_lines = []
+        self.arch_tbutt_penetration_info = []
 
         self.hardware_screws_by_type = {}
         self.screw_lengths_by_type = {}
@@ -228,6 +229,7 @@ class DrillingProcessor:
         self.debug_points = []
         self.contact_polylines = []
         self.clearance_lines = []
+        self.arch_tbutt_penetration_info = []
 
         self.hardware_screws_by_type = {}
         self.screw_lengths_by_type = {}
@@ -425,6 +427,7 @@ class DrillingProcessor:
             [[ln.start.x, ln.start.y, ln.start.z], [ln.end.x, ln.end.y, ln.end.z]]
             for ln in self.clearance_lines
         ]
+        self.timber_model.rf_arch_tbutt_penetrations = self.arch_tbutt_penetration_info
         return self.timber_model
 
     # ---------------------------------------------------------------------------
@@ -662,6 +665,38 @@ class DrillingProcessor:
                     }
                 )
                 continue
+            penetration = self._screw_penetration_from_beam_face(
+                head, axis, length, abut_beam
+            )
+            angle_deg = 0.0
+            resolved_shallow = False
+            if penetration["penetration"] < 0.050 and penetration["entry_point"]:
+                resolved = self._resolve_shallow_arch_drilling(
+                    penetration["entry_point"],
+                    axis,
+                    length,
+                    cont_beam,
+                    abut_beam,
+                    entry_face,
+                    0.050,
+                    penetration["penetration"],
+                )
+                if resolved:
+                    head, axis, length, penetration, angle_deg = resolved
+                    resolved_shallow = True
+            self.arch_tbutt_penetration_info.append(
+                {
+                    "line": Line(head, head + axis * length),
+                    "beam": abut_beam.attributes.get("edge")
+                    if hasattr(abut_beam, "attributes")
+                    else None,
+                    "length_m": length,
+                    "penetration_m": penetration["penetration"],
+                    "entry_point": penetration["entry_point"],
+                    "angle_deg": angle_deg,
+                    "resolved_shallow": resolved_shallow,
+                }
+            )
             self._generate_features(
                 [Line(head, head + axis * length)],
                 [cont_beam, abut_beam],
@@ -834,6 +869,79 @@ class DrillingProcessor:
             cands.append((beam.height / 2.0) / nz)
         return min(cands) if cands else 0.0
 
+    def _rotate_vector(self, vector, axis, angle):
+        """Rotate ``vector`` around ``axis`` by ``angle`` radians."""
+        k = axis.unitized()
+        v = vector.copy()
+        return (
+            v * math.cos(angle)
+            + k.cross(v) * math.sin(angle)
+            + k * (k.dot(v) * (1.0 - math.cos(angle)))
+        )
+
+    def _resolve_shallow_arch_drilling(
+        self,
+        pivot,
+        base_dir,
+        length,
+        cont_beam,
+        abut_beam,
+        entry_face,
+        min_penetration,
+        original_penetration,
+    ):
+        """Improve shallow arch screws by pivoting around the abutting-beam entry."""
+        plane_axis = base_dir.cross(cont_beam.centerline.direction)
+        if plane_axis.length < 1e-6:
+            plane_axis = abut_beam.frame.zaxis.copy()
+        plane_axis.unitize()
+
+        best = None
+        for deg in range(1, 26):
+            for sign in (1.0, -1.0):
+                screw_dir = self._rotate_vector(
+                    base_dir, plane_axis, math.radians(deg) * sign
+                )
+                if screw_dir.length < 1e-9:
+                    continue
+                screw_dir.unitize()
+
+                if not self._point_in_beam(
+                    pivot + screw_dir * self.edge_margin,
+                    abut_beam,
+                    -0.003,
+                ):
+                    continue
+
+                head = self._face_entry_point(pivot, screw_dir, entry_face)
+                if head is None:
+                    continue
+                head_to_pivot = Vector.from_start_end(head, pivot)
+                if head_to_pivot.dot(screw_dir) <= 1e-6:
+                    continue
+                if not self._point_in_beam(head, cont_beam, -0.003):
+                    continue
+                if not self._point_in_beam(
+                    head + screw_dir * length,
+                    abut_beam,
+                    self.edge_margin,
+                ):
+                    continue
+
+                penetration = self._screw_penetration_from_beam_face(
+                    head, screw_dir, length, abut_beam
+                )
+                pen = penetration["penetration"]
+                if pen <= original_penetration:
+                    continue
+                candidate = (head, screw_dir, length, penetration, deg * sign)
+                if pen >= min_penetration:
+                    return candidate
+                if best is None or pen > best[3]["penetration"]:
+                    best = candidate
+
+        return best
+
     def _dist_point_segment(self, pt, line):
         """Shortest distance from a point to a finite line segment (for spatial cull)."""
         a, b = line.start, line.end
@@ -890,6 +998,45 @@ class DrillingProcessor:
         if tmax < tmin or tmax < 0:
             return None
         return tmin if tmin > 0 else 0.0
+
+    def _ray_obb_span(self, origin, direction, beam):
+        """Parametric entry/exit distances where a ray crosses a beam OBB."""
+        cl = beam.centerline
+        ax = (
+            beam.frame.xaxis.unitized(),
+            beam.frame.yaxis.unitized(),
+            beam.frame.zaxis.unitized(),
+        )
+        half = (cl.length / 2.0, beam.width / 2.0, beam.height / 2.0)
+        o = Vector.from_start_end(cl.midpoint, origin)
+        tmin, tmax = -1e18, 1e18
+        for i in range(3):
+            e = o.dot(ax[i])
+            f = direction.dot(ax[i])
+            if abs(f) > 1e-9:
+                t1 = (-half[i] - e) / f
+                t2 = (half[i] - e) / f
+                if t1 > t2:
+                    t1, t2 = t2, t1
+                tmin = max(tmin, t1)
+                tmax = min(tmax, t2)
+            elif (-half[i] - e) > 0 or (half[i] - e) < 0:
+                return None
+        if tmax < tmin or tmax < 0:
+            return None
+        return tmin, tmax
+
+    def _screw_penetration_from_beam_face(self, head, screw_dir, length, beam):
+        """Measure screw embedment from first beam-face intersection to screw tip."""
+        span = self._ray_obb_span(head, screw_dir, beam)
+        if span is None:
+            return {"penetration": 0.0, "entry_point": None}
+        entry_t = max(span[0], 0.0)
+        penetration = max(0.0, length - entry_t)
+        return {
+            "penetration": penetration,
+            "entry_point": head + screw_dir * entry_t,
+        }
 
     # ---------------------------------------------------------------------------
     # Common / Shared Logic
