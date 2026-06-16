@@ -756,14 +756,19 @@ class DrillingProcessor:
             w0 = max(-half_v + edge_clamp, min(half_v - edge_clamp, w0))
             head0 = face_pt + face_u_raw * u0 + face_v_raw * w0
 
-            # Grid covering the whole face
-            steps = 25
+            # Search only a small window of the face centered on the joint (the screw
+            # must enter near where the abutting beam meets the arch beam). Scanning the
+            # whole beam length was ~5k iterations/joint and froze the solve.
+            steps = 8
+            u_win = 0.15  # +/- along the arch beam around the joint
+            j_u = Vector.from_start_end(face_pt, joint_pt).dot(face_u_raw)
             candidates = []  # (score, margin_ok, head, length)
 
             for cand_len in ARCH_LENGTHS:
                 for iu in range(-steps, steps + 1):
                     for iv in range(-steps, steps + 1):
-                        du = (iu / steps) * (half_u - edge_clamp)
+                        du = j_u + (iu / steps) * u_win
+                        du = max(-half_u + edge_clamp, min(half_u - edge_clamp, du))
                         dv = (iv / steps) * (half_v - edge_clamp)
                         cand_head = face_pt + face_u_raw * du + face_v_raw * dv
 
