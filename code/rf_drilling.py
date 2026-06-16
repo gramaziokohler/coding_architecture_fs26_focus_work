@@ -621,7 +621,7 @@ class DrillingProcessor:
         if abut_beam is None or cont_beam is None:
             return
 
-        ARCH_LENGTHS = (0.150, 0.190)
+        ARCH_LENGTHS = (0.190, 0.150)
         TIP_MARGIN   = 0.010
         MIN_ANGLE    = 40.0
         joint_label  = "TButtJoint - arch"
