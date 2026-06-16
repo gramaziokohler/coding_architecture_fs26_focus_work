@@ -59,9 +59,10 @@ from easyhops.utility_commands import MachineStop
 from easyhops.strategies import LapStrategies
 from easyhops.strategies import JackRafterCutStrategies
 from easyhops.strategies import DrillingStrategies
+from easyhops.strategies import PocketStrategies
 from easyhops.tool_library import SaegeD350
 from easyhops.tool_library import CastorD61
-from easyhops.tool_library import SRSLD12
+from easyhops.tool_library import MachiningTool
 
 
 # ---------------------------------------------------------------------------
@@ -95,14 +96,17 @@ def override_features(element, allow_flip=False):
     """Replace any JackRafterCut features on the beam with new features based on the same planes but with ref_side_index taken from beam attributes."""
 
     ref_side_index = element.attributes.get("ref_side_index", 0)
+    _, height = element.get_dimensions_relative_to_side(ref_side_index)
 
-    for f in element.features:
+    for f in list(element.features):
         if isinstance(f, JackRafterCut):
             plane = f.plane_from_params_and_beam(element)
             new_feature = f.__class__.from_plane_and_beam(
                 plane, element, ref_side_index
             )
-            element.remove_features(f)
+            if height < 120.0:
+                # remove the feature only if the cut can be done from only one side
+                element.remove_features(f)
             element.add_feature(new_feature)
 
 
@@ -158,9 +162,12 @@ def get_processing_report(element):
 
     Each entry has the format: "PROCESSING_NAME | ref_side: N"
     """
+    width, height = element.get_dimensions_relative_to_side(
+        element.attributes.get("ref_side_index", 0)
+    )
     report = [
-        "Beam: {} | RSId: {}".format(
-            element.name, element.attributes.get("ref_side_index")
+        "Beam: {} | RSId: {} | W: {:.1f} x H: {:.1f}".format(
+            element.name, element.attributes.get("ref_side_index"), width, height
         )
     ]
     report.append("-------------")
@@ -241,11 +248,36 @@ def _element_to_job(element, scale_factor=1.0):
             assert processing.ref_side_index in (rsi, opp_rsi), (
                 f"Unexpected ref_side_index {processing.ref_side_index} for JackRafterCut"
             )
-            machinings = JackRafterCutStrategies.sawing(
-                processing, machine_ref_side_index=rsi, tool=SaegeD350()
-            )
-            post_flip.extend(machinings)
-            _dispatch(name, rsi_proc, machinings, "post-flip")
+            if processing.ref_side_index == opp_rsi:
+                machinings = JackRafterCutStrategies.sawing(
+                    processing, machine_ref_side_index=opp_rsi, tool=SaegeD350()
+                )
+                pre_flip.extend(machinings)
+                _dispatch(name, rsi_proc, machinings, "pre-flip")
+            else:
+                machinings = JackRafterCutStrategies.sawing(
+                    processing, machine_ref_side_index=rsi, tool=SaegeD350()
+                )
+                post_flip.extend(machinings)
+                _dispatch(name, rsi_proc, machinings, "post-flip")
+
+        elif name == "Pocket":
+            if processing.ref_side_index == opp_rsi:
+                machinings = PocketStrategies.pocketing(
+                    processing,
+                    machine_ref_side_index=opp_rsi,
+                    tool=MachiningTool(position=403),
+                )
+                pre_flip.extend(machinings)
+                _dispatch(name, rsi_proc, machinings, "pre-flip")
+            else:
+                machinings = PocketStrategies.pocketing(
+                    processing,
+                    machine_ref_side_index=rsi,
+                    tool=MachiningTool(position=403),
+                )
+                post_flip.extend(machinings)
+                _dispatch(name, rsi_proc, machinings, "post-flip")
 
         elif name == "Drilling":
             if processing.diameter == 4.0:
@@ -272,7 +304,9 @@ def _element_to_job(element, scale_factor=1.0):
                     _dispatch(name, rsi_proc, machinings, "post-flip (pre-drill)")
             else:
                 machinings = DrillingStrategies.pocketing(
-                    processing, machine_ref_side_index=rsi, tool=SRSLD12()
+                    processing,
+                    machine_ref_side_index=rsi,
+                    tool=MachiningTool(position=403),  # SR20mm drill bit
                 )
                 if processing.ref_side_index == opp_rsi:
                     pre_flip.extend(machinings)
@@ -294,25 +328,35 @@ def _element_to_job(element, scale_factor=1.0):
             )
 
     # Sort order: operation type → tool position → processing name
-    # Lap is always last within each group.
     OP_ORDER = {"SAWING": 2, "DRILLING": 0, "MILLING": 1}
-    PROCESSING_ORDER = {
+
+    POST_FLIP_PROCESSING_ORDER = {
+        "JackRafterCut": 0,  # always FIRST — saw cut removes the end of the beam
+        "Drilling": 1,
+        "Lap": 2,
+        "Pocket": 3,
+    }
+    PRE_FLIP_PROCESSING_ORDER = {
         "Drilling": 0,
-        "JackRafterCut": 9,  # always last
         "Lap": 1,
+        "Pocket": 2,
+        "JackRafterCut": 9,  # always LAST — saw cut removes the end of the beam
     }
 
-    def _sort_key(m):
-        op_priority = OP_ORDER.get(getattr(m, "OPERATION_TYPE", ""), 3)
-        tool = getattr(m, "tool", None)
-        tool_position = getattr(tool, "position", 0) if tool is not None else 0
-        processing_priority = PROCESSING_ORDER.get(
-            getattr(m, "_processing_name", ""), 50
-        )
-        return (op_priority, tool_position, processing_priority)
+    def _sort_key(processing_order):
+        def key(m):
+            op_priority = OP_ORDER.get(getattr(m, "OPERATION_TYPE", ""), 3)
+            tool = getattr(m, "tool", None)
+            tool_position = getattr(tool, "position", 0) if tool is not None else 0
+            processing_priority = processing_order.get(
+                getattr(m, "_processing_name", ""), 50
+            )
+            return (processing_priority, op_priority, tool_position)
 
-    pre_flip.sort(key=_sort_key)
-    post_flip.sort(key=_sort_key)
+        return key
+
+    pre_flip.sort(key=_sort_key(PRE_FLIP_PROCESSING_ORDER))
+    post_flip.sort(key=_sort_key(POST_FLIP_PROCESSING_ORDER))
 
     if pre_flip:
         job.add(pre_flip)

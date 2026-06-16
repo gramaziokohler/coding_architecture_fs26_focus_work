@@ -1,0 +1,162 @@
+;MAKROTYP=0
+;INSTVERSION=
+;EXEVERSION=8.9.20.5[Hops.exe]
+;BILD=F18.WMF
+;INFO=Beam_162
+;WZGV=7235C_219
+;WZGVCONFIG=
+;MASCHINE=HH7
+;NCNAME=
+;KOMMENTAR=
+;DX=0
+;DY=0
+;DZ=0
+;DIALOGDLL=Dialoge.Dll
+;DIALOGPROC=StandardFormAnzeigen
+;DIALOGKIND=0
+;AUTOSCRIPTSTART=1
+;BUTTONBILD=
+;DIMENSION_UNIT=0
+VARS
+   DX := 1223.461;*VAR*Piece Length
+   DY := 120.0;*VAR*Piece Height
+   DZ := 140.0;*VAR*Piece Thickness
+   RSI := 2;*VAR*ReferenceSideIndex (0-5)
+START
+FERTIGTEIL(DX,DY,DZ,0,0,0.000,0.000,0.000,'',0,0,0)
+CALL Park_V7 ( VAL MODE:=5,POSX:=0,POSY:=0)
+; ---------------------------------
+;Pocket_Pocketing
+; ---------------------------------
+WZF (403,_VE,_V,_VA,_SD,_ANF,'1')
+EBENEF(1116.908,48.042,0,0,-8.002,1,2,0)
+KB ('RE_926c','',191,51,0,'',0,0)
+KG01 ('',0,-51,0,'',10,2)
+KG01 ('',-191,0,0,'',10,2)
+KG01 ('',0,51,0,'',0,2)
+KG01ZuKB()
+CALL _ExecutePocket_V5 ( VAL NAMEN:='RE_926c',AA:=0,UEBERLAPPUNG:=33,MODE:=0,ANGLE:=0,TIEFE:=-2.5,ESMD:=0,ANZAHL:=0,MAXZ:=_AT_MAXDEPTH,RD:=0,FLIEGENDEINTAUCHEN:=0,MAXEINTAUCHLAENGE:=20)
+; ---------------------------------
+;JackRafterCut_Sawing
+; ---------------------------------
+WZS(201,_VE,_V,_VA,_SD,_ANF,'1')
+EBENE0()
+CALL _saege_lae_wi_V7 ( VAL SX:=1206.593,SY:=0,SZ:=0,LAENGE:=121.180,SCHNITTWINKEL:=81.998,EZ:=-105,BL:=2,EINPASSEN:=0,EL:=_ANF,AL:=_ANF,PARALLEL:=0,K:=0,KW:=0,BH:=2,RITZVERSATZ:=0,ESZ:=2,ESXY1:=1)
+CALL MachineStop_V7 ( VAL MODE:=0,PARKMODE:=5,PARKPOSX:=0.000,PARKPOSY:=0.0,TYP:=0,R6:=0, STR:='flip beam 180deg',R7:=0)
+; ---------------------------------
+;Pocket_Pocketing
+; ---------------------------------
+WZF (403,_VE,_V,_VA,_SD,_ANF,'1')
+EBENEF(1124.007,21.455,0,0,8.002,1,2,0)
+KB ('RE_3386','',191,51,0,'',0,0)
+KG01 ('',0,-51,0,'',10,2)
+KG01 ('',-191,0,0,'',10,2)
+KG01 ('',0,51,0,'',0,2)
+KG01ZuKB()
+CALL _ExecutePocket_V5 ( VAL NAMEN:='RE_3386',AA:=0,UEBERLAPPUNG:=33,MODE:=0,ANGLE:=0,TIEFE:=-2.5,ESMD:=0,ANZAHL:=0,MAXZ:=_AT_MAXDEPTH,RD:=0,FLIEGENDEINTAUCHEN:=0,MAXEINTAUCHLAENGE:=20)
+; ---------------------------------
+;JackRafterCut_Sawing
+; ---------------------------------
+WZS(201,_VE,_V,_VA,_SD,_ANF,'1')
+EBENE0()
+CALL _saege_lae_wi_V7 ( VAL SX:=1223.462,SY:=0,SZ:=0,LAENGE:=121.180,SCHNITTWINKEL:=98.002,EZ:=-105,BL:=2,EINPASSEN:=0,EL:=_ANF,AL:=_ANF,PARALLEL:=0,K:=0,KW:=0,BH:=2,RITZVERSATZ:=0,ESZ:=2,ESXY1:=1)
+; ---------------------------------
+;Lap_Pocketing
+; ---------------------------------
+WZF(503,_VE,_V,_VA,_SD,_ANF,'1')
+EBENE0()
+SP (305.681,0.0,-10,1,1,_ANF,0.0,0.0,0.0,1,0,1,0,0.0,0.0,0,0,0,0,0.0,0,0,0.0,0.5)
+CALL _WGerade_V5 ( VAL LAENGE:=137.110,WINKEL:=118.930,Z:=0,R:=0,ESD:=2)
+EP(1,_ANF,0)
+SP (344.496,0.0,-10,1,1,_ANF,0.0,0.0,0.0,1,0,1,0,0.0,0.0,0,0,0,0,0.0,0,0,0.0,0.5)
+CALL _WGerade_V5 ( VAL LAENGE:=137.110,WINKEL:=118.930,Z:=0,R:=0,ESD:=2)
+EP(1,_ANF,0)
+; ---------------------------------
+;Lap_Pocketing
+; ---------------------------------
+WZF(503,_VE,_V,_VA,_SD,_ANF,'1')
+EBENE0()
+SP (482.478,0.0,-10,2,1,_ANF,0.0,0.0,0.0,1,0,1,0,0.0,0.0,0,0,0,0,0.0,0,0,0.0,0.5)
+CALL _WGerade_V5 ( VAL LAENGE:=167.229,WINKEL:=134.145,Z:=0,R:=0,ESD:=2)
+EP(1,_ANF,0)
+SP (526.833,0.0,-10,2,1,_ANF,0.0,0.0,0.0,1,0,1,0,0.0,0.0,0,0,0,0,0.0,0,0,0.0,0.5)
+CALL _WGerade_V5 ( VAL LAENGE:=167.229,WINKEL:=134.145,Z:=0,R:=0,ESD:=2)
+EP(1,_ANF,0)
+; ---------------------------------
+;Lap_Pocketing
+; ---------------------------------
+WZF(503,_VE,_V,_VA,_SD,_ANF,'1')
+EBENE0()
+SP (1021.814,0.0,-10,2,1,_ANF,0.0,0.0,0.0,1,0,1,0,0.0,0.0,0,0,0,0,0.0,0,0,0.0,0.5)
+CALL _WGerade_V5 ( VAL LAENGE:=121.555,WINKEL:=99.174,Z:=0,R:=0,ESD:=2)
+EP(1,_ANF,0)
+SP (1022.112,0.0,-10,2,1,_ANF,0.0,0.0,0.0,1,0,1,0,0.0,0.0,0,0,0,0,0.0,0,0,0.0,0.5)
+CALL _WGerade_V5 ( VAL LAENGE:=121.555,WINKEL:=99.174,Z:=0,R:=0,ESD:=2)
+EP(1,_ANF,0)
+; ---------------------------------
+;Lap_Pocketing
+; ---------------------------------
+WZF(503,_VE,_V,_VA,_SD,_ANF,'1')
+EBENE3()
+SP (22.599,0.0,-10,2,1,_ANF,0.0,0.0,0.0,5,0,0,0,0.0,0.0,0,0,0,0,0.0,0,0,0.0,0.5)
+CALL _WGerade_V5 ( VAL LAENGE:=-140,WINKEL:=90,Z:=0,R:=0,ESD:=2)
+EP(1,_ANF,0)
+SP (61.584999999999994,0.0,-10,2,1,_ANF,0.0,0.0,0.0,5,0,0,0,0.0,0.0,0,0,0,0,0.0,0,0,0.0,0.5)
+CALL _WGerade_V5 ( VAL LAENGE:=-140,WINKEL:=90,Z:=0,R:=0,ESD:=2)
+EP(1,_ANF,0)
+; ---------------------------------
+;Lap_Pocketing
+; ---------------------------------
+WZF(503,_VE,_V,_VA,_SD,_ANF,'1')
+EBENE1()
+SP (22.599,0.0,-10,2,1,_ANF,0.0,0.0,0.0,1,0,1,0,0.0,0.0,0,0,0,0,0.0,0,0,0.0,0.5)
+CALL _WGerade_V5 ( VAL LAENGE:=_RZ,WINKEL:=90,Z:=0,R:=0,ESD:=2)
+EP(1,_ANF,0)
+SP (61.584999999999994,0.0,-10,2,1,_ANF,0.0,0.0,0.0,1,0,1,0,0.0,0.0,0,0,0,0,0.0,0,0,0.0,0.5)
+CALL _WGerade_V5 ( VAL LAENGE:=_RZ,WINKEL:=90,Z:=0,R:=0,ESD:=2)
+EP(1,_ANF,0)
+; ---------------------------------
+;Lap_Pocketing
+; ---------------------------------
+WZF(503,_VE,_V,_VA,_SD,_ANF,'1')
+EBENE3()
+SP (748.591,0.0,-10,2,1,_ANF,0.0,0.0,0.0,5,0,0,0,0.0,0.0,0,0,0,0,0.0,0,0,0.0,0.5)
+CALL _WGerade_V5 ( VAL LAENGE:=-140,WINKEL:=90,Z:=0,R:=0,ESD:=2)
+EP(1,_ANF,0)
+SP (787.577,0.0,-10,2,1,_ANF,0.0,0.0,0.0,5,0,0,0,0.0,0.0,0,0,0,0,0.0,0,0,0.0,0.5)
+CALL _WGerade_V5 ( VAL LAENGE:=-140,WINKEL:=90,Z:=0,R:=0,ESD:=2)
+EP(1,_ANF,0)
+; ---------------------------------
+;Lap_Pocketing
+; ---------------------------------
+WZF(503,_VE,_V,_VA,_SD,_ANF,'1')
+EBENE1()
+SP (748.591,0.0,-10,2,1,_ANF,0.0,0.0,0.0,1,0,1,0,0.0,0.0,0,0,0,0,0.0,0,0,0.0,0.5)
+CALL _WGerade_V5 ( VAL LAENGE:=_RZ,WINKEL:=90,Z:=0,R:=0,ESD:=2)
+EP(1,_ANF,0)
+SP (787.577,0.0,-10,2,1,_ANF,0.0,0.0,0.0,1,0,1,0,0.0,0.0,0,0,0,0,0.0,0,0,0.0,0.5)
+CALL _WGerade_V5 ( VAL LAENGE:=_RZ,WINKEL:=90,Z:=0,R:=0,ESD:=2)
+EP(1,_ANF,0)
+; ---------------------------------
+;Lap_Pocketing
+; ---------------------------------
+WZF(503,_VE,_V,_VA,_SD,_ANF,'1')
+EBENE3()
+SP (269.608,0.0,-10,2,1,_ANF,0.0,0.0,0.0,5,0,0,0,0.0,0.0,0,0,0,0,0.0,0,0,0.0,0.5)
+CALL _WGerade_V5 ( VAL LAENGE:=-140,WINKEL:=90,Z:=0,R:=0,ESD:=2)
+EP(1,_ANF,0)
+SP (308.594,0.0,-10,2,1,_ANF,0.0,0.0,0.0,5,0,0,0,0.0,0.0,0,0,0,0,0.0,0,0,0.0,0.5)
+CALL _WGerade_V5 ( VAL LAENGE:=-140,WINKEL:=90,Z:=0,R:=0,ESD:=2)
+EP(1,_ANF,0)
+; ---------------------------------
+;Lap_Pocketing
+; ---------------------------------
+WZF(503,_VE,_V,_VA,_SD,_ANF,'1')
+EBENE1()
+SP (269.608,0.0,-10,2,1,_ANF,0.0,0.0,0.0,1,0,1,0,0.0,0.0,0,0,0,0,0.0,0,0,0.0,0.5)
+CALL _WGerade_V5 ( VAL LAENGE:=_RZ,WINKEL:=90,Z:=0,R:=0,ESD:=2)
+EP(1,_ANF,0)
+SP (308.594,0.0,-10,2,1,_ANF,0.0,0.0,0.0,1,0,1,0,0.0,0.0,0,0,0,0,0.0,0,0,0.0,0.5)
+CALL _WGerade_V5 ( VAL LAENGE:=_RZ,WINKEL:=90,Z:=0,R:=0,ESD:=2)
+EP(1,_ANF,0)
+Ebene0()

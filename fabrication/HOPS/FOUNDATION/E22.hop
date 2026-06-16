@@ -1,0 +1,150 @@
+;MAKROTYP=0
+;INSTVERSION=
+;EXEVERSION=8.9.20.5[Hops.exe]
+;BILD=E22.WMF
+;INFO=E22
+;WZGV=7235C_219
+;WZGVCONFIG=
+;MASCHINE=HH7
+;NCNAME=
+;KOMMENTAR=
+;DX=0
+;DY=0
+;DZ=0
+;DIALOGDLL=Dialoge.Dll
+;DIALOGPROC=StandardFormAnzeigen
+;DIALOGKIND=0
+;AUTOSCRIPTSTART=1
+;BUTTONBILD=
+;DIMENSION_UNIT=0
+VARS
+   DX := 793.442;*VAR*Piece Length
+   DY := 120.0;*VAR*Piece Height
+   DZ := 140.0;*VAR*Piece Thickness
+   RSI := 2;*VAR*ReferenceSideIndex (0-5)
+START
+FERTIGTEIL(DX,DY,DZ,0,0,0.000,0.000,0.000,'',0,0,0)
+CALL Park_V7 ( VAL MODE:=5,POSX:=0,POSY:=0)
+; ---------------------------------
+;Pocket_Pocketing
+; ---------------------------------
+WZF(403,_VE,_V,_VA,_SD,_ANF,'1')
+EBENEF(696.441,30.095,0,0,2.660,1,2,0)
+KB ('RE_87fe','',191,51,0,'',0,0)
+KG01 ('',0,-51,0,'',10,2)
+KG01 ('',-191,0,0,'',10,2)
+KG01 ('',0,51,0,'',10,2)
+KG01ZuKB()
+CALL _ExecutePocket_V5 ( VAL NAMEN:='RE_87fe',AA:=0,UEBERLAPPUNG:=33,MODE:=0,ANGLE:=0,TIEFE:=-2.500,ESMD:=0,ANZAHL:=0,MAXZ:=_AT_MAXDEPTH,RD:=1,FLIEGENDEINTAUCHEN:=0,MAXEINTAUCHLAENGE:=20)
+; ---------------------------------
+;JackRafterCut_Sawing
+; ---------------------------------
+WZS(201,_VE,_V,_VA,_SD,_ANF,'1')
+EBENE0()
+CALL _saege_lae_wi_V7 ( VAL SX:=793.442,SY:=0,SZ:=0,LAENGE:=120.129,SCHNITTWINKEL:=92.660,EZ:=-105,BL:=2,EINPASSEN:=0,EL:=_ANF,AL:=_ANF,PARALLEL:=0,K:=0,KW:=0,BH:=2,RITZVERSATZ:=0,ESZ:=2,ESXY1:=1)
+CALL MachineStop_V7 ( VAL MODE:=0,PARKMODE:=5,PARKPOSX:=0.000,PARKPOSY:=0.0,TYP:=0,R6:=0, STR:='flip beam 180deg',R7:=0)
+; ---------------------------------
+;JackRafterCut_Sawing
+; ---------------------------------
+WZS(201,_VE,_V,_VA,_SD,_ANF,'1')
+EBENE0()
+CALL _saege_lae_wi_V7 ( VAL SX:=787.867,SY:=0,SZ:=0,LAENGE:=120.129,SCHNITTWINKEL:=87.340,EZ:=-105,BL:=2,EINPASSEN:=0,EL:=_ANF,AL:=_ANF,PARALLEL:=0,K:=0,KW:=0,BH:=2,RITZVERSATZ:=0,ESZ:=2,ESXY1:=1)
+; ---------------------------------
+;Lap_Pocketing
+; ---------------------------------
+WZF(503,_VE,_V,_VA,_SD,_ANF,'1')
+EBENE0()
+SP(627.174,0.0,-15.0,1,1,_ANF,0.0,0.0,0.0,1,0,1,0,0.0,0.0,0,0,1,0.0,0.0,0,0.0,0.0)
+CALL _WGerade_V5 ( VAL LAENGE:=137.524,WINKEL:=119.241,Z:=0,R:=0,ESD:=2)
+EP(1,_ANF,0)
+SP(647.371,0.0,-15.0,1,1,_ANF,0.0,0.0,0.0,1,0,1,0,0.0,0.0,0,0,1,0.0,0.0,0,0.0,0.0)
+CALL _WGerade_V5 ( VAL LAENGE:=137.524,WINKEL:=119.241,Z:=0,R:=0,ESD:=2)
+EP(1,_ANF,0)
+; ---------------------------------
+;Lap_Pocketing
+; ---------------------------------
+WZF(503,_VE,_V,_VA,_SD,_ANF,'1')
+EBENE0()
+SP(260.458,0.0,-15.0,1,1,_ANF,0.0,0.0,0.0,1,0,0,0,0.0,0.0,0,0,1,0.0,0.0,0,0.0,0.0)
+CALL _WGerade_V5 ( VAL LAENGE:=120.265,WINKEL:=86.198,Z:=0,R:=0,ESD:=2)
+EP(1,_ANF,0)
+SP(293.64300000000003,0.0,-15.0,1,1,_ANF,0.0,0.0,0.0,1,0,0,0,0.0,0.0,0,0,1,0.0,0.0,0,0.0,0.0)
+CALL _WGerade_V5 ( VAL LAENGE:=120.265,WINKEL:=86.198,Z:=0,R:=0,ESD:=2)
+EP(1,_ANF,0)
+; ---------------------------------
+;Lap_Pocketing
+; ---------------------------------
+WZF(503,_VE,_V,_VA,_SD,_ANF,'1')
+EBENE3()
+SP(37.204,-0.0,-10.0,2,1,_ANF,0.0,0.0,0.0,5,0,0,0,0.0,0.0,0,0,1,0.0,0.0,0,0.0,0.0)
+CALL _WGerade_V5 ( VAL LAENGE:=-140,WINKEL:=90,Z:=0,R:=0,ESD:=2)
+EP(1,_ANF,0)
+SP(76.19,-0.0,-10.0,2,1,_ANF,0.0,0.0,0.0,5,0,0,0,0.0,0.0,0,0,1,0.0,0.0,0,0.0,0.0)
+CALL _WGerade_V5 ( VAL LAENGE:=-140,WINKEL:=90,Z:=0,R:=0,ESD:=2)
+EP(1,_ANF,0)
+; ---------------------------------
+;Lap_Pocketing
+; ---------------------------------
+WZF(503,_VE,_V,_VA,_SD,_ANF,'1')
+EBENE1()
+SP(37.204,0.0,-10.0,2,1,_ANF,0.0,0.0,0.0,1,0,1,0,0.0,0.0,0,0,1,0.0,0.0,0,0.0,0.0)
+CALL _WGerade_V5 ( VAL LAENGE:=_RZ,WINKEL:=90,Z:=0,R:=0,ESD:=2)
+EP(1,_ANF,0)
+SP(76.19,0.0,-10.0,2,1,_ANF,0.0,0.0,0.0,1,0,1,0,0.0,0.0,0,0,1,0.0,0.0,0,0.0,0.0)
+CALL _WGerade_V5 ( VAL LAENGE:=_RZ,WINKEL:=90,Z:=0,R:=0,ESD:=2)
+EP(1,_ANF,0)
+; ---------------------------------
+;Lap_Pocketing
+; ---------------------------------
+WZF(503,_VE,_V,_VA,_SD,_ANF,'1')
+EBENE3()
+SP(340.087,-0.0,-10.0,2,1,_ANF,0.0,0.0,0.0,5,0,0,0,0.0,0.0,0,0,1,0.0,0.0,0,0.0,0.0)
+CALL _WGerade_V5 ( VAL LAENGE:=-140,WINKEL:=90,Z:=0,R:=0,ESD:=2)
+EP(1,_ANF,0)
+SP(379.073,-0.0,-10.0,2,1,_ANF,0.0,0.0,0.0,5,0,0,0,0.0,0.0,0,0,1,0.0,0.0,0,0.0,0.0)
+CALL _WGerade_V5 ( VAL LAENGE:=-140,WINKEL:=90,Z:=0,R:=0,ESD:=2)
+EP(1,_ANF,0)
+; ---------------------------------
+;Lap_Pocketing
+; ---------------------------------
+WZF(503,_VE,_V,_VA,_SD,_ANF,'1')
+EBENE1()
+SP(340.087,0.0,-10.0,2,1,_ANF,0.0,0.0,0.0,1,0,1,0,0.0,0.0,0,0,1,0.0,0.0,0,0.0,0.0)
+CALL _WGerade_V5 ( VAL LAENGE:=_RZ,WINKEL:=90,Z:=0,R:=0,ESD:=2)
+EP(1,_ANF,0)
+SP(379.073,0.0,-10.0,2,1,_ANF,0.0,0.0,0.0,1,0,1,0,0.0,0.0,0,0,1,0.0,0.0,0,0.0,0.0)
+CALL _WGerade_V5 ( VAL LAENGE:=_RZ,WINKEL:=90,Z:=0,R:=0,ESD:=2)
+EP(1,_ANF,0)
+; ---------------------------------
+;Lap_Pocketing
+; ---------------------------------
+WZF(503,_VE,_V,_VA,_SD,_ANF,'1')
+EBENE3()
+SP(630.67,-0.0,-10.0,2,1,_ANF,0.0,0.0,0.0,5,0,0,0,0.0,0.0,0,0,1,0.0,0.0,0,0.0,0.0)
+CALL _WGerade_V5 ( VAL LAENGE:=-140,WINKEL:=90,Z:=0,R:=0,ESD:=2)
+EP(1,_ANF,0)
+SP(669.656,-0.0,-10.0,2,1,_ANF,0.0,0.0,0.0,5,0,0,0,0.0,0.0,0,0,1,0.0,0.0,0,0.0,0.0)
+CALL _WGerade_V5 ( VAL LAENGE:=-140,WINKEL:=90,Z:=0,R:=0,ESD:=2)
+EP(1,_ANF,0)
+; ---------------------------------
+;Lap_Pocketing
+; ---------------------------------
+WZF(503,_VE,_V,_VA,_SD,_ANF,'1')
+EBENE1()
+SP(630.67,0.0,-10.0,2,1,_ANF,0.0,0.0,0.0,1,0,1,0,0.0,0.0,0,0,1,0.0,0.0,0,0.0,0.0)
+CALL _WGerade_V5 ( VAL LAENGE:=_RZ,WINKEL:=90,Z:=0,R:=0,ESD:=2)
+EP(1,_ANF,0)
+SP(669.656,0.0,-10.0,2,1,_ANF,0.0,0.0,0.0,1,0,1,0,0.0,0.0,0,0,1,0.0,0.0,0,0.0,0.0)
+CALL _WGerade_V5 ( VAL LAENGE:=_RZ,WINKEL:=90,Z:=0,R:=0,ESD:=2)
+EP(1,_ANF,0)
+; ---------------------------------
+;Pocket_Pocketing
+; ---------------------------------
+WZF(403,_VE,_V,_VA,_SD,_ANF,'1')
+EBENEF(694.074,38.959,0,0,-2.660,1,2,0)
+KB ('RE_1d5c','',191,51,0,'',0,0)
+KG01 ('',0,-51,0,'',10,2)
+KG01 ('',-191,0,0,'',10,2)
+KG01 ('',0,51,0,'',10,2)
+KG01ZuKB()
+CALL _ExecutePocket_V5 ( VAL NAMEN:='RE_1d5c',AA:=0,UEBERLAPPUNG:=33,MODE:=0,ANGLE:=0,TIEFE:=-2.500,ESMD:=0,ANZAHL:=0,MAXZ:=_AT_MAXDEPTH,RD:=1,FLIEGENDEINTAUCHEN:=0,MAXEINTAUCHLAENGE:=20)
