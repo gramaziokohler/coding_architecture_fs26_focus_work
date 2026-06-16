@@ -894,15 +894,18 @@ class DrillingProcessor:
                 break
 
         if chosen is None:
-            tool_dir = axis * -1.0
+            # Clearance search failed — fall back to a 190 mm screw placed
+            # straight along the abutting-beam axis, best entry point we can find.
+            FALLBACK_LENGTH = 0.190
+            hw_lines_fb = []
             for sign in (1.0, -1.0):
                 base = joint_pt + offset_vec * sign
                 head = self._face_entry_point(base, axis, entry_face) or base
-                probe = Line(head, head + tool_dir * self.clearance)
-                self.clearance_lines.append(probe)
-                self.failed_screw_info.append(
-                    {"line": probe, "type": f"{joint_label}: no 170mm clearance"}
-                )
+                # Keep clearance probe for visualisation
+                self.clearance_lines.append(Line(head, head + (axis * -1.0) * self.clearance))
+                hw_lines_fb.append(Line(head, head + axis * FALLBACK_LENGTH))
+            if hw_lines_fb:
+                self._generate_features(hw_lines_fb, [cont_beam], joint_label, FALLBACK_LENGTH)
             return
 
         screw_dir, heads, length = chosen
