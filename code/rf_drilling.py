@@ -313,7 +313,9 @@ class DrillingProcessor:
                     if cat_a == "base":
                         cont_beam, abut_beam = abut_beam, cont_beam
                     self._apply_foundation_butt_drilling(joint, abut_beam, cont_beam)
-                elif cat_c == "arch" or cat_a == "arch":
+                elif cat_c.startswith("arch") or cat_a.startswith("arch"):
+                    # arch_A / arch_B: drill straight from the open outside of the
+                    # arch beam (no tight-triangle clearance problem here).
                     self._apply_arch_tbutt_drilling(joint, abut_beam, cont_beam)
                 else:
                     self._apply_tbutt_drilling(joint, abut_beam, cont_beam)
@@ -676,6 +678,7 @@ class DrillingProcessor:
         dot_y = abs(face_v_raw.dot(cont_beam.frame.yaxis.unitized()))
         dot_z = abs(face_v_raw.dot(cont_beam.frame.zaxis.unitized()))
         half_v = (cont_beam.width / 2.0) if dot_y > dot_z else (cont_beam.height / 2.0)
+        edge_clamp = 2.0 * self.screw_diameter  # keep entries >= 2 diameters off edges
 
         def head_on_face(pt):
             """Return True if pt lies within the finite face rectangle."""
@@ -749,8 +752,8 @@ class DrillingProcessor:
             v0 = Vector.from_start_end(face_pt, head0)
             u0 = v0.dot(face_u_raw)
             w0 = v0.dot(face_v_raw)
-            u0 = max(-half_u + 0.005, min(half_u - 0.005, u0))
-            w0 = max(-half_v + 0.005, min(half_v - 0.005, w0))
+            u0 = max(-half_u + edge_clamp, min(half_u - edge_clamp, u0))
+            w0 = max(-half_v + edge_clamp, min(half_v - edge_clamp, w0))
             head0 = face_pt + face_u_raw * u0 + face_v_raw * w0
 
             # Grid covering the whole face
@@ -760,8 +763,8 @@ class DrillingProcessor:
             for cand_len in ARCH_LENGTHS:
                 for iu in range(-steps, steps + 1):
                     for iv in range(-steps, steps + 1):
-                        du = (iu / steps) * (half_u - 0.005)
-                        dv = (iv / steps) * (half_v - 0.005)
+                        du = (iu / steps) * (half_u - edge_clamp)
+                        dv = (iv / steps) * (half_v - edge_clamp)
                         cand_head = face_pt + face_u_raw * du + face_v_raw * dv
 
                         tip = cand_head + screw_dir * cand_len
@@ -777,8 +780,9 @@ class DrillingProcessor:
             if not candidates:
                 return None, None
 
-            # Sort: margin_ok first (False < True), then by centerline distance
-            candidates.sort(key=lambda x: (x[1], x[0]))
+            # Sort: margin_ok first (False < True), then prefer the longer (190 mm)
+            # screw, then by centerline distance.
+            candidates.sort(key=lambda x: (x[1], -x[3], x[0]))
             _, _, best_head, best_len = candidates[0]
             return best_head, best_len
 
@@ -841,12 +845,36 @@ class DrillingProcessor:
         n.unitize()
 
         entry_face = self._entry_face(cont_beam, axis)
+        # Spatial cull: a 170 mm probe from near the joint can only reach beams whose
+        # centerline passes within ~(clearance + margin) of the joint. Pre-filtering
+        # here turns the per-config clearance scan from O(all beams) into O(local).
+        cull_radius = self.clearance + 0.25
         others = [
             b
             for b in self.timber_model.beams
-            if b is not abut_beam and b is not cont_beam
+            if b is not abut_beam
+            and b is not cont_beam
+            and self._dist_point_segment(joint_pt, b.centerline) < cull_radius
         ]
-        edge_slide = max(self._half_extent_along(abut_beam, n) - self.edge_margin, 0.0)
+        # Keep the entry point on the cross face, at least two screw diameters in from
+        # the edge. The shift is limited by BOTH beams (head stays on the cross face,
+        # tip still reaches across the main beam).
+        edge_inset = max(self.edge_margin, 2.0 * self.screw_diameter)
+        edge_slide = max(
+            min(
+                self._half_extent_along(cont_beam, n),
+                self._half_extent_along(abut_beam, n),
+            )
+            - edge_inset,
+            0.0,
+        )
+        # In-face component of n, so a shifted head stays on the entry-face plane.
+        if entry_face is not None:
+            face_n = entry_face.normal.unitized()
+            n_in_face = n - face_n * n.dot(face_n)
+            n_in_face = n_in_face.unitized() if n_in_face.length > 1e-9 else n.copy()
+        else:
+            n_in_face = n.copy()
 
         tilt_order = [0] + sorted(
             (a for a in self.TILT_DEGREES if 0 < a <= self.target_tilt), reverse=True
@@ -858,14 +886,18 @@ class DrillingProcessor:
                 screw_dir = axis * math.cos(theta) + n * (d * math.sin(theta))
                 screw_dir.unitize()
 
-                slide = -d * edge_slide
-                heads = [
-                    self._face_entry_point(
-                        joint_pt + offset_vec * sign + n * slide, screw_dir, entry_face
+                # Entry point on the cross face, shifted toward the open edge but kept
+                # >= 2 diameters in. The screw PIVOTS about this point, so the entry
+                # never drifts off the face as the tilt grows.
+                heads = []
+                for sign in (1.0, -1.0):
+                    head0 = self._face_entry_point(
+                        joint_pt + offset_vec * sign, axis, entry_face
                     )
-                    for sign in (1.0, -1.0)
-                ]
-                if any(h is None for h in heads):
+                    if head0 is None:
+                        break
+                    heads.append(head0 + n_in_face * (-d * edge_slide))
+                if len(heads) < 2:
                     continue
                 if not all(self._point_in_beam(h, cont_beam, -0.003) for h in heads):
                     continue
@@ -887,6 +919,16 @@ class DrillingProcessor:
                         length = cand
                         break
                 if length is None:
+                    # Escalate to a 190 mm screw for joints where 150 mm is too short
+                    # to reach and seat in the main beam.
+                    if all(
+                        self._point_in_beam(
+                            h + screw_dir * 0.190, abut_beam, self.edge_margin
+                        )
+                        for h in heads
+                    ):
+                        length = 0.190
+                if length is None:
                     continue
                 chosen = (screw_dir, heads, length)
                 break
@@ -906,10 +948,7 @@ class DrillingProcessor:
             return
 
         screw_dir, heads, length = chosen
-        tool_dir = screw_dir * -1.0
         hw_lines = [Line(h, h + screw_dir * length) for h in heads]
-        for h in heads:
-            self.clearance_lines.append(Line(h, h + tool_dir * self.clearance))
         self._generate_features(hw_lines, [cont_beam], joint_label, length)
 
     def _entry_face(self, beam, axis):
@@ -941,6 +980,17 @@ class DrillingProcessor:
         if nz > 1e-9:
             cands.append((beam.height / 2.0) / nz)
         return min(cands) if cands else 0.0
+
+    def _dist_point_segment(self, pt, line):
+        """Shortest distance from a point to a finite line segment (for spatial cull)."""
+        a, b = line.start, line.end
+        ab = Vector.from_start_end(a, b)
+        denom = ab.dot(ab)
+        if denom < 1e-12:
+            return distance_point_point(pt, a)
+        t = Vector.from_start_end(a, pt).dot(ab) / denom
+        t = max(0.0, min(1.0, t))
+        return distance_point_point(pt, a + ab * t)
 
     def _point_in_beam(self, pt, beam, margin):
         """True if ``pt`` is at least ``margin`` inside every face of the beam box."""
@@ -1142,10 +1192,21 @@ class DrillingProcessor:
             hw_line = hw_lines[i]
             line_added_to_any = False
 
+            # Extend the drill line ~20 mm past the head so it reliably crosses the
+            # beam's reference sides; a line that starts exactly on a face can be
+            # rejected by compas_timber's intersection test. The hole is clipped to
+            # the beam, so the extension does not change the result.
+            _ext = Vector.from_start_end(hw_line.end, hw_line.start)
+            if _ext.length > 1e-9:
+                _ext.unitize()
+                drill_line = Line(hw_line.start + _ext * 0.02, hw_line.end)
+            else:
+                drill_line = hw_line
+
             for beam in target_beams:
                 try:
                     drill = Drilling.from_line_and_element(
-                        hw_line, beam, diameter=self.screw_diameter
+                        drill_line, beam, diameter=self.screw_diameter
                     )
                     if hasattr(beam, "add_feature"):
                         beam.add_feature(drill)
@@ -1159,6 +1220,14 @@ class DrillingProcessor:
             if line_added_to_any:
                 self.drilling_count += 1
                 self.screw_lines.append(hw_line)
+                # Driver clearance probe: a line from the screw head extending outwards
+                # (opposite the insertion), for visual debugging of collisions.
+                out_dir = Vector.from_start_end(hw_line.end, hw_line.start)
+                if out_dir.length > 1e-9:
+                    out_dir.unitize()
+                    self.clearance_lines.append(
+                        Line(hw_line.start, hw_line.start + out_dir * self.clearance)
+                    )
                 if place_first:
                     self.place_first_screw_lines.append(hw_line)
                 self.hardware_screws_by_type[joint_label] += 1
@@ -1192,6 +1261,8 @@ class DrillingProcessor:
 
                 success = True
             else:
-                self.failed_screw_info.append({"line": hw_line, "type": joint_label})
+                self.failed_screw_info.append(
+                    {"line": hw_line, "type": "DRILL FAILED: " + joint_label}
+                )
 
         return success
