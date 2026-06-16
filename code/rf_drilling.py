@@ -699,7 +699,7 @@ class DrillingProcessor:
             )
             self._generate_features(
                 [Line(head, head + axis * length)],
-                [cont_beam, abut_beam],
+                [cont_beam],
                 joint_label,
                 length,
             )
