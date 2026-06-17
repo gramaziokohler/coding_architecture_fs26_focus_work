@@ -132,6 +132,18 @@ def override_features(element, allow_flip=False):
                 new_feature = f.__class__.from_line_and_element(
                     line, element, f.diameter, ref_side_index=ref_side_index
                 )
+            elif f.ref_side_index == ref_side_index:
+                pass
+            else:
+                try:
+                    line = f.line_from_params_and_element(element)
+                    new_feature = f.__class__.from_line_and_element(
+                        line, element, f.diameter, ref_side_index=ref_side_index
+                    )
+                except Exception:
+                    pass
+
+            if new_feature is not None:
                 element.add_feature(new_feature)
                 element.remove_features(f)
 
