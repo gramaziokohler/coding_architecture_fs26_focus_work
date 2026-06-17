@@ -50,7 +50,7 @@ from compas.geometry import Vector
 from compas.scene import Scene
 from compas.tolerance import TOL
 
-from compas_timber.fabrication import JackRafterCut
+from compas_timber.fabrication import Drilling, JackRafterCut
 from compas_timber.btlx import BTLxReader
 
 from easyhops.hop_job import HOPSJob
@@ -92,6 +92,24 @@ def load_btlx(filepath):
 # ---------------------------------------------------------------------------
 
 
+def resolve_element(model, index=None, group=None, ref_side=None):
+    """Return a beam element from the model by index or group."""
+
+    elements = list(model.elements())
+    if group is not None:
+        elements = [e for e in elements if e.name.startswith(group)]
+        print(
+            "Group[{}] {}/{} -> {}".format(
+                group, index + 1, len(elements), elements[index].name
+            )
+        )
+    element = elements[index]
+
+    # set the ref_side_index attribute on the element for later use in feature overrides
+    element.attributes["ref_side_index"] = ref_side
+    return element
+
+
 def override_features(element, allow_flip=False):
     """Replace any JackRafterCut features on the beam with new features based on the same planes but with ref_side_index taken from beam attributes."""
 
@@ -108,6 +126,14 @@ def override_features(element, allow_flip=False):
                 # remove the feature only if the cut can be done from only one side
                 element.remove_features(f)
             element.add_feature(new_feature)
+        elif isinstance(f, Drilling):
+            if f.ref_side_index == (ref_side_index + 2) % 4:
+                line = f.line_from_params_and_element(element)
+                new_feature = f.__class__.from_line_and_element(
+                    line, element, f.diameter, ref_side_index=ref_side_index
+                )
+                element.add_feature(new_feature)
+                element.remove_features(f)
 
 
 # ---------------------------------------------------------------------------
@@ -303,10 +329,9 @@ def _element_to_job(element, scale_factor=1.0):
                     post_flip.extend(machinings)
                     _dispatch(name, rsi_proc, machinings, "post-flip (pre-drill)")
             else:
-                machinings = DrillingStrategies.pocketing(
+                machinings = DrillingStrategies.drilling(
                     processing,
                     machine_ref_side_index=rsi,
-                    tool=MachiningTool(position=403),  # SR20mm drill bit
                 )
                 if processing.ref_side_index == opp_rsi:
                     pre_flip.extend(machinings)
@@ -331,16 +356,16 @@ def _element_to_job(element, scale_factor=1.0):
     OP_ORDER = {"SAWING": 2, "DRILLING": 0, "MILLING": 1}
 
     POST_FLIP_PROCESSING_ORDER = {
-        "JackRafterCut": 0,  # always FIRST — saw cut removes the end of the beam
+        "JackRafterCut": 9,  # always FIRST — saw cut removes the end of the beam
         "Drilling": 1,
         "Lap": 2,
-        "Pocket": 3,
+        "Pocket": 0,
     }
     PRE_FLIP_PROCESSING_ORDER = {
-        "Drilling": 0,
-        "Lap": 1,
-        "Pocket": 2,
-        "JackRafterCut": 9,  # always LAST — saw cut removes the end of the beam
+        "Drilling": 1,
+        "Lap": 2,
+        "Pocket": 9,
+        "JackRafterCut": 0,  # always LAST — saw cut removes the end of the beam
     }
 
     def _sort_key(processing_order):
@@ -425,7 +450,7 @@ def export_hop(beam, export_dir):
 # ---------------------------------------------------------------------------
 
 
-def run(filepath, index, ref_side, export, allow_flip=False, ghenv=None):
+def run(filepath, index, ref_side, export, group=None, allow_flip=False, ghenv=None):
     """Load a BTLx file, resolve one beam by index, visualise it, optionally export it, and return a processing report.
 
     Parameters:
@@ -444,10 +469,8 @@ def run(filepath, index, ref_side, export, allow_flip=False, ghenv=None):
     model = load_btlx(filepath)
     export_dir = os.path.join(os.path.dirname(filepath), "HOPS")
 
-    # Get element by index
-    element = list(model.elements())[index]
-    element.name = "Beam_" + str(index)
-    element.attributes["ref_side_index"] = ref_side
+    # Get element by index (optionally filtered by group)
+    element = resolve_element(model, index=index, group=group, ref_side=ref_side)
 
     # Override features
     override_features(element, allow_flip)
