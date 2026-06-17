@@ -1,0 +1,73 @@
+VARS
+   DX := 1261.29;*VAR* Piece Length
+   DY := 80.0;*VAR* Piece Height
+   DZ := 60.0;*VAR* Piece Thickness
+   RSI := 1;*VAR* ReferenceSideIndex (0-5)
+START
+
+FERTIGTEIL(DX,DY,DZ,0,0,0.000,0.000,0.000,'',0,0,0)
+
+CALL Park_V7 ( VAL MODE:=5,POSX:=0,POSY:=0)
+
+; ---------------------------------
+;JackRafterCut_Sawing
+; ---------------------------------
+WZS(201,_VE,_V,_VA,_SD,_ANF,'1')
+EBENE0()
+CALL _saege_lae_wi_V7 ( VAL SX:=60.996,SY:=80,SZ:=0,LAENGE:=-80.686,SCHNITTWINKEL:=262.523,EZ:=-67.957,BL:=1,EINPASSEN:=0,EL:=_ANF,AL:=_ANF,PARALLEL:=0,K:=0,KW:=-28.004,BH:=2,RITZVERSATZ:=0,ESZ:=2,ESXY1:=7)
+
+; ---------------------------------
+;JackRafterCut_Sawing
+; ---------------------------------
+WZS(201,_VE,_V,_VA,_SD,_ANF,'1')
+EBENE0()
+CALL _saege_lae_wi_V7 ( VAL SX:=1232.727,SY:=80,SZ:=0,LAENGE:=80.023,SCHNITTWINKEL:=268.632,EZ:=-68.769,BL:=1,EINPASSEN:=0,EL:=_ANF,AL:=_ANF,PARALLEL:=0,K:=0,KW:=-29.251,BH:=2,RITZVERSATZ:=0,ESZ:=2,ESXY1:=1)
+
+; ---------------------------------
+; Drilling_PreDrilling
+; ---------------------------------
+WZF(301,_VE,_V,_VA,_SD,_ANF,'1')
+EBENE0()
+HorzB (611.320,39.091,0,1,-8,0,-55.466,4.501,1,2,0,0)
+
+; ---------------------------------
+; Drilling_PreDrilling
+; ---------------------------------
+WZF(301,_VE,_V,_VA,_SD,_ANF,'1')
+EBENE0()
+HorzB (574.956,39.091,0,1,-8,0,-55.466,4.501,1,2,0,0)
+
+; ---------------------------------
+; Drilling_Drilling
+; ---------------------------------
+WZF(607,_VE,_V,_VA,_SD,_ANF,'1')
+EBENE0()
+HorzB (611.320,39.091,0,4,-60,0,-55.466,4.501,1,2,0,0)
+
+; ---------------------------------
+; Drilling_Drilling
+; ---------------------------------
+WZF(607,_VE,_V,_VA,_SD,_ANF,'1')
+EBENE0()
+HorzB (574.956,39.091,0,4,-60,0,-55.466,4.501,1,2,0,0)
+
+; ---------------------------------
+;Lap_Pocketing
+; ---------------------------------
+WZF(503,_VE,_V,_VA,_SD,_ANF,'1')
+EBENE0()
+SP(552.6050556847208,0.0,-5.0,2,1,_ANF,0.0,0.0,0.0,1,0,0,0,0.0,0.0,0,0,1,0.0,0.0,0,0.0,0.0)
+CALL _WGerade_V5 ( VAL LAENGE:=80.431,WINKEL:=84.063,Z:=0,R:=0,ESD:=2)
+EP(1,_ANF,0)
+SP(567.5040556847208,0.0,-5.0,2,1,_ANF,0.0,0.0,0.0,1,0,0,0,0.0,0.0,0,0,1,0.0,0.0,0,0.0,0.0)
+CALL _WGerade_V5 ( VAL LAENGE:=80.431,WINKEL:=84.063,Z:=0,R:=0,ESD:=2)
+EP(1,_ANF,0)
+
+; ---------------------------------
+;Lap_Pocketing
+; ---------------------------------
+WZF(503,_VE,_V,_VA,_SD,_ANF,'1')
+EBENEF(185.223,0,0,93.526,173.403,7,2,0)
+SP(0.0,-0.0,-30.049,2,1,_ANF,0.0,0.0,0.0,0,0,0,0,0.0,0.0,0,0,1,0.0,0.0,0,0.0,0.0)
+CALL _WGerade_V5 ( VAL LAENGE:=-68.085,WINKEL:=61.793,Z:=0,R:=0,ESD:=2)
+EP(1,_ANF,0)

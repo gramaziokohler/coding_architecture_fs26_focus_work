@@ -1,0 +1,156 @@
+;MAKROTYP=0
+;INSTVERSION=
+;EXEVERSION=8.9.20.5[Hops.exe]
+;BILD=A17.WMF
+;INFO=A17
+;WZGV=7235C_219
+;WZGVCONFIG=
+;MASCHINE=HH7
+;NCNAME=
+;KOMMENTAR=
+;DX=0
+;DY=0
+;DZ=0
+;DIALOGDLL=Dialoge.Dll
+;DIALOGPROC=StandardFormAnzeigen
+;DIALOGKIND=0
+;AUTOSCRIPTSTART=1
+;BUTTONBILD=
+;DIMENSION_UNIT=0
+VARS
+   DX := 1377.192;*VAR*Piece Length
+   DY := 100.0;*VAR*Piece Height
+   DZ := 80.0;*VAR*Piece Thickness
+   RSI := 1;*VAR*ReferenceSideIndex (0-5)
+START
+FERTIGTEIL(DX,DY,DZ,0,0,0.000,0.000,0.000,'',0,0,0)
+CALL Park_V7 ( VAL MODE:=5,POSX:=0,POSY:=0)
+; ---------------------------------
+;Lap_Pocketing
+; ---------------------------------
+WZF(503,_VE,_V,_VA,_SD,_ANF,'1')
+EBENE0()
+SP(131.31605737526291,0.0,-5.0,2,1,_ANF,0.0,0.0,0.0,1,0,0,0,0.0,0.0,0,0,1,0.0,0.0,0,0.0,0.0)
+CALL _WGerade_V5 ( VAL LAENGE:=100.351,WINKEL:=85.208,Z:=0,R:=0,ESD:=2)
+EP(1,_ANF,0)
+SP(138.7320573752629,0.0,-5.0,2,1,_ANF,0.0,0.0,0.0,1,0,0,0,0.0,0.0,0,0,1,0.0,0.0,0,0.0,0.0)
+CALL _WGerade_V5 ( VAL LAENGE:=100.351,WINKEL:=85.208,Z:=0,R:=0,ESD:=2)
+EP(1,_ANF,0)
+; ---------------------------------
+;Lap_Pocketing
+; ---------------------------------
+WZF(503,_VE,_V,_VA,_SD,_ANF,'1')
+EBENE0()
+SP(737.943,0.0,-5.0,2,1,_ANF,0.0,0.0,0.0,1,0,1,0,0.0,0.0,0,0,1,0.0,0.0,0,0.0,0.0)
+CALL _WGerade_V5 ( VAL LAENGE:=108.848,WINKEL:=113.262,Z:=0,R:=0,ESD:=2)
+EP(1,_ANF,0)
+SP(794.165,0.0,-5.0,2,1,_ANF,0.0,0.0,0.0,1,0,1,0,0.0,0.0,0,0,1,0.0,0.0,0,0.0,0.0)
+CALL _WGerade_V5 ( VAL LAENGE:=108.848,WINKEL:=113.262,Z:=0,R:=0,ESD:=2)
+EP(1,_ANF,0)
+; ---------------------------------
+;Pocket_Pocketing
+; ---------------------------------
+WZF(403,_VE,_V,_VA,_SD,_ANF,'1')
+EBENEF(-60,4.959,0,0,4.040,1,2,0)
+KB ('RE_5e42','',0,0,0,'',0,0)
+KG01 ('',146,0,0,'',10,2)
+KG01 ('',0,65,0,'',10,2)
+KG01 ('',-146,0,0,'',10,2)
+KG01ZuKB()
+CALL _ExecutePocket_V5 ( VAL NAMEN:='RE_5e42',AA:=0,UEBERLAPPUNG:=33,MODE:=0,ANGLE:=0,TIEFE:=-5.208,ESMD:=0,ANZAHL:=0,MAXZ:=_AT_MAXDEPTH,RD:=1,FLIEGENDEINTAUCHEN:=0,MAXEINTAUCHLAENGE:=20)
+CALL MachineStop_V7 ( VAL MODE:=0,PARKMODE:=5,PARKPOSX:=0.000,PARKPOSY:=0.0,TYP:=0,R6:=0, STR:='flip beam 180deg',R7:=0)
+; ---------------------------------
+;Pocket_Pocketing
+; ---------------------------------
+WZF(403,_VE,_V,_VA,_SD,_ANF,'1')
+EBENEF(-64.580,30.203,0,0,-4.040,1,2,0)
+KB ('RE_9e6a','',0,0,0,'',0,0)
+KG01 ('',146,0,0,'',10,2)
+KG01 ('',0,65,0,'',10,2)
+KG01 ('',-146,0,0,'',10,2)
+KG01ZuKB()
+CALL _ExecutePocket_V5 ( VAL NAMEN:='RE_9e6a',AA:=0,UEBERLAPPUNG:=33,MODE:=0,ANGLE:=0,TIEFE:=-4.792,ESMD:=0,ANZAHL:=0,MAXZ:=_AT_MAXDEPTH,RD:=1,FLIEGENDEINTAUCHEN:=0,MAXEINTAUCHLAENGE:=20)
+; ---------------------------------
+; Drilling_PreDrilling
+; ---------------------------------
+WZF(301,_VE,_V,_VA,_SD,_ANF,'1')
+EBENE0()
+HorzB (223.564,22.112,0,1,-8,0,-56.308,138.659,1,2,0,0)
+; ---------------------------------
+; Drilling_PreDrilling
+; ---------------------------------
+WZF(301,_VE,_V,_VA,_SD,_ANF,'1')
+EBENE0()
+HorzB (190.566,22.112,0,1,-8,0,-56.308,138.659,1,2,0,0)
+; ---------------------------------
+; Drilling_PreDrilling
+; ---------------------------------
+WZF(301,_VE,_V,_VA,_SD,_ANF,'1')
+EBENE0()
+HorzB (678.079,34.774,0,1,-8,0,-40,9.572,1,2,0,0)
+; ---------------------------------
+; Drilling_PreDrilling
+; ---------------------------------
+WZF(301,_VE,_V,_VA,_SD,_ANF,'1')
+EBENE0()
+HorzB (629.804,34.774,0,1,-8,0,-40,10.323,1,2,0,0)
+; ---------------------------------
+; Drilling_PreDrilling
+; ---------------------------------
+/WZF(301,_VE,_V,_VA,_SD,_ANF,'1')
+/EBENE0()
+/HorzB (1227.386,0,22.857,1,-8,0,-53.664,31.530,1,2,0,0)
+; ---------------------------------
+; Drilling_PreDrilling
+; ---------------------------------
+/WZF(301,_VE,_V,_VA,_SD,_ANF,'1')
+/EBENE0()
+/HorzB (1360.381,132.149,0,1,-8,0,-24.914,-139.208,1,2,0,0)
+; ---------------------------------
+; Drilling_Drilling
+; ---------------------------------
+WZF(607,_VE,_V,_VA,_SD,_ANF,'1')
+EBENE0()
+HorzB (223.564,22.112,0,4,-60,0,-56.308,138.659,1,2,0,0)
+; ---------------------------------
+; Drilling_Drilling
+; ---------------------------------
+WZF(607,_VE,_V,_VA,_SD,_ANF,'1')
+EBENE0()
+HorzB (190.566,22.112,0,4,-60,0,-56.308,138.659,1,2,0,0)
+; ---------------------------------
+; Drilling_Drilling
+; ---------------------------------
+WZF(607,_VE,_V,_VA,_SD,_ANF,'1')
+EBENE0()
+HorzB (678.079,34.774,0,4,-40,0,-30.176,9.572,1,2,0,0)
+; ---------------------------------
+; Drilling_Drilling
+; ---------------------------------
+WZF(607,_VE,_V,_VA,_SD,_ANF,'1')
+EBENE0()
+HorzB (629.804,34.774,0,4,-40,0,-32.070,10.323,1,2,0,0)
+; ---------------------------------
+; Drilling_Drilling
+; ---------------------------------
+/WZF(607,_VE,_V,_VA,_SD,_ANF,'1')
+/EBENE0()
+/HorzB (1227.386,0,22.857,4,-60,0,-53.664,31.530,1,2,0,0)
+; ---------------------------------
+; Drilling_Drilling
+; ---------------------------------
+/WZF(607,_VE,_V,_VA,_SD,_ANF,'1')
+/EBENE0()
+/HorzB (1360.381,132.149,0,4,-60,0,-24.914,-139.208,1,2,0,0)
+; ---------------------------------
+;JackRafterCut_Sawing
+; ---------------------------------
+WZS(201,_VE,_V,_VA,_SD,_ANF,'1')
+EBENE0()
+CALL _saege_lae_wi_V7 ( VAL SX:=13.608,SY:=0,SZ:=0,LAENGE:=-100.249,SCHNITTWINKEL:=85.963,EZ:=-80.000,BL:=2,EINPASSEN:=0,EL:=_ANF,AL:=_ANF,PARALLEL:=0,K:=0,KW:=-0.113,BH:=2,RITZVERSATZ:=0,ESZ:=2,ESXY1:=7)
+; ---------------------------------
+;JackRafterCut_Sawing
+; ---------------------------------
+WZS(201,_VE,_V,_VA,_SD,_ANF,'1')
+EBENE0()
+CALL _saege_lae_wi_V7 ( VAL SX:=1315.707,SY:=0,SZ:=0,LAENGE:=132.085,SCHNITTWINKEL:=130.792,EZ:=-88.209,BL:=2,EINPASSEN:=0,EL:=_ANF,AL:=_ANF,PARALLEL:=0,K:=0,KW:=-24.914,BH:=2,RITZVERSATZ:=0,ESZ:=2,ESXY1:=1)
