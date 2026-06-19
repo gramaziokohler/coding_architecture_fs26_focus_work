@@ -26,18 +26,6 @@ START
 FERTIGTEIL(DX,DY,DZ,0,0,0.000,0.000,0.000,'',0,0,0)
 CALL Park_V7 ( VAL MODE:=5,POSX:=0,POSY:=0)
 ; ---------------------------------
-;JackRafterCut_Sawing
-; ---------------------------------
-WZS(201,_VE,_V,_VA,_SD,_ANF,'1')
-EBENE0()
-CALL _saege_lae_wi_V7 ( VAL SX:=64.248,SY:=80,SZ:=0,LAENGE:=-80.188,SCHNITTWINKEL:=273.920,EZ:=-75.575,BL:=1,EINPASSEN:=0,EL:=_ANF,AL:=_ANF,PARALLEL:=0,K:=0,KW:=-37.447,BH:=2,RITZVERSATZ:=0,ESZ:=2,ESXY1:=7)
-; ---------------------------------
-;JackRafterCut_Sawing
-; ---------------------------------
-WZS(201,_VE,_V,_VA,_SD,_ANF,'1')
-EBENE0()
-CALL _saege_lae_wi_V7 ( VAL SX:=1161.294,SY:=80,SZ:=0,LAENGE:=80.220,SCHNITTWINKEL:=265.755,EZ:=-77.272,BL:=1,EINPASSEN:=0,EL:=_ANF,AL:=_ANF,PARALLEL:=0,K:=0,KW:=-39.061,BH:=2,RITZVERSATZ:=0,ESZ:=2,ESXY1:=1)
-; ---------------------------------
 ; Drilling_PreDrilling
 ; ---------------------------------
 WZF(301,_VE,_V,_VA,_SD,_ANF,'1')
@@ -90,8 +78,8 @@ HorzB (537.853,35.519,0,4,-60,0,-50.659,-29.922,1,2,0,0)
 ; ---------------------------------
 WZF(503,_VE,_V,_VA,_SD,_ANF,'1')
 EBENEF(729.924,0,0,93.132,183.105,7,2,0)
-SP(0.0,-0.0,-41.997,2,1,_ANF,0.0,0.0,0.0,0,0,0,0,0.0,0.0,0,0,1,0.0,0.0,0,0.0,0.0)
-CALL _WGerade_V5 ( VAL LAENGE:=-85.287,WINKEL:=135.291,Z:=0,R:=0,ESD:=2)
+SP(0.0,-0.0,-41.997,2,1,_ANF*2,0.0,0.0,0.0,0,0,0,0,0.0,0.0,0,0,1,0.0,0.0,0,0.0,0.0)
+CALL _WGerade_V5 ( VAL LAENGE:=-54.780,WINKEL:=135.291,Z:=0,R:=0,ESD:=2)
 EP(1,_ANF,0)
 ; ---------------------------------
 ;Lap_Pocketing
@@ -112,3 +100,15 @@ EBENEF(256.259,0,0,92.385,3.111,1,0,0)
 SP(0.0,-0.0,-29.05,2,1,_ANF,0.0,0.0,0.0,0,0,1,0,0.0,0.0,0,0,1,0.0,0.0,0,0.0,0.0)
 CALL _WGerade_V5 ( VAL LAENGE:=75.641,WINKEL:=127.512,Z:=0,R:=0,ESD:=2)
 EP(1,_ANF,0)
+; ---------------------------------
+;JackRafterCut_Sawing
+; ---------------------------------
+WZS(201,_VE,_V,_VA,_SD,_ANF,'1')
+EBENE0()
+CALL _saege_lae_wi_V7 ( VAL SX:=1173.170,SY:=80,SZ:=0,LAENGE:=80.220,SCHNITTWINKEL:=265.755,EZ:=-77.272,BL:=1,EINPASSEN:=0,EL:=_ANF,AL:=_ANF,PARALLEL:=0,K:=0,KW:=-39.061,BH:=2,RITZVERSATZ:=0,ESZ:=2,ESXY1:=1)
+; ---------------------------------
+;JackRafterCut_Sawing
+; ---------------------------------
+WZS(201,_VE,_V,_VA,_SD,_ANF,'1')
+EBENE0()
+CALL _saege_lae_wi_V7 ( VAL SX:=64.248,SY:=80,SZ:=0,LAENGE:=-80.188,SCHNITTWINKEL:=273.920,EZ:=-75.575,BL:=1,EINPASSEN:=0,EL:=_ANF,AL:=_ANF,PARALLEL:=0,K:=0,KW:=-37.447,BH:=2,RITZVERSATZ:=0,ESZ:=2,ESXY1:=7)

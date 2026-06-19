@@ -28,15 +28,22 @@ CALL Park_V7 ( VAL MODE:=5,POSX:=0,POSY:=0)
 ; ---------------------------------
 ;JackRafterCut_Sawing
 ; ---------------------------------
-WZS(201,_VE,_V,_VA,_SD,_ANF,'1')
-EBENE0()
-CALL _saege_lae_wi_V7 ( VAL SX:=96.167,SY:=80,SZ:=0,LAENGE:=-80.115,SCHNITTWINKEL:=273.067,EZ:=-70.211,BL:=1,EINPASSEN:=0,EL:=_ANF,AL:=_ANF,PARALLEL:=0,K:=0,KW:=-31.288,BH:=2,RITZVERSATZ:=0,ESZ:=2,ESXY1:=7)
+/WZS(201,_VE,_V,_VA,_SD,_ANF,'1')
+/EBENE0()
+/CALL _saege_lae_wi_V7 ( VAL SX:=1221.183,SY:=0,SZ:=0,LAENGE:=80.739,SCHNITTWINKEL:=97.756,EZ:=-100,BL:=2,EINPASSEN:=0,EL:=_ANF,AL:=_ANF,PARALLEL:=0,K:=0,KW:=-53.921,BH:=2,RITZVERSATZ:=0,ESZ:=2,ESXY1:=1)
+/CALL MachineStop_V7 ( VAL MODE:=0,PARKMODE:=5,PARKPOSX:=0.000,PARKPOSY:=0.0,TYP:=0,R6:=0, STR:='flip beam 180deg',R7:=0)
 ; ---------------------------------
 ;JackRafterCut_Sawing
 ; ---------------------------------
 WZS(201,_VE,_V,_VA,_SD,_ANF,'1')
 EBENE0()
-CALL _saege_lae_wi_V7 ( VAL SX:=1282.495,SY:=80,SZ:=0,LAENGE:=80.739,SCHNITTWINKEL:=262.244,EZ:=-101.885,BL:=1,EINPASSEN:=0,EL:=_ANF,AL:=_ANF,PARALLEL:=0,K:=0,KW:=-53.921,BH:=2,RITZVERSATZ:=0,ESZ:=2,ESXY1:=1)
+CALL _saege_lae_wi_V7 ( VAL SX:=1304.287,SY:=80,SZ:=0,LAENGE:=80.739,SCHNITTWINKEL:=262.244,EZ:=-100,BL:=1,EINPASSEN:=0,EL:=_ANF,AL:=_ANF,PARALLEL:=0,K:=0,KW:=-53.921,BH:=2,RITZVERSATZ:=0,ESZ:=2,ESXY1:=1)
+; ---------------------------------
+;JackRafterCut_Sawing
+; ---------------------------------
+WZS(201,_VE,_V,_VA,_SD,_ANF,'1')
+EBENE0()
+CALL _saege_lae_wi_V7 ( VAL SX:=96.167,SY:=80,SZ:=0,LAENGE:=-80.115,SCHNITTWINKEL:=273.067,EZ:=-70.211,BL:=1,EINPASSEN:=0,EL:=_ANF,AL:=_ANF,PARALLEL:=0,K:=0,KW:=-31.288,BH:=2,RITZVERSATZ:=0,ESZ:=2,ESXY1:=7)
 ; ---------------------------------
 ; Drilling_PreDrilling
 ; ---------------------------------
@@ -90,8 +97,8 @@ HorzB (569.371,33.094,0,4,-60,0,-61.198,-43.124,1,2,0,0)
 ; ---------------------------------
 WZF(503,_VE,_V,_VA,_SD,_ANF,'1')
 EBENEF(753.020,0,0,94.154,183.196,7,2,0)
-SP(0.0,0.0,-46.079,2,1,_ANF,0.0,0.0,0.0,0,0,0,0,0.0,0.0,0,0,1,0.0,0.0,0,0.0,0.0)
-CALL _WGerade_V5 ( VAL LAENGE:=-98.545,WINKEL:=142.493,Z:=0,R:=0,ESD:=2)
+SP(0.0,0.0,-46.079,2,1,_ANF*2,0.0,0.0,0.0,0,0,0,0,0.0,0.0,0,0,1,0.0,0.0,0,0.0,0.0)
+CALL _WGerade_V5 ( VAL LAENGE:=-68.038,WINKEL:=142.493,Z:=0,R:=0,ESD:=2)
 EP(1,_ANF,0)
 ; ---------------------------------
 ;Lap_Pocketing
