@@ -26,18 +26,6 @@ START
 FERTIGTEIL(DX,DY,DZ,0,0,0.000,0.000,0.000,'',0,0,0)
 CALL Park_V7 ( VAL MODE:=5,POSX:=0,POSY:=0)
 ; ---------------------------------
-;JackRafterCut_Sawing
-; ---------------------------------
-WZS(201,_VE,_V,_VA,_SD,_ANF,'1')
-EBENE0()
-CALL _saege_lae_wi_V7 ( VAL SX:=103.487,SY:=80,SZ:=0,LAENGE:=-80.053,SCHNITTWINKEL:=267.915,EZ:=-85.160,BL:=1,EINPASSEN:=0,EL:=_ANF,AL:=_ANF,PARALLEL:=0,K:=0,KW:=-45.206,BH:=2,RITZVERSATZ:=0,ESZ:=2,ESXY1:=7)
-; ---------------------------------
-;JackRafterCut_Sawing
-; ---------------------------------
-WZS(201,_VE,_V,_VA,_SD,_ANF,'1')
-EBENE0()
-CALL _saege_lae_wi_V7 ( VAL SX:=1066.712,SY:=80,SZ:=0,LAENGE:=80.008,SCHNITTWINKEL:=269.202,EZ:=-61.377,BL:=1,EINPASSEN:=0,EL:=_ANF,AL:=_ANF,PARALLEL:=0,K:=0,KW:=-12.161,BH:=2,RITZVERSATZ:=0,ESZ:=2,ESXY1:=1)
-; ---------------------------------
 ; Drilling_PreDrilling
 ; ---------------------------------
 WZF(301,_VE,_V,_VA,_SD,_ANF,'1')
@@ -133,6 +121,18 @@ EP(1,_ANF,0)
 ; ---------------------------------
 WZF(503,_VE,_V,_VA,_SD,_ANF,'1')
 EBENEF(683.744,0,0,90.216,-1.679,1,0,0)
-SP(0.0,0.0,-40.716,2,1,_ANF,0.0,0.0,0.0,0,0,0,0,0.0,0.0,0,0,1,0.0,0.0,0,0.0,0.0)
-CALL _WGerade_V5 ( VAL LAENGE:=60.497,WINKEL:=82.651,Z:=0,R:=0,ESD:=2)
+SP(0.0,0.0,-40.716,2,0,_ANF,0.0,0.0,0.0,0,0,1,0,0.0,0.0,0,0,1,0.0,0.0,0,0.0,0.0)
+CALL _WGerade_V5 ( VAL LAENGE:=91.004,WINKEL:=82.651,Z:=0,R:=0,ESD:=2)
 EP(1,_ANF,0)
+; ---------------------------------
+;JackRafterCut_Sawing
+; ---------------------------------
+WZS(201,_VE,_V,_VA,_SD,_ANF,'1')
+EBENE0()
+CALL _saege_lae_wi_V7 ( VAL SX:=1068.940,SY:=80,SZ:=0,LAENGE:=80.008,SCHNITTWINKEL:=269.202,EZ:=-61.377,BL:=1,EINPASSEN:=0,EL:=_ANF,AL:=_ANF,PARALLEL:=0,K:=0,KW:=-12.161,BH:=2,RITZVERSATZ:=0,ESZ:=2,ESXY1:=1)
+; ---------------------------------
+;JackRafterCut_Sawing
+; ---------------------------------
+WZS(201,_VE,_V,_VA,_SD,_ANF,'1')
+EBENE0()
+CALL _saege_lae_wi_V7 ( VAL SX:=97.661,SY:=80,SZ:=0,LAENGE:=-80.053,SCHNITTWINKEL:=267.915,EZ:=-85.160,BL:=1,EINPASSEN:=0,EL:=_ANF,AL:=_ANF,PARALLEL:=0,K:=0,KW:=-45.206,BH:=2,RITZVERSATZ:=0,ESZ:=2,ESXY1:=7)
