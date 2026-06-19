@@ -65,6 +65,9 @@ from easyhops.tool_library import CastorD61
 from easyhops.tool_library import MachiningTool
 
 
+TOOL_MAX_DEPTH = 100.0  # mm — max saw blade cutting depth (SaegeD350)
+
+
 # ---------------------------------------------------------------------------
 # Model loading
 # ---------------------------------------------------------------------------
@@ -119,13 +122,27 @@ def override_features(element, allow_flip=False):
     for f in list(element.features):
         if isinstance(f, JackRafterCut):
             plane = f.plane_from_params_and_beam(element)
-            new_feature = f.__class__.from_plane_and_beam(
-                plane, element, ref_side_index
-            )
-            if height < 120.0:
-                # remove the feature only if the cut can be done from only one side
-                element.remove_features(f)
-            element.add_feature(new_feature)
+            if f.ref_side_index != ref_side_index:
+                new_feature = f.__class__.from_plane_and_beam(
+                    plane, element, ref_side_index
+                )
+                if height < 120.0:
+                    # remove the feature only if the cut can be done from only one side
+                    element.remove_features(f)
+                element.add_feature(new_feature)
+            else:
+                new_feature = f  # already on the correct side
+            # if the blade path through the material exceeds the tool max depth,
+            # add a matching cut from the opposite side
+            inclination_rad = math.radians(new_feature.inclination)
+            if (
+                inclination_rad > 0
+                and height / math.sin(inclination_rad) > TOOL_MAX_DEPTH
+            ):
+                opp_feature = f.__class__.from_plane_and_beam(
+                    plane, element, (ref_side_index + 2) % 4
+                )
+                element.add_feature(opp_feature)
         elif isinstance(f, Drilling):
             if f.ref_side_index == (ref_side_index + 2) % 4:
                 line = f.line_from_params_and_element(element)
@@ -352,11 +369,15 @@ def _element_to_job(element, scale_factor=1.0):
                 }
             )
 
-    # Sort order: operation type → tool position → processing name
+    # Sort order — two-tier:
+    #   Tier 1 (tool optimisation): operations whose (processing_name, tool_position)
+    #     appear in BOTH lists are "bridge" ops — placed last in pre_flip and first
+    #     in post_flip so the machine crosses the flip without a tool change.
+    #   Tier 2 (static order): everything else follows the per-list PROCESSING_ORDER.
     OP_ORDER = {"SAWING": 2, "DRILLING": 0, "MILLING": 1}
 
     POST_FLIP_PROCESSING_ORDER = {
-        "JackRafterCut": 9,  # always FIRST — saw cut removes the end of the beam
+        "JackRafterCut": 9,
         "Drilling": 1,
         "Lap": 2,
         "Pocket": 0,
@@ -365,23 +386,35 @@ def _element_to_job(element, scale_factor=1.0):
         "Drilling": 1,
         "Lap": 2,
         "Pocket": 9,
-        "JackRafterCut": 0,  # always LAST — saw cut removes the end of the beam
+        "JackRafterCut": 0,
     }
 
-    def _sort_key(processing_order):
+    def _sig(m):
+        tool = getattr(m, "tool", None)
+        return (
+            getattr(m, "_processing_name", ""),
+            getattr(tool, "position", 0) if tool else 0,
+        )
+
+    bridge_sigs = {_sig(m) for m in pre_flip} & {_sig(m) for m in post_flip}
+
+    def _sort_key(processing_order, bridge_priority):
         def key(m):
             op_priority = OP_ORDER.get(getattr(m, "OPERATION_TYPE", ""), 3)
             tool = getattr(m, "tool", None)
             tool_position = getattr(tool, "position", 0) if tool is not None else 0
-            processing_priority = processing_order.get(
-                getattr(m, "_processing_name", ""), 50
-            )
+            if _sig(m) in bridge_sigs:
+                processing_priority = bridge_priority
+            else:
+                processing_priority = processing_order.get(
+                    getattr(m, "_processing_name", ""), 50
+                )
             return (processing_priority, op_priority, tool_position)
 
         return key
 
-    pre_flip.sort(key=_sort_key(PRE_FLIP_PROCESSING_ORDER))
-    post_flip.sort(key=_sort_key(POST_FLIP_PROCESSING_ORDER))
+    pre_flip.sort(key=_sort_key(PRE_FLIP_PROCESSING_ORDER, bridge_priority=99))
+    post_flip.sort(key=_sort_key(POST_FLIP_PROCESSING_ORDER, bridge_priority=-1))
 
     if pre_flip:
         job.add(pre_flip)
