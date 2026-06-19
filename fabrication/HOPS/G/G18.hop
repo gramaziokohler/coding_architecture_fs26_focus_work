@@ -1,0 +1,74 @@
+VARS
+   DX := 1226.057;*VAR* Piece Length
+   DY := 100.0;*VAR* Piece Height
+   DZ := 80.0;*VAR* Piece Thickness
+   RSI := 1;*VAR* ReferenceSideIndex (0-5)
+START
+
+FERTIGTEIL(DX,DY,DZ,0,0,0.000,0.000,0.000,'',0,0,0)
+
+CALL Park_V7 ( VAL MODE:=5,POSX:=0,POSY:=0)
+
+; ---------------------------------
+;Pocket_Pocketing
+; ---------------------------------
+WZF(403,_VE,_V,_VA,_SD,_ANF,'1')
+EBENEF(-45.133,-8.401,0,0,15.835,1,2,0)
+KB ('RE_c3e1','',0,0,0,'',0,0)
+KG01 ('',146,0,0,'',10,2)
+KG01 ('',0,65,0,'',10,2)
+KG01 ('',-146,0,0,'',10,2)
+KG01ZuKB()
+CALL _ExecutePocket_V5 ( VAL NAMEN:='RE_c3e1',AA:=0,UEBERLAPPUNG:=33,MODE:=0,ANGLE:=0,TIEFE:=-5,ESMD:=0,ANZAHL:=0,MAXZ:=_AT_MAXDEPTH,RD:=1,FLIEGENDEINTAUCHEN:=0,MAXEINTAUCHLAENGE:=20)
+
+; ---------------------------------
+;Pocket_Pocketing
+; ---------------------------------
+WZF(403,_VE,_V,_VA,_SD,_ANF,'1')
+EBENEF(1131.626,30.442,0,0,-15.131,1,2,0)
+KB ('RE_9025','',146,65,0,'',0,0)
+KG01 ('',0,-65,0,'',10,2)
+KG01 ('',-146,0,0,'',10,2)
+KG01 ('',0,65,0,'',10,2)
+KG01ZuKB()
+CALL _ExecutePocket_V5 ( VAL NAMEN:='RE_9025',AA:=0,UEBERLAPPUNG:=33,MODE:=0,ANGLE:=0,TIEFE:=-5,ESMD:=0,ANZAHL:=0,MAXZ:=_AT_MAXDEPTH,RD:=1,FLIEGENDEINTAUCHEN:=0,MAXEINTAUCHLAENGE:=20)
+
+CALL MachineStop_V7 ( VAL MODE:=0,PARKMODE:=5,PARKPOSX:=0.000,PARKPOSY:=0.0,TYP:=0,R6:=0, STR:='flip beam 180deg',R7:=0)
+
+; ---------------------------------
+;Pocket_Pocketing
+; ---------------------------------
+WZF(403,_VE,_V,_VA,_SD,_ANF,'1')
+EBENEF(-62.870,45.868,0,0,-15.835,1,2,0)
+KB ('RE_b7cf','',0,0,0,'',0,0)
+KG01 ('',146,0,0,'',10,2)
+KG01 ('',0,65,0,'',10,2)
+KG01 ('',-146,0,0,'',10,2)
+KG01ZuKB()
+CALL _ExecutePocket_V5 ( VAL NAMEN:='RE_b7cf',AA:=0,UEBERLAPPUNG:=33,MODE:=0,ANGLE:=0,TIEFE:=-5,ESMD:=0,ANZAHL:=0,MAXZ:=_AT_MAXDEPTH,RD:=1,FLIEGENDEINTAUCHEN:=0,MAXEINTAUCHLAENGE:=20)
+
+; ---------------------------------
+;Pocket_Pocketing
+; ---------------------------------
+WZF(403,_VE,_V,_VA,_SD,_ANF,'1')
+EBENEF(1148.593,6.811,0,0,15.131,1,2,0)
+KB ('RE_129b','',146,65,0,'',0,0)
+KG01 ('',0,-65,0,'',10,2)
+KG01 ('',-146,0,0,'',10,2)
+KG01 ('',0,65,0,'',10,2)
+KG01ZuKB()
+CALL _ExecutePocket_V5 ( VAL NAMEN:='RE_129b',AA:=0,UEBERLAPPUNG:=33,MODE:=0,ANGLE:=0,TIEFE:=-5,ESMD:=0,ANZAHL:=0,MAXZ:=_AT_MAXDEPTH,RD:=1,FLIEGENDEINTAUCHEN:=0,MAXEINTAUCHLAENGE:=20)
+
+; ---------------------------------
+;JackRafterCut_Sawing
+; ---------------------------------
+WZS(201,_VE,_V,_VA,_SD,_ANF,'1')
+EBENE0()
+CALL _saege_lae_wi_V7 ( VAL SX:=28.363,SY:=0,SZ:=0,LAENGE:=-103.945,SCHNITTWINKEL:=74.165,EZ:=-80,BL:=2,EINPASSEN:=0,EL:=_ANF,AL:=_ANF,PARALLEL:=0,K:=0,KW:=0,BH:=2,RITZVERSATZ:=0,ESZ:=2,ESXY1:=7)
+
+; ---------------------------------
+;JackRafterCut_Sawing
+; ---------------------------------
+WZS(201,_VE,_V,_VA,_SD,_ANF,'1')
+EBENE0()
+CALL _saege_lae_wi_V7 ( VAL SX:=1226.056,SY:=0,SZ:=0,LAENGE:=103.591,SCHNITTWINKEL:=105.131,EZ:=-80,BL:=2,EINPASSEN:=0,EL:=_ANF,AL:=_ANF,PARALLEL:=0,K:=0,KW:=0,BH:=2,RITZVERSATZ:=0,ESZ:=2,ESXY1:=1)
