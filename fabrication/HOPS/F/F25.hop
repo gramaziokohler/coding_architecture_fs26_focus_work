@@ -1,0 +1,119 @@
+;MAKROTYP=0
+;INSTVERSION=
+;EXEVERSION=8.9.20.5[Hops.exe]
+;BILD=F25.WMF
+;INFO=F25
+;WZGV=7235C_219
+;WZGVCONFIG=
+;MASCHINE=HH7
+;NCNAME=
+;KOMMENTAR=
+;DX=0
+;DY=0
+;DZ=0
+;DIALOGDLL=Dialoge.Dll
+;DIALOGPROC=StandardFormAnzeigen
+;DIALOGKIND=0
+;AUTOSCRIPTSTART=1
+;BUTTONBILD=
+;DIMENSION_UNIT=0
+VARS
+   DX := 1514.364;*VAR*Piece Length
+   DY := 100.0;*VAR*Piece Height
+   DZ := 80.0;*VAR*Piece Thickness
+   RSI := 1;*VAR*ReferenceSideIndex (0-5)
+START
+FERTIGTEIL(DX,DY,DZ,0,0,0.000,0.000,0.000,'',0,0,0)
+CALL Park_V7 ( VAL MODE:=5,POSX:=0,POSY:=0)
+; ---------------------------------
+;Pocket_Pocketing
+; ---------------------------------
+WZF(403,_VE,_V,_VA,_SD,_ANF,'1')
+EBENEF(-65.794,4.729,0,0,4.259,1,2,0)
+KB ('RE_597d','',0,0,0,'',0,0)
+KG01 ('',146,0,0,'',10,2)
+KG01 ('',0,65,0,'',10,2)
+KG01 ('',-146,0,0,'',10,2)
+KG01ZuKB()
+CALL _ExecutePocket_V5 ( VAL NAMEN:='RE_597d',AA:=0,UEBERLAPPUNG:=33,MODE:=0,ANGLE:=0,TIEFE:=-5.941,ESMD:=0,ANZAHL:=0,MAXZ:=_AT_MAXDEPTH,RD:=1,FLIEGENDEINTAUCHEN:=0,MAXEINTAUCHLAENGE:=20)
+; ---------------------------------
+;Pocket_Pocketing
+; ---------------------------------
+WZF(403,_VE,_V,_VA,_SD,_ANF,'1')
+EBENEF(1429.105,20.913,0,0,-8.268,1,2,0)
+KB ('RE_f187','',146,65,0,'',0,0)
+KG01 ('',0,-65,0,'',10,2)
+KG01 ('',-146,0,0,'',10,2)
+KG01 ('',0,65,0,'',10,2)
+KG01ZuKB()
+CALL _ExecutePocket_V5 ( VAL NAMEN:='RE_f187',AA:=0,UEBERLAPPUNG:=33,MODE:=0,ANGLE:=0,TIEFE:=-5,ESMD:=0,ANZAHL:=0,MAXZ:=_AT_MAXDEPTH,RD:=1,FLIEGENDEINTAUCHEN:=0,MAXEINTAUCHLAENGE:=20)
+CALL MachineStop_V7 ( VAL MODE:=0,PARKMODE:=5,PARKPOSX:=0.000,PARKPOSY:=0.0,TYP:=0,R6:=0, STR:='flip beam 180deg',R7:=0)
+; ---------------------------------
+;Pocket_Pocketing
+; ---------------------------------
+WZF(403,_VE,_V,_VA,_SD,_ANF,'1')
+EBENEF(-70.622,30.451,0,0,-4.259,1,2,0)
+KB ('RE_5b1e','',0,0,0,'',0,0)
+KG01 ('',146,0,0,'',10,2)
+KG01 ('',0,65,0,'',10,2)
+KG01 ('',-146,0,0,'',10,2)
+KG01ZuKB()
+CALL _ExecutePocket_V5 ( VAL NAMEN:='RE_5b1e',AA:=0,UEBERLAPPUNG:=33,MODE:=0,ANGLE:=0,TIEFE:=-4.059,ESMD:=0,ANZAHL:=0,MAXZ:=_AT_MAXDEPTH,RD:=1,FLIEGENDEINTAUCHEN:=0,MAXEINTAUCHLAENGE:=20)
+; ---------------------------------
+;Pocket_Pocketing
+; ---------------------------------
+WZF(403,_VE,_V,_VA,_SD,_ANF,'1')
+EBENEF(1438.453,14.762,0,0,8.268,1,2,0)
+KB ('RE_17f7','',146,65,0,'',0,0)
+KG01 ('',0,-65,0,'',10,2)
+KG01 ('',-146,0,0,'',10,2)
+KG01 ('',0,65,0,'',10,2)
+KG01ZuKB()
+CALL _ExecutePocket_V5 ( VAL NAMEN:='RE_17f7',AA:=0,UEBERLAPPUNG:=33,MODE:=0,ANGLE:=0,TIEFE:=-5,ESMD:=0,ANZAHL:=0,MAXZ:=_AT_MAXDEPTH,RD:=1,FLIEGENDEINTAUCHEN:=0,MAXEINTAUCHLAENGE:=20)
+; ---------------------------------
+; Drilling_PreDrilling
+; ---------------------------------
+/WZF(301,_VE,_V,_VA,_SD,_ANF,'1')
+/EBENE0()
+/HorzB (224.928,0,3.998,1,-8,0,-50.976,59.595,1,2,0,0)
+; ---------------------------------
+; Drilling_PreDrilling
+; ---------------------------------
+/WZF(301,_VE,_V,_VA,_SD,_ANF,'1')
+/EBENE0()
+/HorzB (192.300,0,3.998,1,-8,0,-50.976,59.595,1,2,0,0)
+; ---------------------------------
+; Drilling_Drilling
+; ---------------------------------
+/WZF(607,_VE,_V,_VA,_SD,_ANF,'1')
+/EBENE0()
+/HorzB (224.928,0,3.998,4,-60,0,-50.976,59.595,1,2,0,0)
+; ---------------------------------
+; Drilling_Drilling
+; ---------------------------------
+/WZF(607,_VE,_V,_VA,_SD,_ANF,'1')
+/EBENE0()
+/HorzB (192.300,0,3.998,4,-60,0,-50.976,59.595,1,2,0,0)
+; ---------------------------------
+;Lap_Pocketing
+; ---------------------------------
+WZF(503,_VE,_V,_VA,_SD,_ANF,'1')
+EBENE0()
+SP(196.871,0.0,-5.0,2,1,_ANF,0.0,0.0,0.0,1,0,0,0,0.0,0.0,0,0,1,0.0,0.0,0,0.0,0.0)
+CALL _WGerade_V5 ( VAL LAENGE:=104.907,WINKEL:=72.406,Z:=0,R:=0,ESD:=2)
+EP(1,_ANF,0)
+SP(199.59300000000002,0.0,-5.0,2,1,_ANF,0.0,0.0,0.0,1,0,0,0,0.0,0.0,0,0,1,0.0,0.0,0,0.0,0.0)
+CALL _WGerade_V5 ( VAL LAENGE:=104.907,WINKEL:=72.406,Z:=0,R:=0,ESD:=2)
+EP(1,_ANF,0)
+; ---------------------------------
+;JackRafterCut_Sawing
+; ---------------------------------
+WZS(201,_VE,_V,_VA,_SD,_ANF,'1')
+EBENE0()
+CALL _saege_lae_wi_V7 ( VAL SX:=8.072,SY:=0,SZ:=0,LAENGE:=-100.268,SCHNITTWINKEL:=85.808,EZ:=-80.003,BL:=2,EINPASSEN:=0,EL:=_ANF,AL:=_ANF,PARALLEL:=0,K:=0,KW:=-0.531,BH:=2,RITZVERSATZ:=0,ESZ:=2,ESXY1:=7)
+; ---------------------------------
+;JackRafterCut_Sawing
+; ---------------------------------
+WZS(201,_VE,_V,_VA,_SD,_ANF,'1')
+EBENE0()
+CALL _saege_lae_wi_V7 ( VAL SX:=1514.364,SY:=0,SZ:=0,LAENGE:=101.050,SCHNITTWINKEL:=98.268,EZ:=-80,BL:=2,EINPASSEN:=0,EL:=_ANF,AL:=_ANF,PARALLEL:=0,K:=0,KW:=0,BH:=2,RITZVERSATZ:=0,ESZ:=2,ESXY1:=1)
