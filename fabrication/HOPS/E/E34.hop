@@ -26,6 +26,25 @@ START
 FERTIGTEIL(DX,DY,DZ,0,0,0.000,0.000,0.000,'',0,0,0)
 CALL Park_V7 ( VAL MODE:=5,POSX:=0,POSY:=0)
 ; ---------------------------------
+;JackRafterCut_Sawing
+; ---------------------------------
+/WZS(201,_VE,_V,_VA,_SD,_ANF,'1')
+/EBENE0()
+/CALL _saege_lae_wi_V7 ( VAL SX:=1192.736,SY:=0,SZ:=0,LAENGE:=81.574,SCHNITTWINKEL:=78.728,EZ:=-100,BL:=2,EINPASSEN:=0,EL:=_ANF,AL:=_ANF,PARALLEL:=0,K:=0,KW:=-54.910,BH:=2,RITZVERSATZ:=0,ESZ:=2,ESXY1:=1)
+/CALL MachineStop_V7 ( VAL MODE:=0,PARKMODE:=5,PARKPOSX:=0.000,PARKPOSY:=0.0,TYP:=0,R6:=0, STR:='flip beam 180deg',R7:=0)
+; ---------------------------------
+;JackRafterCut_Sawing
+; ---------------------------------
+WZS(201,_VE,_V,_VA,_SD,_ANF,'1')
+EBENE0()
+CALL _saege_lae_wi_V7 ( VAL SX:=1285.055-2.618*2,SY:=80,SZ:=0,LAENGE:=81.574,SCHNITTWINKEL:=281.272,EZ:=-100,BL:=1,EINPASSEN:=0,EL:=_ANF,AL:=_ANF,PARALLEL:=0,K:=0,KW:=-54.910,BH:=2,RITZVERSATZ:=0,ESZ:=2,ESXY1:=1)
+; ---------------------------------
+;JackRafterCut_Sawing
+; ---------------------------------
+WZS(201,_VE,_V,_VA,_SD,_ANF,'1')
+EBENE0()
+CALL _saege_lae_wi_V7 ( VAL SX:=31.273,SY:=80,SZ:=0,LAENGE:=-80.027,SCHNITTWINKEL:=268.517,EZ:=-69.295,BL:=1,EINPASSEN:=0,EL:=_ANF,AL:=_ANF,PARALLEL:=0,K:=0,KW:=-30.018,BH:=2,RITZVERSATZ:=0,ESZ:=2,ESXY1:=7)
+; ---------------------------------
 ; Drilling_PreDrilling
 ; ---------------------------------
 WZF(301,_VE,_V,_VA,_SD,_ANF,'1')
@@ -113,7 +132,10 @@ EBENE0()
 SP(640.13,0.0,-5.0,2,1,_ANF,0.0,0.0,0.0,1,0,1,0,0.0,0.0,0,0,1,0.0,0.0,0,0.0,0.0)
 CALL _WGerade_V5 ( VAL LAENGE:=81.692,WINKEL:=101.681,Z:=0,R:=0,ESD:=2)
 EP(1,_ANF,0)
-SP(702.43,0.0,-5.0,2,1,_ANF,0.0,0.0,0.0,1,0,1,0,0.0,0.0,0,0,1,0.0,0.0,0,0.0,0.0)
+SP (640.13+62.96/2,0.0,-5.0,2,1,_ANF,0.0,0.0,0.0,1,0,1,0,0.0,0.0,0,0,0,0,0.0,0,0,0.0,0.5)
+CALL _WGerade_V5 ( VAL LAENGE:=81.692,WINKEL:=101.681,Z:=0,R:=0,ESD:=2)
+EP(1,_ANF,0)
+SP (640.13+62.96,0.0,-5.0,2,1,_ANF,0.0,0.0,0.0,1,0,1,0,0.0,0.0,0,0,0,0,0.0,0,0,0.0,0.5)
 CALL _WGerade_V5 ( VAL LAENGE:=81.692,WINKEL:=101.681,Z:=0,R:=0,ESD:=2)
 EP(1,_ANF,0)
 ; ---------------------------------
@@ -124,15 +146,3 @@ EBENEF(485.247,0,0,89.515,181.974,7,2,0)
 SP(0.0,0.0,-32.226,2,1,_ANF,0.0,0.0,0.0,0,0,0,0,0.0,0.0,0,0,1,0.0,0.0,0,0.0,0.0)
 CALL _WGerade_V5 ( VAL LAENGE:=-61.786,WINKEL:=76.190,Z:=0,R:=0,ESD:=2)
 EP(1,_ANF,0)
-; ---------------------------------
-;JackRafterCut_Sawing
-; ---------------------------------
-WZS(201,_VE,_V,_VA,_SD,_ANF,'1')
-EBENE0()
-CALL _saege_lae_wi_V7 ( VAL SX:=1279.818,SY:=80,SZ:=0,LAENGE:=81.574,SCHNITTWINKEL:=281.272,EZ:=-104.372,BL:=1,EINPASSEN:=0,EL:=_ANF,AL:=_ANF,PARALLEL:=0,K:=0,KW:=-54.910,BH:=2,RITZVERSATZ:=0,ESZ:=2,ESXY1:=1)
-; ---------------------------------
-;JackRafterCut_Sawing
-; ---------------------------------
-WZS(201,_VE,_V,_VA,_SD,_ANF,'1')
-EBENE0()
-CALL _saege_lae_wi_V7 ( VAL SX:=35.415,SY:=80,SZ:=0,LAENGE:=-80.027,SCHNITTWINKEL:=268.517,EZ:=-69.295,BL:=1,EINPASSEN:=0,EL:=_ANF,AL:=_ANF,PARALLEL:=0,K:=0,KW:=-30.018,BH:=2,RITZVERSATZ:=0,ESZ:=2,ESXY1:=7)
