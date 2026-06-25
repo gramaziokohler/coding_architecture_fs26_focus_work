@@ -1,0 +1,33 @@
+VARS
+   DX := 830.378;*VAR* Piece Length
+   DY := 80.0;*VAR* Piece Height
+   DZ := 60.0;*VAR* Piece Thickness
+   RSI := 1;*VAR* ReferenceSideIndex (0-5)
+START
+
+FERTIGTEIL(DX,DY,DZ,0,0,0.000,0.000,0.000,'',0,0,0)
+
+CALL Park_V7 ( VAL MODE:=5,POSX:=0,POSY:=0)
+
+; ---------------------------------
+;JackRafterCut_Sawing
+; ---------------------------------
+WZS(201,_VE,_V,_VA,_SD,_ANF,'1')
+EBENE0()
+CALL _saege_lae_wi_V7 ( VAL SX:=706.613,SY:=0,SZ:=0,LAENGE:=81.218,SCHNITTWINKEL:=80.064,EZ:=-100,BL:=2,EINPASSEN:=0,EL:=_ANF,AL:=_ANF,PARALLEL:=0,K:=0,KW:=-58.589,BH:=2,RITZVERSATZ:=0,ESZ:=2,ESXY1:=1)
+
+CALL MachineStop_V7 ( VAL MODE:=0,PARKMODE:=5,PARKPOSX:=0.000,PARKPOSY:=0.0,TYP:=0,R6:=0, STR:='flip beam 180deg',R7:=0)
+
+; ---------------------------------
+;JackRafterCut_Sawing
+; ---------------------------------
+WZS(201,_VE,_V,_VA,_SD,_ANF,'1')
+EBENE0()
+CALL _saege_lae_wi_V7 ( VAL SX:=108.840,SY:=0,SZ:=0,LAENGE:=-135.908,SCHNITTWINKEL:=143.940,EZ:=-83.576,BL:=2,EINPASSEN:=0,EL:=_ANF,AL:=_ANF,PARALLEL:=0,K:=0,KW:=-44.118,BH:=2,RITZVERSATZ:=0,ESZ:=2,ESXY1:=7)
+
+; ---------------------------------
+;JackRafterCut_Sawing
+; ---------------------------------
+WZS(201,_VE,_V,_VA,_SD,_ANF,'1')
+EBENE0()
+CALL _saege_lae_wi_V7 ( VAL SX:=803.631,SY:=80,SZ:=0,LAENGE:=81.218,SCHNITTWINKEL:=279.936,EZ:=-100,BL:=1,EINPASSEN:=0,EL:=_ANF,AL:=_ANF,PARALLEL:=0,K:=0,KW:=-58.589,BH:=2,RITZVERSATZ:=0,ESZ:=2,ESXY1:=1)

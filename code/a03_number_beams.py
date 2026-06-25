@@ -10,7 +10,7 @@ import Rhino.Geometry as rg
 from compas.datastructures import Graph
 
 # =========================
-# COSTANTI GLOBALI
+# GLOBAL CONSTANTS
 # =========================
 DEFAULT_BASE_URL = "https://raw.githubusercontent.com/gramaziokohler/coding_architecture_fs26_focus_work/main/web_data"
 DEFAULT_DENSITY_KG_M3 = 500.0
@@ -20,13 +20,13 @@ NAME_KEYS = ("beam_id", "beam ID", "beam_name", "name", "label", "mark")
 MODULE_KEYS = ("module", "module_id", "module_name", "fabrication_module", "assembly_module", "group")
 NUMBER_KEYS = ("beam_number", "number", "sequence", "fabrication_number", "element_number", "index")
 
-# Key Beams aggiornati basati sulla nomenclatura finale
-KEY_BEAMS_LIST = ["B10", "B11", "C10", "C19", "C20", "C23", "E36", "G18"]
+# Key Beams updated based on the final appearance nomenclature
+KEY_BEAMS_LIST = ["B10", "B11", "C10", "C19", "C20", "C23", "E36", "G18", "A21", "C13"]
 
-# Beams estratti per modulo G (nomi pre-spostamento)
+# Beams extracted for module G (pre-move names)
 KEY_BEAMS_MODULE_G = ["A10", "C27", "C28", "C29", "D17", "D18"]
 
-# Beams estratti per modulo H (nomi pre-spostamento)
+# Beams extracted for module H (pre-move names)
 KEY_BEAMS_MODULE_H = ["C25", "C26", "D22"]
 
 # =========================
@@ -913,7 +913,7 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
 
     debug_out = ""
     info_out = ""
-    json_export_out = "Export non avviato (RunExport è False)."
+    json_export_out = "Export not started (RunExport is False)."
     A_geom_out, B_geom_out, C_geom_out = [], [], []
     D_geom_out, E_geom_out, F_geom_out = [], [], []
     G_geom_out, H_geom_out = [], []
@@ -924,20 +924,20 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
         idx = 0
 
     # =========================
-    # TEST RAPIDO GEOMETRIA
+    # QUICK GEOMETRY TEST
     # =========================
     try:
         test_beam = list(timber_model.beams)[0]
         g_obj = test_beam.geometry
-        debug_out = "TIPO: {}\nATTR: {}".format(
+        debug_out = "TYPE: {}\nATTR: {}".format(
             type(g_obj),
             [a for a in dir(g_obj) if not a.startswith('_')]
         )
     except Exception as e:
-        debug_out = "ERRORE TEST GEOMETRIA: {}".format(e)
+        debug_out = "GEOMETRY TEST ERROR: {}".format(e)
 
     # =========================
-    # 1. COSTRUZIONE GRAFO
+    # 1. GRAPH CONSTRUCTION
     # =========================
     g = Graph()
 
@@ -950,7 +950,7 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
         g.add_edge(na, nb)
 
     # =========================
-    # 2. DATI NODI & BOUNDING BOX
+    # 2. NODE DATA & BOUNDING BOX
     # =========================
     pts = {n: g.node_attributes(n, ['x', 'y', 'z']) for n in g.nodes()}
 
@@ -962,7 +962,7 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
     max_z = max(p[2] for p in pts.values())
 
     # =========================
-    # 3. GRIGLIA 3x2 = 6 MODULI BASE (A-F)
+    # 3. 3x2 GRID = 6 BASE MODULES (A-F)
     # =========================
     nx_grid = 3
     ny_grid = 2
@@ -976,7 +976,7 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
             cy = min_y + dy * (j + 0.5)
             cells.append((cx, cy))
 
-    # Solo A-F per la griglia spaziale iniziale
+    # Only A-F for the initial spatial grid
     base_labels = ["A", "B", "C", "D", "E", "F"]
     all_labels  = ["A", "B", "C", "D", "E", "F", "G", "H"]
 
@@ -992,7 +992,7 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
         seeds[key] = seed
 
     # =========================
-    # 5. ASSEGNAZIONE SPAZIALE (solo A-F)
+    # 5. SPATIAL ASSIGNMENT (A-F only)
     # =========================
     assignment = {}
     groups = {k: [] for k in base_labels}
@@ -1010,7 +1010,7 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
         groups[best_k].append(node)
 
     # =========================
-    # 6. CRESCITA COSTRUIBILE
+    # 6. BUILDABLE GROWTH
     # =========================
     def connected_growth(seed, group_nodes):
         group_set = set(group_nodes)
@@ -1053,14 +1053,14 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
     for k in base_labels:
         ordered_by_module[k] = connected_growth(seeds[k], groups[k])
 
-    def _insert_by_proximity(target_list, node_to_move):
+    def _insert_by_proximity(target_list, node_to_move): # noqa: F811
         if not target_list:
             target_list.append(node_to_move)
             return
         best_idx = 0
         min_d2 = 1e99
         px, py, pz = pts[node_to_move]
-        for idx_n, existing_node in enumerate(target_list):
+        for idx_n, existing_node in enumerate(target_list): # noqa: F811
             ex, ey, ez = pts[existing_node]
             d2 = (px-ex)**2 + (py-ey)**2 + (pz-ez)**2
             if d2 < min_d2:
@@ -1069,7 +1069,7 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
         target_list.insert(best_idx + 1, node_to_move)
 
     # =========================================================================
-    # POST-PROCESSING FASE 1: APPLICAZIONE SPOSTAMENTI STORICI (Nomenclatura Corrente)
+    # POST-PROCESSING PHASE 1: APPLYING HISTORICAL MOVES (Current Nomenclature)
     # =========================================================================
     guid_by_pure_grid_name = {}
     for k in base_labels:
@@ -1097,7 +1097,7 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
             assignment[node_to_move] = target_mod
 
     # =========================================================================
-    # POST-PROCESSING FASE 2: MAPPATURA DALLA NOMENCLATURA MODIFICATA CORRENTE
+    # POST-PROCESSING PHASE 2: MAPPING FROM THE CURRENT MODIFIED NOMENCLATURE
     # =========================================================================
     guid_by_modified_name = {}
     node_initial_name = {}
@@ -1109,7 +1109,7 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
             node_initial_name[node] = current_modified_name
 
     # =========================================================================
-    # POST-PROCESSING FASE 3: NUOVI MODULI G, H E SPOSTAMENTI FINALI RICHIESTI
+    # POST-PROCESSING PHASE 3: NEW MODULES G, H AND FINAL REQUIRED MOVES
     # =========================================================================
     new_manual_moves_ordered = [
         ("A10",  "G"),
@@ -1142,7 +1142,7 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
             assignment[node_to_move] = target_mod
 
     # =========================================================================
-    # POST-PROCESSING FASE 4: NUOVA NOMENCLATURA DEI MODULI CON INVERSIONI CORRETTE
+    # POST-PROCESSING PHASE 4: NEW MODULE NOMENCLATURE WITH CORRECT INVERSIONS
     # E->B, F->A, A->D, B->C, C->H, G->F, H->G, D->E
     # =========================================================================
     module_renaming_map = {
@@ -1168,7 +1168,7 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
             assignment[node] = module_renaming_map[old_assignment]
 
     # =========================================================================
-    # POST-PROCESSING FASE 5: STRUTTURAZIONE SECONDO I NUOVI INTERVALLI E UNIONI
+    # POST-PROCESSING PHASE 5: STRUCTURING ACCORDING TO NEW INTERVALS AND UNIONS
     # =========================================================================
     final_ordered_by_module = {k: [] for k in all_labels}
 
@@ -1200,8 +1200,9 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
     ordered_by_module = final_ordered_by_module
 
     # =========================================================================
-    # POST-PROCESSING FASE 6: ULTIMO CAMBIAMENTO NOMENCLATURA RICHIESTO
+    # POST-PROCESSING PHASE 6: LAST REQUIRED NOMENCLATURE CHANGE
     # A,B,C,D,E restano uguali. F -> H, H -> G, G -> F
+    # A,B,C,D,E remain the same. F -> H, H -> G, G -> F
     # =========================================================================
     final_swap_map = {
         "A": "A",
@@ -1225,7 +1226,7 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
             assignment[node] = k
 
     # =========================
-    # 7. GENERAZIONE BEAM OUTPUT
+    # 7. BEAM OUTPUT GENERATION
     # =========================
     geom = {k: [] for k in all_labels}
     beam_label_by_guid = {}
@@ -1237,8 +1238,8 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
             beam = timber_model.get_element(node)
             set_beam_partitioning_attributes(beam, k, i + 1, beam_id=name.lower(), display_name=name)
 
-            # CORREZIONE CRUCIALE: Il controllo del Key Beam viene eseguito basandosi 
-            # sul nome dell'apparizione finale generata a schermo (es. B10, B11, C10, ecc.)
+            # CRUCIAL CORRECTION: The Key Beam check is performed based on
+            # the final appearance name generated on screen (e.g., B10, B11, C10, etc.)
             is_key_beam_by_guid[node] = (name in KEY_BEAMS_LIST)
 
             rhino_geom = beam.geometry
@@ -1256,7 +1257,7 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
             beam_label_by_guid[node] = name
 
     # =========================
-    # 7B. STRUTTURA INTERNA CO-GIUNTI
+    # 7B. INTERNAL CO-JOINT STRUCTURE
     # =========================
     joint_number_by_pair = {}
     beam_joints = {node: [] for node in g.nodes()}
@@ -1281,7 +1282,7 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
         beam_joints[gb].append((parameter_on_centerline(eb, jp), joint_number))
 
     # =========================
-    # 8. RACCOLTA INFO BEAMS
+    # 8. BEAM INFO COLLECTION
     # =========================
     summary_by_category = {k: [] for k in all_labels}
     info_lines_master = []
@@ -1315,10 +1316,10 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
         return (match.group(1), int(match.group(2))) if match else (line, 0)
 
     info_list = sorted(info_lines_master, key=sort_key)
-    info_out = info_list[idx] if (0 <= idx < len(info_list)) else (info_list[0] if info_list else "nessun beam")
+    info_out = info_list[idx] if (0 <= idx < len(info_list)) else (info_list[0] if info_list else "no beam")
 
     # =========================
-    # 9. POSIZIONI GLOBALI
+    # 9. GLOBAL POSITIONS
     # =========================
     all_beams_positions = {}
     all_pts_list = list(pts.values())
@@ -1413,7 +1414,7 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
                 if not os.path.exists(beam_folder):
                     os.makedirs(beam_folder)
 
-                local_frame = get_beam_local_frame(beam)
+                local_frame = get_beam_local_frame(beam) # noqa: F841
 
                 stl_path          = os.path.join(beam_folder, "{}.stl".format(beam_id))
                 blank_stl_path    = os.path.join(beam_folder, "{}_blank.stl".format(beam_id))
@@ -1423,19 +1424,19 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
                     if write_geometry_ascii_stl(stl_path, beam_id, beam.geometry):
                         stl_files_created.append(stl_path)
                 except Exception as error:
-                    stl_errors.append("Errore STL geometry per {}: {}".format(beam_id, error))
+                    stl_errors.append("STL geometry error for {}: {}".format(beam_id, error))
 
                 try:
                     blank = getattr(beam, "blank", None)
                     if write_geometry_ascii_stl(blank_stl_path, "{}_blank".format(beam_id), blank):
                         blank_files_created.append(blank_stl_path)
                 except Exception as error:
-                    stl_errors.append("Errore STL blank per {}: {}".format(beam_id, error))
+                    stl_errors.append("STL blank error for {}: {}".format(beam_id, error))
 
                 if not os.path.exists(stl_path):
-                    stl_errors.append("Errore STL geometry per {}".format(beam_id))
+                    stl_errors.append("STL geometry error for {}".format(beam_id))
                 if not os.path.exists(blank_stl_path):
-                    stl_errors.append("Errore STL blank per {}".format(beam_id))
+                    stl_errors.append("STL blank error for {}".format(beam_id))
 
                 feature_records, feature_mesh_data = collect_non_joinery_features(beam)
                 if feature_mesh_data:
@@ -1444,7 +1445,7 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
                         write_mesh_ascii_stl(features_stl_path, "{}_features".format(beam_id), vertices, faces)
                         feature_files_created.append(features_stl_path)
                     except Exception as error:
-                        stl_errors.append("Errore STL features per {}: {}".format(beam_id, error))
+                        stl_errors.append("STL features error for {}: {}".format(beam_id, error))
 
                 global_pos = all_beams_positions.get(name, {})
 
@@ -1459,7 +1460,7 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
                     "blank_length (m)": round(blank_length, 2) if blank_length else None,
                     "volume (cm³)": round(volume_m3 * 1_000_000, 2),
                     "weight (kg)": round(weight, 2),
-                    "local_frame": local_frame,
+                    "local_frame": get_beam_local_frame(beam),
                     "connected_beams": sorted([
                         beam_label_by_guid[nbr].lower()
                         for nbr in g.neighbors(node)
@@ -1525,7 +1526,7 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
             json.dump(structure_data, f, indent=2)
         json_files_created.append(global_structure_path)
 
-        json_export_out = "JSON: {} | STL geometry: {} | STL blank: {} | STL features: {} | Errori STL: {}".format(
+        json_export_out = "JSON: {} | STL geometry: {} | STL blank: {} | STL features: {} | STL Errors: {}".format(
             len(json_files_created), len(stl_files_created), len(blank_files_created),
             len(feature_files_created), len(stl_errors)
         )
@@ -1533,7 +1534,7 @@ def run_numbering(timber_model, Index, RunExport, OutputFolder):
             json_export_out += "\n" + "\n".join(stl_errors[:5])
 
     # =========================
-    # ASSEGNAZIONE OUTPUT GEOMETRIE
+    # GEOMETRY OUTPUT ASSIGNMENT
     # =========================
     A_geom_out = geom.get("A", [])
     B_geom_out = geom.get("B", [])

@@ -50,7 +50,7 @@ from compas.geometry import Vector
 from compas.scene import Scene
 from compas.tolerance import TOL
 
-from compas_timber.fabrication import JackRafterCut
+from compas_timber.fabrication import Drilling, JackRafterCut
 from compas_timber.btlx import BTLxReader
 
 from easyhops.hop_job import HOPSJob
@@ -59,9 +59,13 @@ from easyhops.utility_commands import MachineStop
 from easyhops.strategies import LapStrategies
 from easyhops.strategies import JackRafterCutStrategies
 from easyhops.strategies import DrillingStrategies
+from easyhops.strategies import PocketStrategies
 from easyhops.tool_library import SaegeD350
 from easyhops.tool_library import CastorD61
-from easyhops.tool_library import SRSLD12
+from easyhops.tool_library import MachiningTool
+
+
+TOOL_MAX_DEPTH = 100.0  # mm — max saw blade cutting depth (SaegeD350)
 
 
 # ---------------------------------------------------------------------------
@@ -91,19 +95,62 @@ def load_btlx(filepath):
 # ---------------------------------------------------------------------------
 
 
+def resolve_element(model, index=None, group=None, ref_side=None):
+    """Return a beam element from the model by index or group."""
+
+    elements = list(model.elements())
+    if group is not None:
+        elements = [e for e in elements if e.name.startswith(group)]
+        print(
+            "Group[{}] {}/{} -> {}".format(
+                group, index + 1, len(elements), elements[index].name
+            )
+        )
+    element = elements[index]
+
+    # set the ref_side_index attribute on the element for later use in feature overrides
+    element.attributes["ref_side_index"] = ref_side
+    return element
+
+
 def override_features(element, allow_flip=False):
     """Replace any JackRafterCut features on the beam with new features based on the same planes but with ref_side_index taken from beam attributes."""
 
     ref_side_index = element.attributes.get("ref_side_index", 0)
+    _, height = element.get_dimensions_relative_to_side(ref_side_index)
 
-    for f in element.features:
+    for f in list(element.features):
         if isinstance(f, JackRafterCut):
             plane = f.plane_from_params_and_beam(element)
-            new_feature = f.__class__.from_plane_and_beam(
-                plane, element, ref_side_index
-            )
-            element.remove_features(f)
-            element.add_feature(new_feature)
+            if f.ref_side_index != ref_side_index:
+                new_feature = f.__class__.from_plane_and_beam(
+                    plane, element, ref_side_index
+                )
+                if height < 120.0:
+                    # remove the feature only if the cut can be done from only one side
+                    element.remove_features(f)
+                element.add_feature(new_feature)
+            else:
+                new_feature = f  # already on the correct side
+            # if the blade path through the material exceeds the tool max depth,
+            # add a matching cut from the opposite side
+            inclination_rad = math.radians(new_feature.inclination)
+            if (
+                inclination_rad > 0
+                and height / math.sin(inclination_rad) > TOOL_MAX_DEPTH
+            ):
+                opp_feature = f.__class__.from_plane_and_beam(
+                    plane, element, (ref_side_index + 2) % 4
+                )
+                element.add_feature(opp_feature)
+        elif isinstance(f, Drilling):
+            if f.ref_side_index == (ref_side_index + 2) % 4:
+                line = f.line_from_params_and_element(element)
+                new_feature = f.__class__.from_line_and_element(
+                    line, element, f.diameter, ref_side_index=ref_side_index
+                )
+                element.add_feature(new_feature)
+                element.remove_features(f)
 
 
 # ---------------------------------------------------------------------------
@@ -158,9 +205,12 @@ def get_processing_report(element):
 
     Each entry has the format: "PROCESSING_NAME | ref_side: N"
     """
+    width, height = element.get_dimensions_relative_to_side(
+        element.attributes.get("ref_side_index", 0)
+    )
     report = [
-        "Beam: {} | RSId: {}".format(
-            element.name, element.attributes.get("ref_side_index")
+        "Beam: {} | RSId: {} | W: {:.1f} x H: {:.1f}".format(
+            element.name, element.attributes.get("ref_side_index"), width, height
         )
     ]
     report.append("-------------")
@@ -241,11 +291,36 @@ def _element_to_job(element, scale_factor=1.0):
             assert processing.ref_side_index in (rsi, opp_rsi), (
                 f"Unexpected ref_side_index {processing.ref_side_index} for JackRafterCut"
             )
-            machinings = JackRafterCutStrategies.sawing(
-                processing, machine_ref_side_index=rsi, tool=SaegeD350()
-            )
-            post_flip.extend(machinings)
-            _dispatch(name, rsi_proc, machinings, "post-flip")
+            if processing.ref_side_index == opp_rsi:
+                machinings = JackRafterCutStrategies.sawing(
+                    processing, machine_ref_side_index=opp_rsi, tool=SaegeD350()
+                )
+                pre_flip.extend(machinings)
+                _dispatch(name, rsi_proc, machinings, "pre-flip")
+            else:
+                machinings = JackRafterCutStrategies.sawing(
+                    processing, machine_ref_side_index=rsi, tool=SaegeD350()
+                )
+                post_flip.extend(machinings)
+                _dispatch(name, rsi_proc, machinings, "post-flip")
+
+        elif name == "Pocket":
+            if processing.ref_side_index == opp_rsi:
+                machinings = PocketStrategies.pocketing(
+                    processing,
+                    machine_ref_side_index=opp_rsi,
+                    tool=MachiningTool(position=403),
+                )
+                pre_flip.extend(machinings)
+                _dispatch(name, rsi_proc, machinings, "pre-flip")
+            else:
+                machinings = PocketStrategies.pocketing(
+                    processing,
+                    machine_ref_side_index=rsi,
+                    tool=MachiningTool(position=403),
+                )
+                post_flip.extend(machinings)
+                _dispatch(name, rsi_proc, machinings, "post-flip")
 
         elif name == "Drilling":
             if processing.diameter == 4.0:
@@ -271,8 +346,9 @@ def _element_to_job(element, scale_factor=1.0):
                     post_flip.extend(machinings)
                     _dispatch(name, rsi_proc, machinings, "post-flip (pre-drill)")
             else:
-                machinings = DrillingStrategies.pocketing(
-                    processing, machine_ref_side_index=rsi, tool=SRSLD12()
+                machinings = DrillingStrategies.drilling(
+                    processing,
+                    machine_ref_side_index=rsi,
                 )
                 if processing.ref_side_index == opp_rsi:
                     pre_flip.extend(machinings)
@@ -293,26 +369,52 @@ def _element_to_job(element, scale_factor=1.0):
                 }
             )
 
-    # Sort order: operation type → tool position → processing name
-    # Lap is always last within each group.
+    # Sort order — two-tier:
+    #   Tier 1 (tool optimisation): operations whose (processing_name, tool_position)
+    #     appear in BOTH lists are "bridge" ops — placed last in pre_flip and first
+    #     in post_flip so the machine crosses the flip without a tool change.
+    #   Tier 2 (static order): everything else follows the per-list PROCESSING_ORDER.
     OP_ORDER = {"SAWING": 2, "DRILLING": 0, "MILLING": 1}
-    PROCESSING_ORDER = {
-        "Drilling": 0,
-        "JackRafterCut": 9,  # always last
-        "Lap": 1,
+
+    POST_FLIP_PROCESSING_ORDER = {
+        "JackRafterCut": 9,
+        "Drilling": 1,
+        "Lap": 2,
+        "Pocket": 0,
+    }
+    PRE_FLIP_PROCESSING_ORDER = {
+        "Drilling": 1,
+        "Lap": 2,
+        "Pocket": 9,
+        "JackRafterCut": 0,
     }
 
-    def _sort_key(m):
-        op_priority = OP_ORDER.get(getattr(m, "OPERATION_TYPE", ""), 3)
+    def _sig(m):
         tool = getattr(m, "tool", None)
-        tool_position = getattr(tool, "position", 0) if tool is not None else 0
-        processing_priority = PROCESSING_ORDER.get(
-            getattr(m, "_processing_name", ""), 50
+        return (
+            getattr(m, "_processing_name", ""),
+            getattr(tool, "position", 0) if tool else 0,
         )
-        return (op_priority, tool_position, processing_priority)
 
-    pre_flip.sort(key=_sort_key)
-    post_flip.sort(key=_sort_key)
+    bridge_sigs = {_sig(m) for m in pre_flip} & {_sig(m) for m in post_flip}
+
+    def _sort_key(processing_order, bridge_priority):
+        def key(m):
+            op_priority = OP_ORDER.get(getattr(m, "OPERATION_TYPE", ""), 3)
+            tool = getattr(m, "tool", None)
+            tool_position = getattr(tool, "position", 0) if tool is not None else 0
+            if _sig(m) in bridge_sigs:
+                processing_priority = bridge_priority
+            else:
+                processing_priority = processing_order.get(
+                    getattr(m, "_processing_name", ""), 50
+                )
+            return (processing_priority, op_priority, tool_position)
+
+        return key
+
+    pre_flip.sort(key=_sort_key(PRE_FLIP_PROCESSING_ORDER, bridge_priority=99))
+    post_flip.sort(key=_sort_key(POST_FLIP_PROCESSING_ORDER, bridge_priority=-1))
 
     if pre_flip:
         job.add(pre_flip)
@@ -381,7 +483,7 @@ def export_hop(beam, export_dir):
 # ---------------------------------------------------------------------------
 
 
-def run(filepath, index, ref_side, export, allow_flip=False, ghenv=None):
+def run(filepath, index, ref_side, export, group=None, allow_flip=False, ghenv=None):
     """Load a BTLx file, resolve one beam by index, visualise it, optionally export it, and return a processing report.
 
     Parameters:
@@ -400,10 +502,8 @@ def run(filepath, index, ref_side, export, allow_flip=False, ghenv=None):
     model = load_btlx(filepath)
     export_dir = os.path.join(os.path.dirname(filepath), "HOPS")
 
-    # Get element by index
-    element = list(model.elements())[index]
-    element.name = "Beam_" + str(index)
-    element.attributes["ref_side_index"] = ref_side
+    # Get element by index (optionally filtered by group)
+    element = resolve_element(model, index=index, group=group, ref_side=ref_side)
 
     # Override features
     override_features(element, allow_flip)

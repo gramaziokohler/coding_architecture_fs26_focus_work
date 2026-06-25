@@ -70,8 +70,166 @@
       "335"
     ]
   },
-  "features": [],
-  "processing": [],
+  "features": [
+    {
+      "id": 10,
+      "type": "Pocket",
+      "data": {
+        "ATTRIBUTE_MAP": {
+          "StartX": "AttributeSpec(python_name='start_x', type=<class 'float'>)",
+          "StartY": "AttributeSpec(python_name='start_y', type=<class 'float'>)",
+          "StartDepth": "AttributeSpec(python_name='start_depth', type=<class 'float'>)",
+          "Angle": "AttributeSpec(python_name='angle', type=<class 'float'>)",
+          "Inclination": "AttributeSpec(python_name='inclination', type=<class 'float'>)",
+          "Slope": "AttributeSpec(python_name='slope', type=<class 'float'>)",
+          "Length": "AttributeSpec(python_name='length', type=<class 'float'>)",
+          "Width": "AttributeSpec(python_name='width', type=<class 'float'>)",
+          "InternalAngle": "AttributeSpec(python_name='internal_angle', type=<class 'float'>)",
+          "TiltRefSide": "AttributeSpec(python_name='tilt_ref_side', type=<class 'float'>)",
+          "TiltEndSide": "AttributeSpec(python_name='tilt_end_side', type=<class 'float'>)",
+          "TiltOppSide": "AttributeSpec(python_name='tilt_opp_side', type=<class 'float'>)",
+          "TiltStartSide": "AttributeSpec(python_name='tilt_start_side', type=<class 'float'>)",
+          "MachiningLimits": "AttributeSpec(python_name='machining_limits', type=<class 'compas_timber.fabrication.btlx.MachiningLimits'>)"
+        },
+        "DATASCHEMA": {},
+        "HEADER_ATTRIBUTE_MAP": {
+          "ReferencePlaneID": [
+            "ref_side_index",
+            "<function BTLxProcessing.<lambda> at 0x1e85c51f0>"
+          ],
+          "Priority": [
+            "priority",
+            "<class 'int'>"
+          ],
+          "ProcessID": [
+            "process_id",
+            "<class 'int'>"
+          ],
+          "ToolID": [
+            "tool_id",
+            "<class 'int'>"
+          ],
+          "CounterSink": [
+            "counter_sink",
+            "<class 'bool'>"
+          ],
+          "ToolPosition": [
+            "tool_position",
+            "<class 'str'>"
+          ],
+          "Name": [
+            "name",
+            "<class 'str'>"
+          ],
+          "Process": [
+            "process",
+            "<class 'bool'>"
+          ]
+        },
+        "PROCESSING_NAME": "Pocket",
+        "angle": -2.659963433719617,
+        "inclination": 0.0,
+        "internal_angle": 89.99999999999969,
+        "is_joinery": true,
+        "length": 0.14600000000000005,
+        "priority": 0,
+        "process_id": 0,
+        "ref_side_index": 2,
+        "slope": 0.0,
+        "start_depth": 0.0049999999999999906,
+        "start_x": 0.716225292167742,
+        "start_y": 0.030922833692239166,
+        "tilt_end_side": 90.0,
+        "tilt_opp_side": 90.0,
+        "tilt_ref_side": 90.0,
+        "tilt_start_side": 90.0,
+        "width": 0.06499999999999995
+      },
+      "length_m": 0.146,
+      "length_mm": 146.0,
+      "has_stl_geometry": false
+    }
+  ],
+  "processing": [
+    {
+      "id": 10,
+      "type": "Pocket",
+      "data": {
+        "ATTRIBUTE_MAP": {
+          "StartX": "AttributeSpec(python_name='start_x', type=<class 'float'>)",
+          "StartY": "AttributeSpec(python_name='start_y', type=<class 'float'>)",
+          "StartDepth": "AttributeSpec(python_name='start_depth', type=<class 'float'>)",
+          "Angle": "AttributeSpec(python_name='angle', type=<class 'float'>)",
+          "Inclination": "AttributeSpec(python_name='inclination', type=<class 'float'>)",
+          "Slope": "AttributeSpec(python_name='slope', type=<class 'float'>)",
+          "Length": "AttributeSpec(python_name='length', type=<class 'float'>)",
+          "Width": "AttributeSpec(python_name='width', type=<class 'float'>)",
+          "InternalAngle": "AttributeSpec(python_name='internal_angle', type=<class 'float'>)",
+          "TiltRefSide": "AttributeSpec(python_name='tilt_ref_side', type=<class 'float'>)",
+          "TiltEndSide": "AttributeSpec(python_name='tilt_end_side', type=<class 'float'>)",
+          "TiltOppSide": "AttributeSpec(python_name='tilt_opp_side', type=<class 'float'>)",
+          "TiltStartSide": "AttributeSpec(python_name='tilt_start_side', type=<class 'float'>)",
+          "MachiningLimits": "AttributeSpec(python_name='machining_limits', type=<class 'compas_timber.fabrication.btlx.MachiningLimits'>)"
+        },
+        "DATASCHEMA": {},
+        "HEADER_ATTRIBUTE_MAP": {
+          "ReferencePlaneID": [
+            "ref_side_index",
+            "<function BTLxProcessing.<lambda> at 0x1e85c51f0>"
+          ],
+          "Priority": [
+            "priority",
+            "<class 'int'>"
+          ],
+          "ProcessID": [
+            "process_id",
+            "<class 'int'>"
+          ],
+          "ToolID": [
+            "tool_id",
+            "<class 'int'>"
+          ],
+          "CounterSink": [
+            "counter_sink",
+            "<class 'bool'>"
+          ],
+          "ToolPosition": [
+            "tool_position",
+            "<class 'str'>"
+          ],
+          "Name": [
+            "name",
+            "<class 'str'>"
+          ],
+          "Process": [
+            "process",
+            "<class 'bool'>"
+          ]
+        },
+        "PROCESSING_NAME": "Pocket",
+        "angle": -2.659963433719617,
+        "inclination": 0.0,
+        "internal_angle": 89.99999999999969,
+        "is_joinery": true,
+        "length": 0.14600000000000005,
+        "priority": 0,
+        "process_id": 0,
+        "ref_side_index": 2,
+        "slope": 0.0,
+        "start_depth": 0.0049999999999999906,
+        "start_x": 0.716225292167742,
+        "start_y": 0.030922833692239166,
+        "tilt_end_side": 90.0,
+        "tilt_opp_side": 90.0,
+        "tilt_ref_side": 90.0,
+        "tilt_start_side": 90.0,
+        "width": 0.06499999999999995
+      },
+      "length_m": 0.146,
+      "length_mm": 146.0,
+      "has_stl_geometry": false
+    }
+  ],
   "3d_model": "beams/e22/e22.stl",
   "geometry_model": "beams/e22/e22.stl",
   "blank_model": "beams/e22/e22_blank.stl"

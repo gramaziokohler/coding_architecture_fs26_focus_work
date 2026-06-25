@@ -2,13 +2,13 @@ import math
 
 def get_beam_fabrication_data(stocks):
     """
-    Estrae dati di fabbricazione per ogni beam:
-    - lunghezza
-    - lunghezze spigoli bounding box
-    - angolo di taglio (start + end)
+    Extracts fabrication data for each beam:
+    - length
+    - bounding box edge lengths
+    - cut angle (start + end)
 
     Returns:
-        list di dict
+        list of dicts
     """
 
     data = []
@@ -17,20 +17,20 @@ def get_beam_fabrication_data(stocks):
         for item in stock["beams"]:
             beam = item["beam"]
 
-            # --- 1. lunghezza ---
+            # --- 1. length ---
             length = beam.centerline.length
 
-            # --- 2. bounding box (dimensioni reali pezzo) ---
+            # --- 2. bounding box (real part dimensions) ---
             bbox = beam.geometry.bounding_box()
             dx = bbox[1][0] - bbox[0][0]
             dy = bbox[3][1] - bbox[0][1]
             dz = bbox[4][2] - bbox[0][2]
 
-            # --- 3. angolo rispetto asse X (taglio globale) ---
+            # --- 3. angle with respect to X-axis (global cut) ---
             vec = beam.centerline.direction
             angle = math.degrees(math.atan2(vec.y, vec.x))
 
-            # --- 4. salvataggio ---
+            # --- 4. saving ---
             data.append({
                 "beam_id": id(beam),
                 "stock_id": stock["id"],
