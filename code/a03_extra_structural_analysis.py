@@ -76,14 +76,14 @@ def process_structural_model(model):
 
 def create_analysis_report(model, total_weight, loadcase_names, max_displacements, utilisations_tree):
     """
-    Erstellt einen formatierten Report.
+    Creates a formatted report.
     
     Args:
-        model: Das TimberModel.
-        total_weight: Gesamtgewicht (float).
-        loadcase_names: Liste von Strings (z.B. ["LC1: Dead", "LC2: Snow", "LC3: Wind"]).
-        max_displacements: Liste mit einem Max-Wert pro Lastfall (z.B. [0.012, 0.045, 0.008] in m).
-        utilisations_tree: GH DataTree mit einer Branch pro Lastfall, darin alle Member-Werte.
+        model: The TimberModel.
+        total_weight: Total weight (float).
+        loadcase_names: List of strings (e.g., ["LC1: Dead", "LC2: Snow", "LC3: Wind"]).
+        max_displacements: List with one max value per load case (e.g., [0.012, 0.045, 0.008] in m).
+        utilisations_tree: GH DataTree with one branch per load case, containing all member values.
     """
     total_length = sum(beam.length for beam in model.beams)
     beam_count = len(list(model.beams))
@@ -96,16 +96,16 @@ def create_analysis_report(model, total_weight, loadcase_names, max_displacement
     report.append("Beam Count:        {}".format(beam_count))
     report.append("Total Weight:      {:.1f} kg".format(total_weight))
     
-    # Durch die Lastfälle iterieren
+    # Iterate through the load cases
     for i, name in enumerate(loadcase_names):
         report.append("-" * 44)
         report.append("LOADCASE: {}".format(name.upper()))
         
-        # 1. Verschiebung (direkt aus der Liste der Max-Werte)
+        # 1. Displacement (directly from the list of max values)
         m_disp = max_displacements[i] if i < len(max_displacements) else 0.0
         report.append("Max. Displacement: {:.3f} cm".format(m_disp))
         
-        # 2. Ausnutzung (Durchschnitt und Max aus dem DataTree berechnen)
+        # 2. Utilisation (calculate average and max from the DataTree)
         if i < utilisations_tree.BranchCount:
             branch_values = utilisations_tree.Branch(i)
             if branch_values:
@@ -135,18 +135,18 @@ def create_preview(text, pt, size, plane):
 
 def calculate_wind_loads(model, wind_angle_deg, q_wind=0.56, c_shape=1.2, safety_factor= 1.35):
     """
-    Berechnet Windlast-Vektoren für alle Segmente des Struktur-Graphen.
-    Versöhnt die 84 Haupt-Beams mit den 304 Karamba-Elementen.
+    Calculates wind load vectors for all segments of the structural graph.
+    Reconciles the 84 main beams with the 304 Karamba elements.
     """
     from compas.geometry import Vector
     from compas_timber.structural import StructuralGraph
     import math
     
-    # 1. Wind-Vektor vorbereiten
+    # 1. Prepare wind vector
     rad = math.radians(wind_angle_deg)
     wind_dir = Vector(math.cos(rad), math.sin(rad), 0.0)
     
-    # 2. Struktur-Graph (die 304 Segmente)
+    # 2. Structural graph (the 304 segments)
     if not any(model.get_beam_structural_segments(beam) for beam in model.beams):
         model.create_beam_structural_segments()
     
@@ -154,9 +154,9 @@ def calculate_wind_loads(model, wind_angle_deg, q_wind=0.56, c_shape=1.2, safety
     
     results = [] # Liste von Dictionaries: {"id": "B0_S0", "vector": [x,y,z]}
     
-    # 3. Über alle Beams und deren Segmente iterieren
+    # 3. Iterate over all beams and their segments
     for b_idx, beam in enumerate(model.beams):
-        # Basis-Info vom Hauptbalken (Querschnitt & Orientierung)
+        # Basic info from the main beam (cross-section & orientation)
         f = beam.frame
         v_y, v_z = f.yaxis, f.zaxis
         
@@ -167,11 +167,11 @@ def calculate_wind_loads(model, wind_angle_deg, q_wind=0.56, c_shape=1.2, safety
         b_eff = (beam.width * dot_y + beam.height * dot_z)
         
         
-        # Lastbetrag (kN/m)
+        # Load magnitude (kN/m)
         load_mag = q_wind * c_shape * b_eff * safety_factor
         lv = wind_dir * load_mag
         
-        # Segmente dieses Balkens im Graphen finden
+        # Find segments of this beam in the graph
         edges = sg.segments_for_beam(beam)
         for s_idx, (u, v) in enumerate(edges):     
             seg_id = "B{}_S{}".format(b_idx, s_idx)
@@ -185,14 +185,14 @@ def calculate_wind_loads(model, wind_angle_deg, q_wind=0.56, c_shape=1.2, safety
 
 def calculate_wind_loads_sia(model, wind_angle_deg, qp0=0.9, terrain_category="III", z_max=3.0, c_force=2.0, gamma_q=1.35):
     """
-    Berechnet Windlast-Vektoren als Linienlasten [kN/m] für alle Segmente
-    des Struktur-Graphen eines COMPAS Timber Modells.
+    Calculates wind load vectors as line loads [kN/m] for all segments
+    of the structural graph of a COMPAS Timber model.
 
-    Annahmen:
-    - SIA 261-Logik mit qp = ch * qp0
-    - qp wird am höchsten Punkt des Bauwerks bestimmt und über die Höhe konstant angesetzt
-    - Rechteckquerschnitte werden konservativ mit konstantem Kraftbeiwert c_force behandelt
-    - Sicherheitsbeiwert gamma_q wird direkt hier integriert, weil Karamba später nicht mehr anpasst
+    Assumptions:
+    - SIA 261 logic with qp = ch * qp0
+    - qp is determined at the highest point of the structure and assumed constant over the height
+    - Rectangular cross-sections are treated conservatively with a constant force coefficient c_force
+    - Safety factor gamma_q is integrated directly here, as Karamba does not adjust it later
     """
     import math
     from compas.geometry import Vector
@@ -200,8 +200,8 @@ def calculate_wind_loads_sia(model, wind_angle_deg, qp0=0.9, terrain_category="I
 
     def _terrain_parameters(category):
         """
-        SIA 261 Tabelle 4:
-        Geländekategorie -> (zg, alpha_r, z_min)
+        SIA 261 Table 4:
+        Terrain category -> (zg, alpha_r, z_min)
         """
         table = {
             "II":  (300.0, 0.16, 5.0),
@@ -218,28 +218,28 @@ def calculate_wind_loads_sia(model, wind_angle_deg, qp0=0.9, terrain_category="I
 
     def _profile_factor_ch(category, z):
         """
-        SIA 261 Gl. (12), in üblicher Lesart:
+        SIA 261 Eq. (12), in common interpretation:
             ch = 1.6 * ((z / zg) ** alpha_r + 0.375) ** 2
 
-        Für kleine Höhen gilt gemäss SIA:
-        - II, IIa, III: z >= 5 m
-        - IV: z >= 10 m
+        For small heights, according to SIA:
+        - II, IIa, III: z >= 5m
+        - IV: z >= 10m
         """
         zg, alpha_r, z_min = _terrain_parameters(category)
         z_ref = max(float(z), z_min)
         ch = 1.6 * (((z_ref / zg) ** alpha_r) + 0.375) ** 2
         return ch, z_ref
 
-    # Windrichtung in XY
+    # Wind direction in XY
     rad = math.radians(wind_angle_deg)
     wind_dir = Vector(math.cos(rad), math.sin(rad), 0.0)
 
-    # SIA: qp am höchsten Punkt bestimmen
+    # SIA: determine qp at the highest point
     ch, z_ref = _profile_factor_ch(terrain_category, z_max)
-    qp_char = ch * qp0              # charakteristischer Staudruck [kN/m²]
-    qp_design = qp_char * gamma_q   # Bemessungswert direkt hier integriert
+    qp_char = ch * qp0              # characteristic velocity pressure [kN/m²]
+    qp_design = qp_char * gamma_q   # design value integrated directly here
 
-    # Sicherstellen, dass Segmente existieren
+    # Ensure that segments exist
     if not any(model.get_beam_structural_segments(beam) for beam in model.beams):
         model.create_beam_structural_segments()
 
@@ -252,17 +252,17 @@ def calculate_wind_loads_sia(model, wind_angle_deg, qp0=0.9, terrain_category="I
         v_y = f.yaxis
         v_z = f.zaxis
 
-        # Effektive projizierte Breite pro Meter Stablänge
-        # für Rechteckquerschnitt bei horizontalem Wind
+        # Effective projected width per meter of member length
+        # for a rectangular cross-section with horizontal wind
         dot_y = abs(wind_dir.dot(v_y))
         dot_z = abs(wind_dir.dot(v_z))
         b_eff = beam.width * dot_y + beam.height * dot_z
 
-        # Linienlast [kN/m]
+        # Line load [kN/m]
         # q = qp_design * c_force * b_eff
         load_mag = qp_design * c_force * b_eff
 
-        # Lastvektor in Windrichtung
+        # Load vector in wind direction
         lv = wind_dir * load_mag
 
         edges = sg.segments_for_beam(beam)

@@ -195,7 +195,7 @@ def clear_cached_geometry(elements):
 
 
 def make_standalone_holes(points, rectangles, hole_radius=0.015, hole_segments=24):
-    """Generiert die Kreis-Polylinien unabhängig von den Platten-Objekten."""
+    """Generates the circle polylines independently of the plate objects."""
     if not points:
         return []
 

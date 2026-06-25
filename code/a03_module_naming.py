@@ -5,8 +5,8 @@ import math
 
 def create_3d_text_engraving_inplace(text, text_height=0.03, engraving_depth=0.005):
     """
-    Genera il testo como solido 3D (Brep) perfettamente centrato sul baricentro XYZ
-    nell'origine WorldXY, scalato in metri per evitare i limiti di precisione di Rhino.
+    Generates the text as a 3D solid (Brep) perfectly centered on the XYZ centroid
+    at the WorldXY origin, scaled in meters to avoid Rhino's precision limits.
     """
     try:
         scale_factor = 1000.0
@@ -76,16 +76,16 @@ def create_3d_text_engraving_inplace(text, text_height=0.03, engraving_depth=0.0
 
 def run_module_naming(timber_model, TextHeight=0.03):
     """
-    Sincronizza i dati estratti dagli attributi di partizione del componente precedente,
-    genera le marcature 3D solide in-place basate sulla sequenza reale dei moduli e
-    propaga stabilmente l'informazione della blank_length negli attributi del timber_model.
+    Synchronizes data extracted from the partition attributes of the previous component,
+    generates solid 3D in-place markings based on the actual module sequence, and
+    stably propagates the blank_length information into the timber_model attributes.
     """
     all_named_labels = []      
     all_beam_geometries = []   
     all_text_solids = []  
     summary_report = []        
     
-    summary_report.append("=== REPORT STRUTTURALE NOMENCLATURA SINCRONIZZATA ===")
+    summary_report.append("=== SYNCHRONIZED NAMING STRUCTURAL REPORT ===")
     t_height = float(TextHeight) if TextHeight else 0.03
     engrave_depth = 0.005 
     
@@ -94,41 +94,41 @@ def run_module_naming(timber_model, TextHeight=0.03):
 
     for i, beam in enumerate(timber_model.beams):
         
-        # === STRATEGIA DI COERENZA SINCRO: LETTURA ATTRIBUTI NATIVI DI NUMBER_BEAMS ===
+        # === SYNC COHERENCE STRATEGY: READING NATIVE ATTRIBUTES OF NUMBER_BEAMS ===
         module_letter = None
         sequence_number = None
         blank_length_attr = None
         
-        # Estraiamo il dizionario degli attributi interni memorizzato da set_beam_partitioning_attributes
+        # We extract the internal attribute dictionary stored by set_beam_partitioning_attributes
         attributes = getattr(beam, "attributes", {}) or {}
         
         if isinstance(attributes, dict):
             module_letter = attributes.get("module")
             sequence_number = attributes.get("number") or attributes.get("beam_number")
             
-            # Recuperiamo la blank_length calcolata o estratta dal componente a monte (a03_number_beams)
+            # We retrieve the blank_length calculated or extracted from the upstream component (a03_number_beams)
             blank_length_attr = attributes.get("blank_length") or attributes.get("blank_len")
             
-        # Fallback di sicurezza estremo se per qualche motivo gli attributi si sono svuotati nella cache
+        # Extreme safety fallback if for some reason the attributes have been cleared from the cache
         if not module_letter or sequence_number is None:
             old_name = getattr(beam, 'name', None) or getattr(beam, 'id', '')
             old_name_str = str(old_name).strip().upper()
             if old_name_str and not old_name_str.isdigit():
                 module_letter = old_name_str[0]
-                # Estrae i numeri finali dalla stringa precedente
+                # Extracts the final numbers from the previous string
                 num_parts = "".join([c for c in old_name_str if c.isdigit()])
                 sequence_number = int(num_parts) if num_parts else (i + 1)
             else:
                 module_letter = "M"
                 sequence_number = i + 1
 
-        # Componiamo la stringa pulita secondo le tue specifiche (Lettera Modulo + Sequenza di Costruzione)
+        # We compose the clean string according to your specifications (Module Letter + Construction Sequence)
         beam_name = "{}{}".format(str(module_letter).upper(), int(sequence_number))
         
-        # Sincronizziamo anche la proprietà nativa del beam per passarla ai moduli successivi di Nesting
+        # We also synchronize the native property of the beam to pass it to the subsequent Nesting modules
         beam.name = beam_name
             
-        # === INIEZIONE E PROPAGAZIONE DELLA INFO BLANK_LENGTH PER IL NESTING ===
+        # === INJECTION AND PROPAGATION OF BLANK_LENGTH INFO FOR NESTING ===
         try:
             beam_length = beam.centerline.length
         except:
@@ -142,12 +142,12 @@ def run_module_naming(timber_model, TextHeight=0.03):
         else:
             final_blank_length = float(beam_length)
 
-        # Salviamo la info stabilmente dentro il dizionario degli attributi di COMPAS
-        # Evitiamo l'assegnazione diretta su 'beam' per prevenire l'AttributeError
+        # We save the info stably inside the COMPAS attribute dictionary
+        # We avoid direct assignment on 'beam' to prevent AttributeError
         if isinstance(beam.attributes, dict):
             beam.attributes["blank_length"] = final_blank_length
 
-        # Estrazione della geometria nativa di Rhino memorizzata in COMPAS
+        # Extraction of the native Rhino geometry stored in COMPAS
         rh_geo = None
         geo = beam.geometry
         if hasattr(geo, "to_rhino"):
@@ -251,11 +251,11 @@ def run_module_naming(timber_model, TextHeight=0.03):
             oriented_solid.Transform(rg.Transform.Translation(-rh_zaxis * engrave_depth))
             
             all_text_solids.append(oriented_solid)
-            summary_report.append(" -> Sincronizzato {}: (Shift: {:.2f}m | Blank-L: {:.3f}m)".format(
+            summary_report.append(" -> Synchronized {}: (Shift: {:.2f}m | Blank-L: {:.3f}m)".format(
                 beam_name, current_shift, final_blank_length
             ))
         except Exception as e:
-            summary_report.append(" -> Errore trave {}: {}".format(beam_name, e))
+            summary_report.append(" -> Beam error {}: {}".format(beam_name, e))
             
     report_string = "\n".join(summary_report)
     

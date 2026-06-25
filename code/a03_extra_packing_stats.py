@@ -18,8 +18,8 @@ def basic_arrange_beams(timber_model, origin, gap):
 
 def get_general_stats(timber_model, wood_density=500):
     """
-    Erstellt allgemeine Statistiken über das Timber-Modell.
-    wood_density: Dichte in kg/m3 (Standard ca. 500 für Nadelholz)
+    Creates general statistics about the Timber model.
+    wood_density: Density in kg/m3 (default approx. 500 for softwood)
     """
     beams = list(timber_model.beams)
 
@@ -57,10 +57,10 @@ def get_general_stats(timber_model, wood_density=500):
 
 def solve_bin_packing(timber_model, stock_length, saw_kerf=0.0):
     """
-    Kerns-Logik für Bin Packing (First Fit Decreasing).
+    Core logic for Bin Packing (First Fit Decreasing).
 
     Returns:
-        list: Liste von Dictionaries (Stocks), die jeweils die gepackten Balken enthalten.
+        list: List of dictionaries (stocks), each containing the packed beams.
     """
     # 1. Daten extrahieren und vorbereiten
     beams = list(timber_model.beams)
@@ -93,7 +93,7 @@ def solve_bin_packing(timber_model, stock_length, saw_kerf=0.0):
                 break
 
         if not placed:
-            # Erstelle neuen Stock
+            # Create new stock
             new_stock = {
                 "id": len(stocks),
                 "remaining": stock_length - needed,
@@ -107,14 +107,14 @@ def solve_bin_packing(timber_model, stock_length, saw_kerf=0.0):
 
 def visualize_packing(stocks, origin, stock_length, beam_spacing=0.6, beam_offset=0.2):
     """
-    Erzeugt Visualisierungs-Geometrie aus dem Packing-Resultat.
+    Generates visualization geometry from the packing result.
 
     Args:
-        stocks (list): Das Ergebnis von solve_bin_packing.
-        origin (Point): Startpunkt für die Visualisierung.
-        stock_length (float): Die visuelle Länge der Rohbalken.
-        beam_spacing (float): Abstand zwischen den Rohbalken in Y.
-        beam_offset (float): Abstand der gepackten Balken zum Rohbalken in Y.
+        stocks (list): The result of solve_bin_packing.
+        origin (Point): Starting point for the visualization.
+        stock_length (float): The visual length of the raw beams.
+        beam_spacing (float): Distance between the raw beams in Y.
+        beam_offset (float): Distance of the packed beams from the raw beam in Y.
 
     Returns:
         tuple: (stock_geometries, packed_beam_geometries)
@@ -138,8 +138,8 @@ def visualize_packing(stocks, origin, stock_length, beam_spacing=0.6, beam_offse
     for i, stock in enumerate(stocks):
         y_pos = base_y + (i * beam_spacing)
 
-        # 1. Erzeuge Stock-Geometrie (als Hintergrund)
-        # Wir nutzen width/height des ersten Balkens im Stock als Referenz
+        # 1. Generate stock geometry (as background)
+        # We use the width/height of the first beam in the stock as a reference
         if stock["beams"]:
             ref_beam = stock["beams"][0]["beam"]
             w = ref_beam.width
@@ -147,20 +147,20 @@ def visualize_packing(stocks, origin, stock_length, beam_spacing=0.6, beam_offse
         else:
             w, h = 0.1, 0.1
 
-        # Erstelle Box Geometrie für den Stock
-        # Box Zentrum berechnen
+        # Create Box geometry for the stock
+        # Calculate Box center
         center_x = base_x + stock_length / 2
         center_pt = Point(center_x, y_pos, base_z)
 
-        # Frame für die Box (Zentrum)
+        # Frame for the Box (center)
         box_frame = Frame(center_pt, Vector(1, 0, 0), Vector(0, 1, 0))
 
         # Box(xsize, ysize, zsize, frame)
-        # xsize ist hier die Länge des Stocks
+        # xsize is the length of the stock here
         stock_box = Box(stock_length, w, h, frame=box_frame)
         visual_stocks.append(stock_box)
 
-        # 2. Transformiere die gepackten Balken
+        # 2. Transform the packed beams
         for item in stock["beams"]:
             beam = item["beam"]
             start_x = base_x + item["start_pos"]
@@ -187,26 +187,26 @@ def visualize_packing(stocks, origin, stock_length, beam_spacing=0.6, beam_offse
 
 def get_packing_stats(stocks, stock_length, price_per_meter=5.00, currency="CHF"):
     """
-    Erzeugt einen Bericht über die Effizienz und Kosten des Packings.
+    Generates a report on the efficiency and cost of the packing.
     """
     if not stocks:
         return {}
 
-    # 1. Basis Werte
+    # 1. Base values
     num_stocks = len(stocks)
     total_stock_bought = num_stocks * stock_length
 
-    # 2. Verschnitt Berechnung
-    # Wir summieren den 'remaining' Wert jedes Stocks
+    # 2. Waste calculation
+    # We sum the 'remaining' value of each stock
     total_waste = sum(stock["remaining"] for stock in stocks)
     used_length = total_stock_bought - total_waste
 
-    # 3. Effizienz
+    # 3. Efficiency
     efficiency = 0
     if total_stock_bought > 0:
         efficiency = (used_length / total_stock_bought) * 100
 
-    # 4. Kosten
+    # 4. Cost
     total_cost = total_stock_bought * price_per_meter
 
     # Ausgabe formatieren
