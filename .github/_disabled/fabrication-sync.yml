@@ -1,8 +1,8 @@
 name: Fabrication sheet sync
 
 on:
-  schedule:
-    - cron: "*/15 * * * *" # recurrent sync; GitHub may delay scheduled runs a few minutes
+  # schedule:
+  #  - cron: "*/15 * * * *" # recurrent sync; GitHub may delay scheduled runs a few minutes
   workflow_dispatch:
     inputs:
       command:
